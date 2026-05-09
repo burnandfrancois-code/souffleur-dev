@@ -19,11 +19,13 @@ export default function FileUploader({ onFileUploaded, isProcessing, progress })
 
     if (!validTypes.includes(file.type)) {
       toast.error('Format non supporté. Utilisez PDF, TXT ou Word.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
     if (file.size > 10 * 1024 * 1024) {
       toast.error('Fichier trop volumineux (max 10 MB).');
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
 
@@ -44,6 +46,8 @@ export default function FileUploader({ onFileUploaded, isProcessing, progress })
     } catch (error) {
       console.error('[FileUploader] Upload failed:', error);
       toast.error('Erreur lors du téléchargement. Vérifiez que le PDF est valide.');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
