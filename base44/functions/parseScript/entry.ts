@@ -9,33 +9,50 @@ Deno.serve(async (req) => {
     const { file_url, file_name } = await req.json();
     if (!file_url) return Response.json({ error: 'file_url requis' }, { status: 400 });
 
-    const timeoutMs = 3600000;
+    const timeoutMs = 1800000;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     console.log(`[parseScript] Démarrage: ${file_name}`);
 
     let rawText = '';
+    let extractionMethod = '';
 
-    console.log('[parseScript] Téléchargement du PDF...');
-    let pdfContent;
+    // ==========================================
+    // STEP 2: EXTRACTION PHASE 1 (FAST)
+    // ==========================================
+    console.log('[parseScript] Phase 1: ExtractDataFromUploadedFile...');
     try {
-      const pdfResponse = await fetch(file_url, { signal: controller.signal });
-      const pdfBuffer = await pdfResponse.arrayBuffer();
-      pdfContent = Buffer.from(pdfBuffer).toString('base64');
-      console.log(`[parseScript] PDF téléchargé: ${pdfContent.length} chars base64`);
-    } catch (dlErr) {
-      console.warn('[parseScript] Téléchargement PDF échoué:', dlErr.message);
-      return Response.json(
-        { error: 'Impossible de télécharger le fichier PDF.' },
-        { status: 400 }
-      );
+      const extracted = await base44.asServiceRole.integrations.Core.ExtractDataFromUploadedFile({
+        file_url,
+        json_schema: {
+          type: 'object',
+          properties: {
+            raw_text: {
+              type: 'string',
+              description: 'Tout le texte brut du document intégral'
+            }
+          }
+        }
+      });
+
+      if (extracted?.status === 'success' && extracted?.output?.raw_text && extracted.output.raw_text.length > 50) {
+        rawText = extracted.output.raw_text;
+        extractionMethod = 'extract';
+        console.log(`[parseScript] Phase 1 succès: ${rawText.length} chars`);
+      }
+    } catch (extractErr) {
+      console.warn('[parseScript] Phase 1 échouée:', extractErr.message);
     }
 
-    console.log('[parseScript] Extraction via LLM vision (Gemini 3.1 Pro)...');
-    try {
-      const extractResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-        prompt: `Tu es un expert en transcription de pièces de théâtre au format PDF. Lis le PDF en pièce jointe et extrais INTÉGRALEMENT le texte, page par page, du début à la fin.
+    // ==========================================
+    // STEP 3: EXTRACTION PHASE 2 (FALLBACK - LLM VISION)
+    // ==========================================
+    if (!rawText || rawText.length < 50) {
+      console.log('[parseScript] Phase 2: LLM Vision (fallback)...');
+      try {
+        const extractResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
+          prompt: `Tu es un expert en transcription de pièces de théâtre. Extrais TOUT le texte du PDF, page par page, du début à la fin, sans rien omettre ni résumer.
 
 INSTRUCTIONS CRITIQUES:
 1. Extrait TOUT le texte visible du PDF - aucune partie ne doit être omise
@@ -47,45 +64,52 @@ INSTRUCTIONS CRITIQUES:
 4. Si c'est un scan image, utilise la reconnaissance optique de caractères (OCR)
 
 Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.`,
-        file_urls: [`data:application/pdf;base64,${pdfContent}`],
-        model: 'gemini_3_1_pro',
-        response_json_schema: {
-          type: 'object',
-          properties: {
-            raw_text: { type: 'string', description: 'Texte intégral du PDF, toutes pages' }
+          file_urls: [file_url],
+          model: 'gemini_3_1_pro',
+          response_json_schema: {
+            type: 'object',
+            properties: {
+              raw_text: { type: 'string', description: 'Texte intégral du PDF, toutes pages' }
+            }
           }
-        }
-      });
+        });
 
-      rawText = extractResult?.raw_text || '';
-      console.log(`[parseScript] Texte extrait via LLM vision: ${rawText.length} chars`);
-    } catch (llmErr) {
-      console.warn('[parseScript] LLM vision échoué:', llmErr.message);
-      return Response.json(
-        { error: 'Impossible de lire le fichier PDF. Vérifiez que le PDF contient du texte sélectionnable (pas un scan image).' },
-        { status: 400 }
-      );
+        rawText = extractResult?.raw_text || '';
+        extractionMethod = 'llm_vision';
+        console.log(`[parseScript] Phase 2 succès: ${rawText.length} chars`);
+      } catch (llmErr) {
+        console.warn('[parseScript] Phase 2 échouée:', llmErr.message);
+        return Response.json(
+          { error: 'Impossible de lire le fichier PDF. Vérifiez que le PDF contient du texte sélectionnable (pas un scan image).' },
+          { status: 400 }
+        );
+      }
     }
 
+    // ==========================================
+    // STEP 4: VALIDATION
+    // ==========================================
     if (!rawText || rawText.length < 50) {
       clearTimeout(timeout);
       return Response.json(
-        { error: 'Impossible de lire le fichier. Vérifiez que le PDF contient du texte sélectionnable (pas un scan image).' },
+        { error: 'Impossible de lire le fichier. Vérifiez que le PDF contient du texte sélectionnable.' },
         { status: 400 }
       );
     }
 
     let wasTruncated = false;
-    if (rawText.length > 500000000) {
-      rawText = rawText.substring(0, 500000000);
+    if (rawText.length > 5000000) {
+      rawText = rawText.substring(0, 5000000);
       wasTruncated = true;
-      console.log(`[parseScript] Texte tronqué à 500MB`);
+      console.log(`[parseScript] Texte tronqué à 5MB`);
     }
 
+    // ==========================================
+    // STEP 5: CHUNKING ADAPTATIF
+    // ==========================================
     const textSize = rawText.length;
-    let CHUNK_SIZE;
-    let OVERLAP_PERCENT;
-    
+    let CHUNK_SIZE, OVERLAP_PERCENT;
+
     if (textSize < 15000) {
       CHUNK_SIZE = textSize;
       OVERLAP_PERCENT = 0;
@@ -99,7 +123,7 @@ Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.
       CHUNK_SIZE = 40000;
       OVERLAP_PERCENT = 0.1;
     }
-    
+
     const OVERLAP = Math.ceil(CHUNK_SIZE * OVERLAP_PERCENT);
     const chunks = [];
     let pos = 0;
@@ -113,13 +137,16 @@ Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.
 
     console.log(`[parseScript] Texte: ${textSize} chars → ${chunks.length} chunks de ${CHUNK_SIZE}c (overlap ${OVERLAP}c)`);
 
+    // ==========================================
+    // STEP 6: ANALYSE LLM PARALLÈLE
+    // ==========================================
     let title = (file_name || '').replace(/\.[^.]+$/, '') || 'Sans titre';
     let allCharacters = new Set();
     let allLines = [];
     const seenLineSignatures = new Set();
 
-    const CHUNK_TIMEOUT = 300000;
-    
+    const CHUNK_TIMEOUT = 120000;
+
     const chunkPromises = chunks.map((chunkText, ci) => {
       return Promise.race([
         base44.asServiceRole.integrations.Core.InvokeLLM({
@@ -148,87 +175,92 @@ ${chunkText}`,
             }
           }
         }),
-        new Promise((_, reject) => 
+        new Promise((_, reject) =>
           setTimeout(() => reject(new Error(`Chunk timeout`)), CHUNK_TIMEOUT)
         )
       ])
         .then(result => {
-          console.log(`[parseScript] Chunk ${ci + 1} OK: ${result?.lines?.length || 0} lignes`);
+          console.log(`[parseScript] Chunk ${ci + 1}/${chunks.length} OK: ${result?.lines?.length || 0} lignes`);
           return { success: true, data: result, ci };
         })
         .catch(err => {
-          console.warn(`[parseScript] Chunk ${ci + 1} erreur: ${err.message}`);
+          console.warn(`[parseScript] Chunk ${ci + 1}/${chunks.length} erreur: ${err.message}`);
           return { success: false, ci };
         });
     });
 
     console.log(`[parseScript] Lancement de ${chunkPromises.length} chunks en parallèle...`);
     const settledPromise = Promise.allSettled(chunkPromises);
-    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 3600000));
-    
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('TIMEOUT')), 240000)
+    );
+
     let settled;
     try {
       settled = await Promise.race([settledPromise, timeoutPromise]);
     } catch (err) {
       if (err.message === 'TIMEOUT') {
         console.error('[parseScript] AllSettled timeout après 240s');
+        clearTimeout(timeout);
         return Response.json({ error: 'Parsing timeout - fichier trop grand' }, { status: 504 });
       }
       throw err;
     }
+
     console.log(`[parseScript] AllSettled complété avec ${settled.length} résultats`);
     const chunkResults = [];
     for (let i = 0; i < settled.length; i++) {
       const r = settled[i];
-      console.log(`[parseScript] Processing result ${i}: status=${r.status}`);
       if (r.status === 'fulfilled') {
         chunkResults.push(r.value);
-        console.log(`[parseScript]   → Chunk ${r.value.ci} succès`);
+        console.log(`[parseScript]   → Chunk ${r.value.ci + 1} succès`);
       } else {
-        console.warn(`[parseScript]   → Chunk ${i} rejeté: ${r.reason?.message || String(r.reason)}`);
+        console.warn(`[parseScript]   → Chunk ${i + 1} rejeté: ${r.reason?.message || String(r.reason)}`);
         chunkResults.push({ success: false, ci: i, data: null });
       }
     }
-    console.log(`[parseScript] ${chunkResults.filter(r => r.success).length}/${chunkResults.length} chunks réussis`);
 
-    const chunkAnalysis = [];
+    const successCount = chunkResults.filter(r => r.success).length;
+    console.log(`[parseScript] ${successCount}/${chunkResults.length} chunks réussis`);
+
+    // ==========================================
+    // STEP 7: DÉDUPLICATION & CONSOLIDATION
+    // ==========================================
     chunkResults
-     .filter(r => r.success && r.data && r.ci >= 0)
-     .sort((a, b) => a.ci - b.ci)
-     .forEach((res) => {
-       const result = res.data;
-       const idx = res.ci;
+      .filter(r => r.success && r.data && r.ci >= 0)
+      .sort((a, b) => a.ci - b.ci)
+      .forEach((res) => {
+        const result = res.data;
 
-       if (idx === 0 && result?.title) title = result.title;
+        if (Array.isArray(result?.characters)) {
+          result.characters.forEach(c => {
+            if (c) allCharacters.add(c);
+          });
+        }
 
-       if (Array.isArray(result?.characters)) {
-         result.characters.forEach(c => { if (c) allCharacters.add(c); });
-       }
+        if (Array.isArray(result?.lines)) {
+          result.lines.forEach(line => {
+            if (line.character && line.text) {
+              const sig = `${line.character}|${line.text.substring(0, 30)}`;
+              if (!seenLineSignatures.has(sig)) {
+                seenLineSignatures.add(sig);
+                allLines.push({
+                  character: line.character,
+                  text: line.text,
+                  act: '',
+                  scene: ''
+                });
+              }
+            }
+          });
+        }
+      });
 
-       let linesInChunk = 0;
-       if (Array.isArray(result?.lines)) {
-         result.lines.forEach(line => {
-           if (line.character && line.text) {
-             const sig = `${line.character}|${line.text.substring(0, 30)}`;
-             if (!seenLineSignatures.has(sig)) {
-               seenLineSignatures.add(sig);
-               allLines.push({
-                 character: line.character,
-                 text: line.text,
-                 act: '',
-                 scene: ''
-               });
-               linesInChunk++;
-             }
-           }
-         });
-       }
-       console.log(`[parseScript] Chunk ${idx} OK: ${linesInChunk} nouvelles répliques (total: ${result?.lines?.length || 0} brutes)`);
-       chunkAnalysis.push({ chunk: idx, extracted: result?.lines?.length || 0, dedup: linesInChunk });
-     });
+    allLines.forEach(l => {
+      if (l.character) allCharacters.add(l.character);
+    });
 
-    allLines.forEach(l => { if (l.character) allCharacters.add(l.character); });
-
+    // Nettoyer @ et trim
     const cleanedChars = new Set();
     allCharacters.forEach(c => {
       const clean = (c || '').replace(/^@/, '').trim();
@@ -238,27 +270,92 @@ ${chunkText}`,
 
     console.log(`[parseScript] FINAL: ${allCharacters.size} personnages, ${allLines.length} répliques, ${rawText.length} chars`);
 
+    // ==========================================
+    // STEP 8: STATISTIQUES D'INTÉGRITÉ
+    // ==========================================
+    const originalWords = rawText
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 0);
+
+    const parsedWords = allLines
+      .map(l => l.text)
+      .join(' ')
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 0);
+
+    const originalWordSet = new Set(originalWords);
+    const parsedWordSet = new Set(parsedWords);
+    const capturedWords = originalWords.filter(w => parsedWordSet.has(w)).length;
+
+    const originalLength = rawText.length;
+    const parsedLength = parsedWords.join(' ').length;
+    const captureRate = originalWords.length > 0 ? (capturedWords / originalWords.length) * 100 : 0;
+    const wordDifference = Math.abs(originalWords.length - parsedWords.length);
+    const percentDifference = originalWords.length > 0 ? (wordDifference / originalWords.length) * 100 : 0;
+
+    // Top 20 missing words
+    const missingWordMap = {};
+    originalWords.forEach(w => {
+      if (!parsedWordSet.has(w)) {
+        missingWordMap[w] = (missingWordMap[w] || 0) + 1;
+      }
+    });
+    const missingWords = Object.entries(missingWordMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([word, count]) => ({ word, count }));
+
+    // Top 20 extra words
+    const extraWordMap = {};
+    parsedWords.forEach(w => {
+      if (!originalWordSet.has(w)) {
+        extraWordMap[w] = (extraWordMap[w] || 0) + 1;
+      }
+    });
+    const extraWords = Object.entries(extraWordMap)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([word, count]) => ({ word, count }));
+
     clearTimeout(timeout);
-    
+
     if (wasTruncated) {
-      console.warn('[parseScript] ⚠️ TEXTE TRONQUÉ: Le PDF dépassait 500KB. Les dernières parties n\'ont pas été traitées.');
+      console.warn('[parseScript] ⚠️ TEXTE TRONQUÉ: Le PDF dépassait 5MB. Les dernières parties n\'ont pas été traitées.');
     }
-    
+
     if (allLines.length === 0 && allCharacters.size === 0) {
       return Response.json(
         { error: 'Aucune réplique détectée. Vérifiez le format du fichier.' },
         { status: 400 }
       );
     }
-    
+
     return Response.json({
       title,
       characters: [...allCharacters],
       lines: allLines,
       rawText: rawText,
-      wasTruncated: wasTruncated
+      wasTruncated: wasTruncated,
+      extractionMethod: extractionMethod,
+      stats: {
+        originalLength,
+        parsedLength,
+        originalWordCount: originalWords.length,
+        parsedWordCount: parsedWords.length,
+        capturedWordCount: capturedWords,
+        captureRate: captureRate.toFixed(1),
+        wordDifference,
+        percentDifference: percentDifference.toFixed(2),
+        missingWords,
+        extraWords,
+        chunksProcessed: chunks.length,
+        chunksSuccessful: successCount
+      }
     });
-
   } catch (error) {
     console.error('[parseScript] Erreur inattendue:', error.message);
     return Response.json({ error: error.message }, { status: 500 });
