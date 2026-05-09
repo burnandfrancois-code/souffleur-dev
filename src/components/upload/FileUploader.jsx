@@ -28,24 +28,13 @@ export default function FileUploader({ onFileUploaded, isProcessing, progress })
     }
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const uploadResponse = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!uploadResponse.ok) {
-        const fileUrl = URL.createObjectURL(file);
-        onFileUploaded(fileUrl, file.name);
-      } else {
-        const data = await uploadResponse.json();
-        onFileUploaded(data.url, file.name);
-      }
+      // Upload file using Base44 integrations
+      const { base44 } = await import('@/api/base44Client');
+      const result = await base44.integrations.Core.UploadFile({ file });
+      onFileUploaded(result.file_url, file.name);
     } catch (error) {
-      const fileUrl = URL.createObjectURL(file);
-      onFileUploaded(fileUrl, file.name);
+      toast.error('Erreur lors du téléchargement du fichier');
+      console.error('Upload error:', error);
     }
   };
 
