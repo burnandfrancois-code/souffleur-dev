@@ -178,9 +178,10 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
 
   useEffect(() => {
     if (autoPlay && !trainingMode) {
+      userStoppedRef.current = false;
       const timer = setTimeout(() => {
         startRecordingRef.current();
-      }, 600);
+      }, 800);
       return () => clearTimeout(timer);
     }
   }, [autoPlay, trainingMode, line]);
