@@ -4,60 +4,19 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress) {
   try {
     onProgress?.(10);
 
-    const response = await fetch(fileUrl);
-    const text = await response.text();
-    onProgress?.(30);
-
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `Extract characters and dialogue lines from this French script. Return a JSON object with:
-{
-  "characters": ["Character1", "Character2", ...],
-  "lines": [
-    {"character": "Character1", "text": "Dialogue text", "act": "1", "scene": "1"},
-    ...
-  ],
-  "stats": {"total_lines": number, "total_characters": number}
-}
-
-Script content:
-${text.substring(0, 8000)}`,
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          characters: {
-            type: 'array',
-            items: { type: 'string' }
-          },
-          lines: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                character: { type: 'string' },
-                text: { type: 'string' },
-                act: { type: 'string' },
-                scene: { type: 'string' }
-              }
-            }
-          },
-          stats: {
-            type: 'object',
-            properties: {
-              total_lines: { type: 'number' },
-              total_characters: { type: 'number' }
-            }
-          }
-        }
-      }
+    // Appeler la vraie fonction backend parseScript
+    const result = await base44.functions.invoke('parseScript', {
+      file_url: fileUrl,
+      file_name: fileName
     });
 
     onProgress?.(80);
 
     return {
-      characters: result.characters || [],
-      lines: result.lines || [],
-      stats: result.stats || {},
-      rawText: text
+      characters: result.data?.characters || [],
+      lines: result.data?.lines || [],
+      stats: result.data?.stats || {},
+      rawText: result.data?.rawText || ''
     };
   } catch (error) {
     console.error('Error parsing script:', error);
