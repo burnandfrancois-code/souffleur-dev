@@ -1,0 +1,53 @@
+{
+  "name": "VersionLock",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "enum": [
+        "desktop",
+        "android"
+      ],
+      "description": "Quelle version est verrouill\u00e9e"
+    },
+    "is_locked": {
+      "type": "boolean",
+      "default": false,
+      "description": "\u00c9tat de verrouillage"
+    },
+    "locked_by": {
+      "type": "string",
+      "description": "Email de l'admin qui a verrouill\u00e9"
+    },
+    "locked_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Quand a \u00e9t\u00e9 verrouill\u00e9"
+    }
+  },
+  "required": [
+    "version"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "name": "RehearsalSession",
+  "type": "object",
+  "properties": {
+    "script_id": {
+      "type": "string",
+      "description": "ID of the script being rehearsed"
+    },
+    "start_line_index": {
+      "type": "number",
+      "description": "Index of the first line in this session"
+    },
+    "end_line_index": {
+      "type": "number",
+      "description": "Index of the last line in this session"
+    },
+    "attempts": {
+      "type": "array",
+      "description": "History of attempts for each of the user's lines",
+      "items": {
+        "type": "object",
+        "properties": {
+          "line_index": {
+            "type": "number"
+          },
+          "spoken_text": {
+            "type": "string"
+          },
+          "accuracy": {
+            "type": "number"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "expected": {
+                  "type": "string"
+                },
+                "got": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "perfect": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "completed": {
+      "type": "boolean",
+      "default": false
+    },
+    "overall_accuracy": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "script_id"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "name": "Script",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Title of the play"
+    },
+    "file_url": {
+      "type": "string",
+      "description": "URL of the uploaded script file"
+    },
+    "file_name": {
+      "type": "string",
+      "description": "Original filename of the uploaded PDF"
+    },
+    "characters": {
+      "type": "array",
+      "description": "List of character names found in the script",
+      "items": {
+        "type": "string"
+      }
+    },
+    "character_genders": {
+      "type": "object",
+      "description": "Map of character name to gender: 'male' or 'female'"
+    },
+    "lines": {
+      "type": "array",
+      "description": "Parsed lines of the script",
+      "items": {
+        "type": "object",
+        "properties": {
+          "character": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "act": {
+            "type": "string"
+          },
+          "scene": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "my_character": {
+      "type": "string",
+      "description": "The character the user plays"
+    }
+  },
+  "required": [
+    "title"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}
