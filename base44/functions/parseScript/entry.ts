@@ -23,8 +23,15 @@ Deno.serve(async (req) => {
     // ==========================================
     console.log('[parseScript] Phase 1: ExtractDataFromUploadedFile...');
     try {
+      const fileResponse = await fetch(file_url);
+      if (!fileResponse.ok) {
+        throw new Error(`Failed to fetch file: ${fileResponse.status}`);
+      }
+      const fileBuffer = await fileResponse.arrayBuffer();
+      const fileBlob = new Blob([fileBuffer], { type: 'application/pdf' });
+      
       const extracted = await base44.asServiceRole.integrations.Core.ExtractDataFromUploadedFile({
-        file_url,
+        file: fileBlob,
         json_schema: {
           type: 'object',
           properties: {
@@ -51,6 +58,13 @@ Deno.serve(async (req) => {
     if (!rawText || rawText.length < 50) {
       console.log('[parseScript] Phase 2: LLM Vision (fallback)...');
       try {
+        const fileResponse = await fetch(file_url);
+        if (!fileResponse.ok) {
+          throw new Error(`Failed to fetch file: ${fileResponse.status}`);
+        }
+        const fileBuffer = await fileResponse.arrayBuffer();
+        const fileBlob = new Blob([fileBuffer], { type: 'application/pdf' });
+        
         const extractResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
           prompt: `Tu es un expert en transcription de pièces de théâtre. Extrais TOUT le texte du PDF, page par page, du début à la fin, sans rien omettre ni résumer.
 
@@ -64,7 +78,7 @@ INSTRUCTIONS CRITIQUES:
 4. Si c'est un scan image, utilise la reconnaissance optique de caractères (OCR)
 
 Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.`,
-          file_urls: [file_url],
+          file_urls: [fileBlob],
           model: 'gemini_3_1_pro',
           response_json_schema: {
             type: 'object',
