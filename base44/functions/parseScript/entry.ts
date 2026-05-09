@@ -33,72 +33,17 @@ Deno.serve(async (req) => {
     let extractionMethod = '';
 
     // ==========================================
-    // STEP 2: EXTRACTION PHASE 1 (FAST)
+    // STEP 2: EXTRACTION PHASE 1 (LLM VISION)
     // ==========================================
-    addLog('info', 'Phase 1: Extraction du texte (méthode directe)');
+    addLog('info', 'Phase 1: Extraction du texte via LLM Vision');
     try {
       const extractController = new AbortController();
       const extractTimeout = setTimeout(() => extractController.abort(), TIMEOUTS.EXTRACT);
       
-      addLog('info', `Téléchargement du fichier: ${file_url.substring(0, 50)}...`);
-      const fileResponse = await fetch(file_url, { signal: extractController.signal });
-      if (!fileResponse.ok) {
-        throw new Error(`HTTP ${fileResponse.status}`);
-      }
-      addLog('info', `Fichier téléchargé: ${fileResponse.headers.get('content-length')} bytes`);
-      const fileBuffer = await fileResponse.arrayBuffer();
-      const fileBlob = new Blob([fileBuffer], { type: 'application/pdf' });
-      clearTimeout(extractTimeout);
-      
-      addLog('info', 'Appel à ExtractDataFromUploadedFile...');
-      const extracted = await Promise.race([
-        base44.asServiceRole.integrations.Core.ExtractDataFromUploadedFile({
-          file: fileBlob,
-          json_schema: {
-            type: 'object',
-            properties: {
-              raw_text: { type: 'string', description: 'Tout le texte brut du document intégral' }
-            }
-          }
-        }),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Extract timeout')), TIMEOUTS.EXTRACT)
-        )
-      ]);
-
-      if (extracted?.status === 'success' && extracted?.output?.raw_text && extracted.output.raw_text.length > 50) {
-        rawText = extracted.output.raw_text;
-        extractionMethod = 'extract';
-        addLog('info', `Phase 1 succès: ${rawText.length} caractères extraits`);
-      } else {
-        addLog('warn', `Phase 1: Pas assez de texte extrait (${extracted?.output?.raw_text?.length || 0} chars)`);
-      }
-    } catch (extractErr) {
-      addLog('error', `Phase 1 échouée: ${extractErr.message}`);
-    }
-
-    // ==========================================
-    // STEP 3: EXTRACTION PHASE 2 (FALLBACK - LLM VISION)
-    // ==========================================
-    if (!rawText || rawText.length < 50) {
-      addLog('warn', 'Phase 2: Fallback LLM Vision (extraction directe insuffisante)');
-      try {
-        const extractController = new AbortController();
-        const extractTimeout = setTimeout(() => extractController.abort(), TIMEOUTS.EXTRACT);
-        
-        addLog('info', 'Téléchargement du fichier pour LLM Vision...');
-        const fileResponse = await fetch(file_url, { signal: extractController.signal });
-        if (!fileResponse.ok) {
-          throw new Error(`HTTP ${fileResponse.status}`);
-        }
-        const fileBuffer = await fileResponse.arrayBuffer();
-        const fileBlob = new Blob([fileBuffer], { type: 'application/pdf' });
-        clearTimeout(extractTimeout);
-        
-        addLog('info', 'Appel à InvokeLLM avec gemini_3_1_pro...');
-        const extractResult = await Promise.race([
-          base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Tu es un expert en transcription de pièces de théâtre. Extrais TOUT le texte du PDF, page par page, du début à la fin, sans rien omettre ni résumer.
+      addLog('info', 'Appel à InvokeLLM avec gemini_3_1_pro...');
+      const extractResult = await Promise.race([
+        base44.asServiceRole.integrations.Core.InvokeLLM({
+          prompt: `Tu es un expert en transcription de pièces de théâtre. Extrais TOUT le texte du PDF, page par page, du début à la fin, sans rien omettre ni résumer.
 
 INSTRUCTIONS CRITIQUES:
 1. Extrait TOUT le texte visible du PDF - aucune partie ne doit être omise
@@ -107,35 +52,33 @@ INSTRUCTIONS CRITIQUES:
    - Les didascalies (entre parenthèses ou crochets)
    - Tous les dialogues complets, même très longs
 3. Maintiens l'ordre et la structure exactement comme dans le document
-4. Si c'est un scan image, utilise la reconnaissance optique de caractères (OCR)
 
 Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.`,
-            file_urls: [fileBlob],
-            model: 'gemini_3_1_pro',
-            response_json_schema: {
-              type: 'object',
-              properties: {
-                raw_text: { type: 'string', description: 'Texte intégral du PDF, toutes pages' }
-              }
+          file_urls: [file_url],
+          model: 'gemini_3_1_pro',
+          response_json_schema: {
+            type: 'object',
+            properties: {
+              raw_text: { type: 'string', description: 'Texte intégral du PDF, toutes pages' }
             }
-          }),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('LLM timeout')), TIMEOUTS.LLM)
-          )
-        ]);
+          }
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('LLM timeout')), TIMEOUTS.LLM)
+        )
+      ]);
 
-        rawText = extractResult?.raw_text || '';
-        extractionMethod = 'llm_vision';
-        addLog('info', `Phase 2 succès: ${rawText.length} caractères extraits via LLM`);
-      } catch (llmErr) {
-        addLog('error', `Phase 2 échouée: ${llmErr.message}`);
-        clearTimeout(globalTimeout);
-        return Response.json(
-          { error: 'Impossible de lire le fichier PDF. Vérifiez que le PDF contient du texte sélectionnable (pas un scan image).', logs },
-          { status: 400 }
-        );
-      }
+      clearTimeout(extractTimeout);
+      rawText = extractResult?.raw_text || '';
+      extractionMethod = 'llm_vision';
+      addLog('info', `Phase 1 succès: ${rawText.length} caractères extraits via LLM`);
+    } catch (extractErr) {
+      addLog('error', `Phase 1 échouée: ${extractErr.message}`);
     }
+
+    // ==========================================
+    // STEP 3: VALIDATION
+    // ==========================================
 
     // ==========================================
     // STEP 4: VALIDATION
