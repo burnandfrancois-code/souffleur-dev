@@ -69,7 +69,7 @@ export default function ParseErrorLog({ logs }) {
       </button>
 
       {isExpanded && (
-        <div className="space-y-1 max-h-64 overflow-y-auto rounded-lg border border-border bg-card p-3">
+        <div className="space-y-1 max-h-48 overflow-y-auto rounded-lg border border-border bg-card p-3">
           {logs.map((log, i) => (
             <div
               key={i}

@@ -22,7 +22,7 @@ export default function ParseProgress({ fileName, progress, logs = [] }) {
       animate={{ opacity: 1, y: 0 }}
       className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center"
     >
-      <div className="bg-card border border-border rounded-2xl p-6 max-w-md w-full mx-4 space-y-5">
+      <div className="bg-card border border-border rounded-2xl p-6 max-w-md w-full mx-4 space-y-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-center gap-3">
           <Loader2 className="w-5 h-5 text-primary animate-spin" />
           <p className="font-semibold text-foreground">Analyse du script…</p>
