@@ -177,6 +177,21 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   useEffect(() => { startRecordingRef.current = startRecording; }, [startRecording]);
 
   useEffect(() => {
+    // Cleanup old recognition when line changes
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch (e) {}
+    }
+    recognitionRef.current = null;
+    setIsRecording(false);
+    finalWordsRef.current = [];
+    interimRef.current = '';
+    setTranscript('');
+    setSttError(null);
+  }, [line]);
+
+  useEffect(() => {
     if (autoPlay && !trainingMode) {
       userStoppedRef.current = false;
       const timer = setTimeout(() => {
