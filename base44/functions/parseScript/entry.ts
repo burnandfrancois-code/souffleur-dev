@@ -37,25 +37,15 @@ Deno.serve(async (req) => {
     // ==========================================
     addLog('info', 'Phase 1: Extraction du texte via LLM Vision');
     try {
-      addLog('info', 'Appel à InvokeLLM avec gemini_3_1_pro...');
+      addLog('info', 'Appel à InvokeLLM...');
       const extractResult = await Promise.race([
         base44.asServiceRole.integrations.Core.InvokeLLM({
-          prompt: `Tu es un expert en transcription de pièces de théâtre. Extrais TOUT le texte du PDF, page par page, du début à la fin, sans rien omettre ni résumer.
-
-INSTRUCTIONS CRITIQUES:
-1. Extrait TOUT le texte visible du PDF - aucune partie ne doit être omise
-2. Préserve exactement:
-   - Les noms de personnages (généralement en MAJUSCULES)
-   - Les didascalies (entre parenthèses ou crochets)
-   - Tous les dialogues complets, même très longs
-3. Maintiens l'ordre et la structure exactement comme dans le document
-
-Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.`,
+          prompt: `Extract ALL text from this theatre script PDF, page by page, from start to end. Keep everything as-is: character names (usually CAPS), stage directions in parentheses/brackets, all dialogues complete. Return only raw text in "raw_text" field with no formatting.`,
           file_urls: [file_url],
           response_json_schema: {
             type: 'object',
             properties: {
-              raw_text: { type: 'string', description: 'Texte intégral du PDF, toutes pages' }
+              raw_text: { type: 'string' }
             }
           }
         }),
@@ -74,14 +64,11 @@ Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.
     // ==========================================
     // STEP 3: VALIDATION
     // ==========================================
-
-    // ==========================================
-    // STEP 4: VALIDATION
-    // ==========================================
     if (!rawText || rawText.length < 50) {
       clearTimeout(globalTimeout);
+      addLog('error', 'Texte extrait vide ou trop court');
       return Response.json(
-        { error: 'Impossible de lire le fichier. Vérifiez que le PDF contient du texte sélectionnable.' },
+        { error: 'Impossible de lire le fichier. Vérifiez que le PDF contient du texte sélectionnable.', logs },
         { status: 400 }
       );
     }
