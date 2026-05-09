@@ -44,6 +44,8 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   }, []);
 
   const startRecording = useCallback(() => {
+    console.log('[MyLineRecorder] startRecording called', { line: line?.text?.substring(0, 20) });
+    
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort();
@@ -61,6 +63,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
+      console.log('[MyLineRecorder] Speech Recognition not supported');
       setSttError({
         message: "Reconnaissance vocale non supportée. Utilisez Chrome ou Edge."
       });
@@ -74,12 +77,14 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     recognitionRef.current = rec;
 
     rec.onstart = () => {
+      console.log('[MyLineRecorder] Recognition started');
       if (!userStoppedRef.current) {
         setIsRecording(true);
       }
     };
 
     rec.onresult = (event) => {
+      console.log('[MyLineRecorder] onresult', { results: event.results.length, userStopped: userStoppedRef.current });
       if (userStoppedRef.current) return;
 
       for (let i = 0; i < event.results.length; i++) {
@@ -133,6 +138,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     };
 
     rec.onerror = (e) => {
+      console.log('[MyLineRecorder] onerror', { error: e.error });
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         stopRecording();
         setSttError({
@@ -142,20 +148,23 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     };
 
     rec.onend = () => {
+      console.log('[MyLineRecorder] onend', { userStopped: userStoppedRef.current });
       if (!userStoppedRef.current) {
         setTimeout(() => _restartIfNeeded(), 50);
       }
     };
 
     try {
+      console.log('[MyLineRecorder] Calling rec.start()');
       rec.start();
     } catch (e) {
+      console.log('[MyLineRecorder] Error calling rec.start()', e);
       setSttError({
         message: `⚠️ Erreur micro: ${e.message}`
       });
       recognitionRef.current = null;
     }
-  }, [_restartIfNeeded]);
+  }, [_restartIfNeeded, onSubmit]);
 
   useImperativeHandle(ref, () => ({
     stopRecording
