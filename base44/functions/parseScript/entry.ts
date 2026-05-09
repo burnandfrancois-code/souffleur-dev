@@ -17,24 +17,42 @@ Deno.serve(async (req) => {
 
     let rawText = '';
 
+    console.log('[parseScript] Téléchargement du PDF...');
+    let pdfContent;
+    try {
+      const pdfResponse = await fetch(file_url, { signal: controller.signal });
+      const pdfBuffer = await pdfResponse.arrayBuffer();
+      pdfContent = Buffer.from(pdfBuffer).toString('base64');
+      console.log(`[parseScript] PDF téléchargé: ${pdfContent.length} chars base64`);
+    } catch (dlErr) {
+      console.warn('[parseScript] Téléchargement PDF échoué:', dlErr.message);
+      return Response.json(
+        { error: 'Impossible de télécharger le fichier PDF.' },
+        { status: 400 }
+      );
+    }
+
     console.log('[parseScript] Extraction via LLM vision (Gemini 3.1 Pro)...');
     try {
       const extractResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-        prompt: `Tu es un expert en transcription de pièces de théâtre. Extrais TOUT le texte du PDF, page par page, du début à la fin, sans rien omettre ni résumer.
+        prompt: `Tu es un expert en transcription de pièces de théâtre au format PDF. Lis le PDF en pièce jointe et extrais INTÉGRALEMENT le texte, page par page, du début à la fin.
 
-IMPORTANT:
-- Garde les noms de personnages en MAJUSCULES
-- Garde les didascalies entre parenthèses ou crochets
-- Transcris TOUS les dialogues complets, y compris les très longs
-- Préserve la structure et l'ordre exactement comme dans le document
+INSTRUCTIONS CRITIQUES:
+1. Extrait TOUT le texte visible du PDF - aucune partie ne doit être omise
+2. Préserve exactement:
+   - Les noms de personnages (généralement en MAJUSCULES)
+   - Les didascalies (entre parenthèses ou crochets)
+   - Tous les dialogues complets, même très longs
+3. Maintiens l'ordre et la structure exactement comme dans le document
+4. Si c'est un scan image, utilise la reconnaissance optique de caractères (OCR)
 
-Retourne le texte intégral dans le champ "raw_text".`,
-        file_urls: [file_url],
+Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.`,
+        file_urls: [`data:application/pdf;base64,${pdfContent}`],
         model: 'gemini_3_1_pro',
         response_json_schema: {
           type: 'object',
           properties: {
-            raw_text: { type: 'string', description: 'Texte intégral du document, toutes pages' }
+            raw_text: { type: 'string', description: 'Texte intégral du PDF, toutes pages' }
           }
         }
       });
