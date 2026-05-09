@@ -100,6 +100,17 @@ export default function Rehearsal() {
     compareSessionRef.current += 1;
   }, []);
 
+  const stopSpeakingOnly = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    stopSpeaking();
+    pendingTimersRef.current.forEach(clearTimeout);
+    pendingTimersRef.current = [];
+    speakSessionRef.current += 1;
+  }, []);
+
   const cancelAll = useCallback(() => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -223,7 +234,7 @@ export default function Rehearsal() {
   };
 
   const handleJumpTo = (idx) => {
-    stopAll();
+    stopSpeakingOnly();
     setPhase('line');
     setComparisonResult(null);
     setTimeout(() => {
@@ -237,7 +248,7 @@ export default function Rehearsal() {
 
   const goToPrevLine = () => {
     if (currentLineIndex > 0) {
-      stopAll();
+      stopSpeakingOnly();
       setPhase('line');
       setComparisonResult(null);
       setTimeout(() => {
@@ -616,7 +627,7 @@ export default function Rehearsal() {
                 onClick={() => {
                   const idx = lines.findLastIndex((l, i) => i < currentLineIndex && normalize(l.character) === normalize(myCharacter));
                   if (idx !== -1) {
-                    stopAll();
+                    stopSpeakingOnly();
                     setPhase('line');
                     setComparisonResult(null);
                     setTimeout(() => {
@@ -654,7 +665,7 @@ export default function Rehearsal() {
                 onClick={() => {
                   const idx = lines.findIndex((l, i) => i > currentLineIndex && normalize(l.character) === normalize(myCharacter));
                   if (idx === -1) return;
-                  stopAll();
+                  stopSpeakingOnly();
                   setPhase('line');
                   setComparisonResult(null);
                   setTimeout(() => setCurrentLineIndex(idx), 100);
