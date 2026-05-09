@@ -31,7 +31,12 @@ export default function FileUploader({ onFileUploaded, isProcessing, progress })
       console.log(`[FileUploader] Uploading: ${file.name} (${file.size} bytes, ${file.type})`);
       
       const { base44 } = await import('@/api/base44Client');
-      const result = await base44.integrations.Core.UploadFile({ file });
+      
+      // Create FormData and send to backend function
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const result = await base44.functions.invoke('uploadScript', { file });
       
       console.log(`[FileUploader] Upload result:`, result);
       
