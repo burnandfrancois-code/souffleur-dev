@@ -37,9 +37,6 @@ Deno.serve(async (req) => {
     // ==========================================
     addLog('info', 'Phase 1: Extraction du texte via LLM Vision');
     try {
-      const extractController = new AbortController();
-      const extractTimeout = setTimeout(() => extractController.abort(), TIMEOUTS.EXTRACT);
-      
       addLog('info', 'Appel à InvokeLLM avec gemini_3_1_pro...');
       const extractResult = await Promise.race([
         base44.asServiceRole.integrations.Core.InvokeLLM({
@@ -68,7 +65,6 @@ Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.
         )
       ]);
 
-      clearTimeout(extractTimeout);
       rawText = extractResult?.raw_text || '';
       extractionMethod = 'llm_vision';
       addLog('info', `Phase 1 succès: ${rawText.length} caractères extraits via LLM`);
@@ -84,7 +80,7 @@ Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.
     // STEP 4: VALIDATION
     // ==========================================
     if (!rawText || rawText.length < 50) {
-      clearTimeout(timeout);
+      clearTimeout(globalTimeout);
       return Response.json(
         { error: 'Impossible de lire le fichier. Vérifiez que le PDF contient du texte sélectionnable.' },
         { status: 400 }
