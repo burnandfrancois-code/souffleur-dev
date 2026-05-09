@@ -1,5 +1,13 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+const TIMEOUTS = {
+  GLOBAL: 1800000,
+  EXTRACT: 60000,
+  LLM: 180000,
+  CHUNK: 120000,
+  SETTLE: 240000
+};
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -9,9 +17,8 @@ Deno.serve(async (req) => {
     const { file_url, file_name } = await req.json();
     if (!file_url) return Response.json({ error: 'file_url requis' }, { status: 400 });
 
-    const timeoutMs = 1800000;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    const globalTimeout = setTimeout(() => controller.abort(), TIMEOUTS.GLOBAL);
 
     console.log(`[parseScript] Démarrage: ${file_name}`);
 
@@ -23,25 +30,31 @@ Deno.serve(async (req) => {
     // ==========================================
     console.log('[parseScript] Phase 1: ExtractDataFromUploadedFile...');
     try {
-      const fileResponse = await fetch(file_url);
+      const extractController = new AbortController();
+      const extractTimeout = setTimeout(() => extractController.abort(), TIMEOUTS.EXTRACT);
+      
+      const fileResponse = await fetch(file_url, { signal: extractController.signal });
       if (!fileResponse.ok) {
         throw new Error(`Failed to fetch file: ${fileResponse.status}`);
       }
       const fileBuffer = await fileResponse.arrayBuffer();
       const fileBlob = new Blob([fileBuffer], { type: 'application/pdf' });
+      clearTimeout(extractTimeout);
       
-      const extracted = await base44.asServiceRole.integrations.Core.ExtractDataFromUploadedFile({
-        file: fileBlob,
-        json_schema: {
-          type: 'object',
-          properties: {
-            raw_text: {
-              type: 'string',
-              description: 'Tout le texte brut du document intégral'
+      const extracted = await Promise.race([
+        base44.asServiceRole.integrations.Core.ExtractDataFromUploadedFile({
+          file: fileBlob,
+          json_schema: {
+            type: 'object',
+            properties: {
+              raw_text: { type: 'string', description: 'Tout le texte brut du document intégral' }
             }
           }
-        }
-      });
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Extract timeout')), TIMEOUTS.EXTRACT)
+        )
+      ]);
 
       if (extracted?.status === 'success' && extracted?.output?.raw_text && extracted.output.raw_text.length > 50) {
         rawText = extracted.output.raw_text;
@@ -58,15 +71,20 @@ Deno.serve(async (req) => {
     if (!rawText || rawText.length < 50) {
       console.log('[parseScript] Phase 2: LLM Vision (fallback)...');
       try {
-        const fileResponse = await fetch(file_url);
+        const extractController = new AbortController();
+        const extractTimeout = setTimeout(() => extractController.abort(), TIMEOUTS.EXTRACT);
+        
+        const fileResponse = await fetch(file_url, { signal: extractController.signal });
         if (!fileResponse.ok) {
           throw new Error(`Failed to fetch file: ${fileResponse.status}`);
         }
         const fileBuffer = await fileResponse.arrayBuffer();
         const fileBlob = new Blob([fileBuffer], { type: 'application/pdf' });
+        clearTimeout(extractTimeout);
         
-        const extractResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-          prompt: `Tu es un expert en transcription de pièces de théâtre. Extrais TOUT le texte du PDF, page par page, du début à la fin, sans rien omettre ni résumer.
+        const extractResult = await Promise.race([
+          base44.asServiceRole.integrations.Core.InvokeLLM({
+            prompt: `Tu es un expert en transcription de pièces de théâtre. Extrais TOUT le texte du PDF, page par page, du début à la fin, sans rien omettre ni résumer.
 
 INSTRUCTIONS CRITIQUES:
 1. Extrait TOUT le texte visible du PDF - aucune partie ne doit être omise
@@ -78,21 +96,26 @@ INSTRUCTIONS CRITIQUES:
 4. Si c'est un scan image, utilise la reconnaissance optique de caractères (OCR)
 
 Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.`,
-          file_urls: [fileBlob],
-          model: 'gemini_3_1_pro',
-          response_json_schema: {
-            type: 'object',
-            properties: {
-              raw_text: { type: 'string', description: 'Texte intégral du PDF, toutes pages' }
+            file_urls: [fileBlob],
+            model: 'gemini_3_1_pro',
+            response_json_schema: {
+              type: 'object',
+              properties: {
+                raw_text: { type: 'string', description: 'Texte intégral du PDF, toutes pages' }
+              }
             }
-          }
-        });
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('LLM timeout')), TIMEOUTS.LLM)
+          )
+        ]);
 
         rawText = extractResult?.raw_text || '';
         extractionMethod = 'llm_vision';
         console.log(`[parseScript] Phase 2 succès: ${rawText.length} chars`);
       } catch (llmErr) {
         console.warn('[parseScript] Phase 2 échouée:', llmErr.message);
+        clearTimeout(globalTimeout);
         return Response.json(
           { error: 'Impossible de lire le fichier PDF. Vérifiez que le PDF contient du texte sélectionnable (pas un scan image).' },
           { status: 400 }
@@ -159,7 +182,7 @@ Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.
     let allLines = [];
     const seenLineSignatures = new Set();
 
-    const CHUNK_TIMEOUT = 120000;
+    const CHUNK_TIMEOUT = TIMEOUTS.CHUNK;
 
     const chunkPromises = chunks.map((chunkText, ci) => {
       return Promise.race([
@@ -206,7 +229,7 @@ ${chunkText}`,
     console.log(`[parseScript] Lancement de ${chunkPromises.length} chunks en parallèle...`);
     const settledPromise = Promise.allSettled(chunkPromises);
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('TIMEOUT')), 240000)
+      setTimeout(() => reject(new Error('TIMEOUT')), TIMEOUTS.SETTLE)
     );
 
     let settled;
@@ -215,7 +238,7 @@ ${chunkText}`,
     } catch (err) {
       if (err.message === 'TIMEOUT') {
         console.error('[parseScript] AllSettled timeout après 240s');
-        clearTimeout(timeout);
+        clearTimeout(globalTimeout);
         return Response.json({ error: 'Parsing timeout - fichier trop grand' }, { status: 504 });
       }
       throw err;
@@ -335,7 +358,7 @@ ${chunkText}`,
       .slice(0, 20)
       .map(([word, count]) => ({ word, count }));
 
-    clearTimeout(timeout);
+    clearTimeout(globalTimeout);
 
     if (wasTruncated) {
       console.warn('[parseScript] ⚠️ TEXTE TRONQUÉ: Le PDF dépassait 5MB. Les dernières parties n\'ont pas été traitées.');
