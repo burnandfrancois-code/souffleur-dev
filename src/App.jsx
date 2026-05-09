@@ -14,6 +14,7 @@ import AndroidHome from '@/pages/android/Home';
 import AndroidRehearsal from '@/pages/android/Rehearsal';
 import AndroidMyScripts from '@/pages/android/MyScripts';
 import Settings from '@/pages/Settings';
+import CompleteProfile from '@/pages/CompleteProfile';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -43,6 +44,7 @@ const AuthenticatedApp = () => {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/platform" element={<PlatformSelect />} />
+      <Route path="/complete-profile" element={<CompleteProfile />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/desktop/" element={<DesktopHome />} />
       <Route path="/desktop/rehearsal" element={<DesktopRehearsal />} />
