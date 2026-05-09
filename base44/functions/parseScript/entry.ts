@@ -52,7 +52,6 @@ INSTRUCTIONS CRITIQUES:
 
 Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.`,
           file_urls: [file_url],
-          model: 'gemini_3_1_pro',
           response_json_schema: {
             type: 'object',
             properties: {
