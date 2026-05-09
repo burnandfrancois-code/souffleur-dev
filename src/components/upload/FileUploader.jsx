@@ -29,9 +29,10 @@ export default function FileUploader({ onFileUploaded, isProcessing, progress })
       return;
     }
 
+    console.log(`[FileUploader] Starting upload: ${file.name} (${file.size} bytes, ${file.type})`);
+    toast.loading('Téléchargement en cours...');
+
     try {
-      console.log(`[FileUploader] Uploading: ${file.name} (${file.size} bytes, ${file.type})`);
-      
       const { base44 } = await import('@/api/base44Client');
       const result = await base44.integrations.Core.UploadFile({ file });
       
@@ -42,9 +43,11 @@ export default function FileUploader({ onFileUploaded, isProcessing, progress })
       }
       
       console.log(`[FileUploader] Upload successful: ${result.file_url}`);
+      toast.dismiss();
       onFileUploaded(result.file_url, file.name);
     } catch (error) {
       console.error('[FileUploader] Upload failed:', error);
+      toast.dismiss();
       toast.error('Erreur lors du téléchargement. Vérifiez que le PDF est valide.');
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
