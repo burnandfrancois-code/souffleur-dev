@@ -180,10 +180,10 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     if (autoPlay && !trainingMode) {
       const timer = setTimeout(() => {
         startRecordingRef.current();
-      }, 500);
+      }, 100);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [autoPlay, trainingMode, line]);
 
   const handleSubmit = () => {
     const final = transcript.trim();
