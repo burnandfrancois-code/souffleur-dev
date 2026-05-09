@@ -30,30 +30,17 @@ export default function FileUploader({ onFileUploaded, isProcessing, progress })
     try {
       console.log(`[FileUploader] Uploading: ${file.name} (${file.size} bytes, ${file.type})`);
       
-      // Use multipart/form-data for file upload
-      const formData = new FormData();
-      formData.append('file', file);
+      const { base44 } = await import('@/api/base44Client');
+      const result = await base44.integrations.Core.UploadFile({ file });
       
-      const response = await fetch('/api/integrations/core/upload', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('_b44_token')}`
-        }
-      });
+      console.log(`[FileUploader] Upload result:`, result);
       
-      if (!response.ok) {
-        throw new Error(`Upload failed with status ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      if (!result?.file_url) {
+      if (!result?.data?.file_url) {
         throw new Error('No file_url returned from upload');
       }
       
-      console.log(`[FileUploader] Upload successful: ${result.file_url}`);
-      onFileUploaded(result.file_url, file.name);
+      console.log(`[FileUploader] Upload successful: ${result.data.file_url}`);
+      onFileUploaded(result.data.file_url, file.name);
     } catch (error) {
       console.error('[FileUploader] Upload failed:', error);
       toast.error('Erreur lors du téléchargement. Vérifiez que le PDF est valide.');
