@@ -5,7 +5,15 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
-// Add page imports here
+import PlatformSelect from '@/pages/PlatformSelect';
+import Landing from '@/pages/Landing';
+import DesktopHome from '@/pages/desktop/Home';
+import DesktopRehearsal from '@/pages/desktop/Rehearsal';
+import DesktopMyScripts from '@/pages/desktop/MyScripts';
+import AndroidHome from '@/pages/android/Home';
+import AndroidRehearsal from '@/pages/android/Rehearsal';
+import AndroidMyScripts from '@/pages/android/MyScripts';
+import Settings from '@/pages/Settings';
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -33,7 +41,15 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      {/* Add your page Route elements here */}
+      <Route path="/" element={<Landing />} />
+      <Route path="/platform" element={<PlatformSelect />} />
+      <Route path="/settings" element={<Settings />} />
+      <Route path="/desktop/" element={<DesktopHome />} />
+      <Route path="/desktop/rehearsal" element={<DesktopRehearsal />} />
+      <Route path="/desktop/my-scripts" element={<DesktopMyScripts />} />
+      <Route path="/android/" element={<AndroidHome />} />
+      <Route path="/android/rehearsal" element={<AndroidRehearsal />} />
+      <Route path="/android/my-scripts" element={<AndroidMyScripts />} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
