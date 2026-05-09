@@ -117,7 +117,7 @@ export default function Home() {
       
       setProcessingError(message);
     } finally {
-      // setIsProcessing(false) - handled after step change
+      setIsProcessing(false);
     }
   };
 
