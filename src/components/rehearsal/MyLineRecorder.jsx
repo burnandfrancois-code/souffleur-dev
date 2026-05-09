@@ -164,7 +164,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       });
       recognitionRef.current = null;
     }
-  }, [_restartIfNeeded, onSubmit]);
+  }, [_restartIfNeeded]);
 
   useImperativeHandle(ref, () => ({
     stopRecording
