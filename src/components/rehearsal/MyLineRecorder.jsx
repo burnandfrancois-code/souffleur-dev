@@ -23,11 +23,12 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   const _restartIfNeeded = useCallback(() => {
     if (userStoppedRef.current) return;
     if (!recognitionRef.current) return;
-    try {
-      recognitionRef.current.start();
-    } catch (e) {
-      // Ignore errors on restart
-    }
+    // Don't auto-restart, let the parent component manage lifecycle
+    // try {
+    //   recognitionRef.current.start();
+    // } catch (e) {
+    //   // Ignore errors on restart
+    // }
   }, []);
 
   const stopRecording = useCallback(() => {
