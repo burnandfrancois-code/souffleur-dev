@@ -28,13 +28,20 @@ export default function FileUploader({ onFileUploaded, isProcessing, progress })
     }
 
     try {
-      // Upload file using Base44 integrations
+      console.log(`[FileUploader] Uploading: ${file.name} (${file.size} bytes, ${file.type})`);
+      
       const { base44 } = await import('@/api/base44Client');
       const result = await base44.integrations.Core.UploadFile({ file });
+      
+      if (!result?.data?.file_url) {
+        throw new Error('No file_url returned from upload');
+      }
+      
+      console.log(`[FileUploader] Upload successful: ${result.data.file_url}`);
       onFileUploaded(result.data.file_url, file.name);
     } catch (error) {
-      toast.error('Erreur lors du téléchargement du fichier');
-      console.error('Upload error:', error);
+      console.error('[FileUploader] Upload failed:', error);
+      toast.error('Erreur lors du téléchargement. Vérifiez que le PDF est valide.');
     }
   };
 

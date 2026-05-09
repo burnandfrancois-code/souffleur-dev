@@ -2,6 +2,8 @@ import { base44 } from '@/api/base44Client';
 
 export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) {
   try {
+    console.log(`[parseScriptWithLLM] Starting parse for: ${fileName}`);
+    console.log(`[parseScriptWithLLM] File URL: ${fileUrl}`);
     onProgress?.(10);
 
     // Appeler la vraie fonction backend parseScript
@@ -17,6 +19,8 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) 
       onLogs(result.data.logs);
     }
 
+    console.log(`[parseScriptWithLLM] Parse successful: ${result.data?.characters?.length} characters, ${result.data?.lines?.length} lines`);
+
     return {
       characters: result.data?.characters || [],
       lines: result.data?.lines || [],
@@ -25,8 +29,13 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) 
       logs: result.data?.logs || []
     };
   } catch (error) {
-    console.error('Error parsing script:', error);
-    throw error;
+    console.error('[parseScriptWithLLM] Parse failed:', error);
+    
+    // Extract backend error message if available
+    const backendError = error?.response?.data?.error || error?.message || 'Unknown error';
+    console.error('[parseScriptWithLLM] Backend error:', backendError);
+    
+    throw new Error(backendError);
   }
 }
 
