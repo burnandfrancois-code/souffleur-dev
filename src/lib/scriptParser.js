@@ -13,11 +13,17 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) 
       onProgress?.(simulatedProgress);
     }, 1000);
 
-    // Appeler la vraie fonction backend parseScript
-    const result = await base44.functions.invoke('parseScript', {
+    // Appeler la vraie fonction backend parseScript avec timeout de 5 minutes
+    const parsePromise = base44.functions.invoke('parseScript', {
       file_url: fileUrl,
       file_name: fileName
     });
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Parsing timeout après 5 minutes')), 300000)
+    );
+
+    const result = await Promise.race([parsePromise, timeoutPromise]);
 
     clearInterval(progressInterval);
     onProgress?.(80);
