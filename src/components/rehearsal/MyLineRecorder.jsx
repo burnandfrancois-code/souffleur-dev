@@ -180,7 +180,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     if (autoPlay && !trainingMode) {
       const timer = setTimeout(() => {
         startRecordingRef.current();
-      }, 100);
+      }, 400);
       return () => clearTimeout(timer);
     }
   }, [autoPlay, trainingMode, line]);
