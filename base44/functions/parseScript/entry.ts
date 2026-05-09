@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
     const { file_url, file_name } = await req.json();
     if (!file_url) return Response.json({ error: 'file_url requis' }, { status: 400 });
 
-    const timeoutMs = 1800000;
+    const timeoutMs = 3600000;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -76,10 +76,10 @@ Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.
     }
 
     let wasTruncated = false;
-    if (rawText.length > 5000000) {
-      rawText = rawText.substring(0, 5000000);
+    if (rawText.length > 500000000) {
+      rawText = rawText.substring(0, 500000000);
       wasTruncated = true;
-      console.log(`[parseScript] Texte tronqué à 5MB`);
+      console.log(`[parseScript] Texte tronqué à 500MB`);
     }
 
     const textSize = rawText.length;
@@ -118,7 +118,7 @@ Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.
     let allLines = [];
     const seenLineSignatures = new Set();
 
-    const CHUNK_TIMEOUT = 120000;
+    const CHUNK_TIMEOUT = 300000;
     
     const chunkPromises = chunks.map((chunkText, ci) => {
       return Promise.race([
@@ -164,7 +164,7 @@ ${chunkText}`,
 
     console.log(`[parseScript] Lancement de ${chunkPromises.length} chunks en parallèle...`);
     const settledPromise = Promise.allSettled(chunkPromises);
-    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 240000));
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 3600000));
     
     let settled;
     try {
