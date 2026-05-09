@@ -31,7 +31,12 @@ export default function FileUploader({ onFileUploaded, isProcessing, progress })
       console.log(`[FileUploader] Uploading: ${file.name} (${file.size} bytes, ${file.type})`);
       
       const { base44 } = await import('@/api/base44Client');
-      const result = await base44.integrations.Core.UploadFile({ file });
+      
+      // Create FormData for proper file upload
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const result = await base44.integrations.Core.UploadFile(formData);
       
       if (!result?.data?.file_url) {
         throw new Error('No file_url returned from upload');
