@@ -6,12 +6,20 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) 
     console.log(`[parseScriptWithLLM] File URL: ${fileUrl}`);
     onProgress?.(10);
 
+    // Simulate progress during parsing (backend doesn't send updates)
+    let simulatedProgress = 10;
+    const progressInterval = setInterval(() => {
+      simulatedProgress = Math.min(simulatedProgress + Math.random() * 5, 75);
+      onProgress?.(simulatedProgress);
+    }, 1000);
+
     // Appeler la vraie fonction backend parseScript
     const result = await base44.functions.invoke('parseScript', {
       file_url: fileUrl,
       file_name: fileName
     });
 
+    clearInterval(progressInterval);
     onProgress?.(80);
 
     // Passer les logs au callback
