@@ -16,56 +16,37 @@ Deno.serve(async (req) => {
     console.log(`[parseScript] Démarrage: ${file_name}`);
 
     let rawText = '';
-    let extractionMethod = '';
 
-    console.log('[parseScript] Extraction via ExtractDataFromUploadedFile...');
+    console.log('[parseScript] Extraction via LLM vision (Gemini 3.1 Pro)...');
     try {
-      const extracted = await base44.asServiceRole.integrations.Core.ExtractDataFromUploadedFile({
-        file_url,
-        json_schema: {
+      const extractResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
+        prompt: `Tu es un expert en transcription de pièces de théâtre. Extrais TOUT le texte du PDF, page par page, du début à la fin, sans rien omettre ni résumer.
+
+IMPORTANT:
+- Garde les noms de personnages en MAJUSCULES
+- Garde les didascalies entre parenthèses ou crochets
+- Transcris TOUS les dialogues complets, y compris les très longs
+- Préserve la structure et l'ordre exactement comme dans le document
+
+Retourne le texte intégral dans le champ "raw_text".`,
+        file_urls: [file_url],
+        model: 'gemini_3_1_pro',
+        response_json_schema: {
           type: 'object',
           properties: {
-            raw_text: {
-              type: 'string',
-              description: 'Tout le texte brut du document intégral'
-            }
+            raw_text: { type: 'string', description: 'Texte intégral du document, toutes pages' }
           }
         }
       });
-      if (extracted?.status === 'success' && extracted?.output?.raw_text && extracted.output.raw_text.length > 50) {
-        rawText = extracted.output.raw_text;
-        extractionMethod = 'extract';
-        console.log(`[parseScript] Extraction réussie: ${rawText.length} chars`);
-      }
-    } catch (extractErr) {
-      console.warn('[parseScript] ExtractDataFromUploadedFile échoué:', extractErr.message);
-    }
 
-    if (!rawText || rawText.length < 50) {
-      console.log('[parseScript] Fallback: InvokeLLM vision...');
-      try {
-        const extractResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-          prompt: `Tu es un assistant qui transcrit intégralement des pièces de théâtre. Transcris TOUT le texte de ce document, page par page, du début à la fin, sans rien omettre, sans résumer. Garde exactement les noms de personnages en majuscules, les didascalies entre parenthèses, et tous les dialogues. Retourne le texte intégral dans le champ "raw_text".`,
-          file_urls: [file_url],
-          model: 'gemini_3_1_pro',
-          response_json_schema: {
-            type: 'object',
-            properties: {
-              raw_text: { type: 'string', description: 'Texte intégral du document, toutes pages' }
-            }
-          }
-        });
-
-        rawText = extractResult?.raw_text || '';
-        extractionMethod = 'llm_vision';
-        console.log(`[parseScript] Texte extrait via LLM vision: ${rawText.length} chars`);
-      } catch (llmErr) {
-        console.warn('[parseScript] LLM vision aussi échoué:', llmErr.message);
-        return Response.json(
-          { error: 'Impossible de lire le fichier PDF.' },
-          { status: 400 }
-        );
-      }
+      rawText = extractResult?.raw_text || '';
+      console.log(`[parseScript] Texte extrait via LLM vision: ${rawText.length} chars`);
+    } catch (llmErr) {
+      console.warn('[parseScript] LLM vision échoué:', llmErr.message);
+      return Response.json(
+        { error: 'Impossible de lire le fichier PDF. Vérifiez que le PDF contient du texte sélectionnable (pas un scan image).' },
+        { status: 400 }
+      );
     }
 
     if (!rawText || rawText.length < 50) {
