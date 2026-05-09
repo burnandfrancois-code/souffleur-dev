@@ -31,21 +31,16 @@ export default function FileUploader({ onFileUploaded, isProcessing, progress })
       console.log(`[FileUploader] Uploading: ${file.name} (${file.size} bytes, ${file.type})`);
       
       const { base44 } = await import('@/api/base44Client');
-      
-      // Create FormData and send to backend function
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      const result = await base44.functions.invoke('uploadScript', { file });
+      const result = await base44.integrations.Core.UploadFile({ file });
       
       console.log(`[FileUploader] Upload result:`, result);
       
-      if (!result?.data?.file_url) {
+      if (!result?.file_url) {
         throw new Error('No file_url returned from upload');
       }
       
-      console.log(`[FileUploader] Upload successful: ${result.data.file_url}`);
-      onFileUploaded(result.data.file_url, file.name);
+      console.log(`[FileUploader] Upload successful: ${result.file_url}`);
+      onFileUploaded(result.file_url, file.name);
     } catch (error) {
       console.error('[FileUploader] Upload failed:', error);
       toast.error('Erreur lors du téléchargement. Vérifiez que le PDF est valide.');
