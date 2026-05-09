@@ -485,6 +485,7 @@ export default function Rehearsal() {
                     {phase === 'line' && (
                       <>
                         <MyLineRecorder
+                          ref={myLineRecorderRef}
                           line={currentLineClean}
                           onSubmit={handleSubmitRecording}
                           onSkip={() => {
