@@ -31,7 +31,7 @@ export default function FileUploader({ onFileUploaded, isProcessing, progress })
       // Upload file using Base44 integrations
       const { base44 } = await import('@/api/base44Client');
       const result = await base44.integrations.Core.UploadFile({ file });
-      onFileUploaded(result.file_url, file.name);
+      onFileUploaded(result.data.file_url, file.name);
     } catch (error) {
       toast.error('Erreur lors du téléchargement du fichier');
       console.error('Upload error:', error);
