@@ -35,6 +35,7 @@ export default function Home() {
   const [integrityReport, setIntegrityReport] = useState(null);
   const [fileName, setFileName] = useState('');
   const [logs, setLogs] = useState([]);
+  const [processingError, setProcessingError] = useState(null);
   
   useEffect(() => {
     setIsAndroid(/Android/i.test(navigator.userAgent));
@@ -67,6 +68,7 @@ export default function Home() {
     setIsProcessing(true);
     setProgress(0);
     setLogs([]);
+    setProcessingError(null);
     const startTime = Date.now();
     try {
       const result = await parseScriptWithLLM(url, uploadedFileName, (progressValue) => {
@@ -113,7 +115,7 @@ export default function Home() {
         message = 'Timeout lors de l\'analyse. Le fichier est peut-être trop grand.';
       }
       
-      toast.error('Erreur : ' + message);
+      setProcessingError(message);
     } finally {
       // setIsProcessing(false) - handled after step change
     }
@@ -200,7 +202,7 @@ export default function Home() {
         </div>
       </header>
 
-      {isProcessing && <ParseProgress fileName={fileName} progress={progress} logs={logs} />}
+      {isProcessing && <ParseProgress fileName={fileName} progress={progress} logs={logs} error={processingError} />}
 
       <main className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-4xl mx-auto space-y-8">

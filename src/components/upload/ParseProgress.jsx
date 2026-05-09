@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
@@ -11,7 +11,26 @@ const PHASES = [
   { id: 'verify', label: 'Vérification', range: [85, 100] }
 ];
 
-export default function ParseProgress({ fileName, progress, logs = [] }) {
+export default function ParseProgress({ fileName, progress, logs = [], error = null }) {
+  const [lastProgress, setLastProgress] = useState(0);
+  const [isStuck, setIsStuck] = useState(false);
+
+  useEffect(() => {
+    setLastProgress(progress);
+  }, [progress]);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (progress === lastProgress && progress > 0 && progress < 100 && !error) {
+        setIsStuck(true);
+      } else {
+        setIsStuck(false);
+      }
+    }, 15000);
+
+    return () => clearTimeout(timeout);
+  }, [progress, lastProgress, error]);
+
   const currentPhase = useMemo(() => {
     return PHASES.find(p => progress >= p.range[0] && progress < p.range[1]) || PHASES[PHASES.length - 1];
   }, [progress]);
@@ -62,6 +81,26 @@ export default function ParseProgress({ fileName, progress, logs = [] }) {
             })}
           </div>
         </div>
+
+        {error && (
+          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 space-y-1">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
+              <p className="text-xs font-semibold text-destructive">Erreur détectée</p>
+            </div>
+            <p className="text-xs text-destructive/80">{error}</p>
+          </div>
+        )}
+
+        {isStuck && !error && (
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 space-y-1">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-yellow-500 shrink-0" />
+              <p className="text-xs font-semibold text-yellow-600">Processus bloqué</p>
+            </div>
+            <p className="text-xs text-yellow-600/80">L'analyse semble s'être arrêtée. Consultez le journal détaillé ci-dessous.</p>
+          </div>
+        )}
 
         <p className="text-xs text-muted-foreground text-center">
           {progress < 100 ? 'Cela peut prendre quelques minutes pour les gros fichiers…' : 'Finalisation…'}
