@@ -99,6 +99,7 @@ export default function Home() {
       setIntegrityReport(integrity);
       
       setParsedScript(parsed);
+      setIsProcessing(false);
       setStep('summary');
       navigate('/desktop/?step=summary', { replace: true });
     } catch (err) {
@@ -114,7 +115,7 @@ export default function Home() {
       
       toast.error('Erreur : ' + message);
     } finally {
-      setIsProcessing(false);
+      // setIsProcessing(false) - handled after step change
     }
   };
 
