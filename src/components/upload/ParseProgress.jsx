@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import ParseErrorLog from './ParseErrorLog';
 
 const PHASES = [
   { id: 'upload', label: 'Téléchargement', range: [0, 10] },
@@ -10,7 +11,7 @@ const PHASES = [
   { id: 'verify', label: 'Vérification', range: [85, 100] }
 ];
 
-export default function ParseProgress({ fileName, progress }) {
+export default function ParseProgress({ fileName, progress, logs = [] }) {
   const currentPhase = useMemo(() => {
     return PHASES.find(p => progress >= p.range[0] && progress < p.range[1]) || PHASES[PHASES.length - 1];
   }, [progress]);
@@ -65,6 +66,8 @@ export default function ParseProgress({ fileName, progress }) {
         <p className="text-xs text-muted-foreground text-center">
           {progress < 100 ? 'Cela peut prendre quelques minutes pour les gros fichiers…' : 'Finalisation…'}
         </p>
+
+        <ParseErrorLog logs={logs} />
       </div>
     </motion.div>
   );

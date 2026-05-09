@@ -31,6 +31,7 @@ export default function AndroidHome() {
   const [isLoadingLast, setIsLoadingLast] = useState(true);
   const [editingScriptId, setEditingScriptId] = useState(null);
   const [fileName, setFileName] = useState('');
+  const [logs, setLogs] = useState([]);
 
   useEffect(() => {
     (async () => {
@@ -61,10 +62,13 @@ export default function AndroidHome() {
     setFileName(uploadedFileName);
     setIsProcessing(true);
     setProgress(0);
+    setLogs([]);
     
     try {
       const result = await parseScriptWithLLM(url, uploadedFileName, (progressValue) => {
         setProgress(progressValue);
+      }, (fileLogs) => {
+        setLogs(fileLogs);
       });
       
       if (!result?.characters || result.characters.length === 0) {
@@ -184,7 +188,7 @@ export default function AndroidHome() {
         </div>
       </header>
 
-      {isProcessing && <ParseProgress fileName={fileName} progress={progress} />}
+      {isProcessing && <ParseProgress fileName={fileName} progress={progress} logs={logs} />}
 
       <main className="flex-1 flex items-center justify-center px-4 py-6">
         <div className="w-full max-w-2xl mx-auto space-y-6">

@@ -34,8 +34,7 @@ export default function Home() {
   const [editingScriptId, setEditingScriptId] = useState(null);
   const [integrityReport, setIntegrityReport] = useState(null);
   const [fileName, setFileName] = useState('');
-
-  const location = useNavigate ? null : null;
+  const [logs, setLogs] = useState([]);
   
   useEffect(() => {
     setIsAndroid(/Android/i.test(navigator.userAgent));
@@ -67,10 +66,13 @@ export default function Home() {
     setFileName(uploadedFileName);
     setIsProcessing(true);
     setProgress(0);
+    setLogs([]);
     const startTime = Date.now();
     try {
       const result = await parseScriptWithLLM(url, uploadedFileName, (progressValue) => {
         setProgress(progressValue);
+      }, (fileLogs) => {
+        setLogs(fileLogs);
       });
       
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -197,7 +199,7 @@ export default function Home() {
         </div>
       </header>
 
-      {isProcessing && <ParseProgress fileName={fileName} progress={progress} />}
+      {isProcessing && <ParseProgress fileName={fileName} progress={progress} logs={logs} />}
 
       <main className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-4xl mx-auto space-y-8">

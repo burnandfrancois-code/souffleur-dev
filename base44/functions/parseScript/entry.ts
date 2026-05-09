@@ -9,6 +9,13 @@ const TIMEOUTS = {
 };
 
 Deno.serve(async (req) => {
+  const logs = [];
+  const addLog = (level, message) => {
+    const timestamp = new Date().toLocaleTimeString('fr-CH', { hour12: false });
+    logs.push({ level, message, timestamp });
+    console.log(`[${timestamp}] [parseScript] ${level.toUpperCase()}: ${message}`);
+  };
+
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
@@ -20,7 +27,7 @@ Deno.serve(async (req) => {
     const controller = new AbortController();
     const globalTimeout = setTimeout(() => controller.abort(), TIMEOUTS.GLOBAL);
 
-    console.log(`[parseScript] Démarrage: ${file_name}`);
+    addLog('info', `Démarrage: ${file_name}`);
 
     let rawText = '';
     let extractionMethod = '';
@@ -28,19 +35,22 @@ Deno.serve(async (req) => {
     // ==========================================
     // STEP 2: EXTRACTION PHASE 1 (FAST)
     // ==========================================
-    console.log('[parseScript] Phase 1: ExtractDataFromUploadedFile...');
+    addLog('info', 'Phase 1: Extraction du texte (méthode directe)');
     try {
       const extractController = new AbortController();
       const extractTimeout = setTimeout(() => extractController.abort(), TIMEOUTS.EXTRACT);
       
+      addLog('info', `Téléchargement du fichier: ${file_url.substring(0, 50)}...`);
       const fileResponse = await fetch(file_url, { signal: extractController.signal });
       if (!fileResponse.ok) {
-        throw new Error(`Failed to fetch file: ${fileResponse.status}`);
+        throw new Error(`HTTP ${fileResponse.status}`);
       }
+      addLog('info', `Fichier téléchargé: ${fileResponse.headers.get('content-length')} bytes`);
       const fileBuffer = await fileResponse.arrayBuffer();
       const fileBlob = new Blob([fileBuffer], { type: 'application/pdf' });
       clearTimeout(extractTimeout);
       
+      addLog('info', 'Appel à ExtractDataFromUploadedFile...');
       const extracted = await Promise.race([
         base44.asServiceRole.integrations.Core.ExtractDataFromUploadedFile({
           file: fileBlob,
@@ -59,29 +69,33 @@ Deno.serve(async (req) => {
       if (extracted?.status === 'success' && extracted?.output?.raw_text && extracted.output.raw_text.length > 50) {
         rawText = extracted.output.raw_text;
         extractionMethod = 'extract';
-        console.log(`[parseScript] Phase 1 succès: ${rawText.length} chars`);
+        addLog('info', `Phase 1 succès: ${rawText.length} caractères extraits`);
+      } else {
+        addLog('warn', `Phase 1: Pas assez de texte extrait (${extracted?.output?.raw_text?.length || 0} chars)`);
       }
     } catch (extractErr) {
-      console.warn('[parseScript] Phase 1 échouée:', extractErr.message);
+      addLog('error', `Phase 1 échouée: ${extractErr.message}`);
     }
 
     // ==========================================
     // STEP 3: EXTRACTION PHASE 2 (FALLBACK - LLM VISION)
     // ==========================================
     if (!rawText || rawText.length < 50) {
-      console.log('[parseScript] Phase 2: LLM Vision (fallback)...');
+      addLog('warn', 'Phase 2: Fallback LLM Vision (extraction directe insuffisante)');
       try {
         const extractController = new AbortController();
         const extractTimeout = setTimeout(() => extractController.abort(), TIMEOUTS.EXTRACT);
         
+        addLog('info', 'Téléchargement du fichier pour LLM Vision...');
         const fileResponse = await fetch(file_url, { signal: extractController.signal });
         if (!fileResponse.ok) {
-          throw new Error(`Failed to fetch file: ${fileResponse.status}`);
+          throw new Error(`HTTP ${fileResponse.status}`);
         }
         const fileBuffer = await fileResponse.arrayBuffer();
         const fileBlob = new Blob([fileBuffer], { type: 'application/pdf' });
         clearTimeout(extractTimeout);
         
+        addLog('info', 'Appel à InvokeLLM avec gemini_3_1_pro...');
         const extractResult = await Promise.race([
           base44.asServiceRole.integrations.Core.InvokeLLM({
             prompt: `Tu es un expert en transcription de pièces de théâtre. Extrais TOUT le texte du PDF, page par page, du début à la fin, sans rien omettre ni résumer.
@@ -112,12 +126,12 @@ Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.
 
         rawText = extractResult?.raw_text || '';
         extractionMethod = 'llm_vision';
-        console.log(`[parseScript] Phase 2 succès: ${rawText.length} chars`);
+        addLog('info', `Phase 2 succès: ${rawText.length} caractères extraits via LLM`);
       } catch (llmErr) {
-        console.warn('[parseScript] Phase 2 échouée:', llmErr.message);
+        addLog('error', `Phase 2 échouée: ${llmErr.message}`);
         clearTimeout(globalTimeout);
         return Response.json(
-          { error: 'Impossible de lire le fichier PDF. Vérifiez que le PDF contient du texte sélectionnable (pas un scan image).' },
+          { error: 'Impossible de lire le fichier PDF. Vérifiez que le PDF contient du texte sélectionnable (pas un scan image).', logs },
           { status: 400 }
         );
       }
@@ -138,7 +152,7 @@ Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.
     if (rawText.length > 5000000) {
       rawText = rawText.substring(0, 5000000);
       wasTruncated = true;
-      console.log(`[parseScript] Texte tronqué à 5MB`);
+      addLog('warn', `Texte tronqué à 5MB (original: ${rawText.length})`);
     }
 
     // ==========================================
@@ -172,7 +186,7 @@ Retourne le texte intégral brut dans "raw_text" sans formatage supplémentaire.
       pos = end - OVERLAP;
     }
 
-    console.log(`[parseScript] Texte: ${textSize} chars → ${chunks.length} chunks de ${CHUNK_SIZE}c (overlap ${OVERLAP}c)`);
+    addLog('info', `Chunking: ${textSize} chars → ${chunks.length} chunks de ${CHUNK_SIZE}c`);
 
     // ==========================================
     // STEP 6: ANALYSE LLM PARALLÈLE
@@ -226,7 +240,7 @@ ${chunkText}`,
         });
     });
 
-    console.log(`[parseScript] Lancement de ${chunkPromises.length} chunks en parallèle...`);
+    addLog('info', `Lancement de ${chunkPromises.length} chunks en parallèle...`);
     const settledPromise = Promise.allSettled(chunkPromises);
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('TIMEOUT')), TIMEOUTS.SETTLE)
@@ -237,28 +251,29 @@ ${chunkText}`,
       settled = await Promise.race([settledPromise, timeoutPromise]);
     } catch (err) {
       if (err.message === 'TIMEOUT') {
-        console.error('[parseScript] AllSettled timeout après 240s');
+        addLog('error', 'AllSettled timeout après 240s');
         clearTimeout(globalTimeout);
-        return Response.json({ error: 'Parsing timeout - fichier trop grand' }, { status: 504 });
+        return Response.json({ error: 'Parsing timeout - fichier trop grand', logs }, { status: 504 });
       }
       throw err;
     }
 
-    console.log(`[parseScript] AllSettled complété avec ${settled.length} résultats`);
+    addLog('info', `AllSettled complété avec ${settled.length} résultats`);
     const chunkResults = [];
     for (let i = 0; i < settled.length; i++) {
       const r = settled[i];
       if (r.status === 'fulfilled') {
         chunkResults.push(r.value);
-        console.log(`[parseScript]   → Chunk ${r.value.ci + 1} succès`);
+        addLog('info', `Chunk ${r.value.ci + 1}/${chunks.length}: ${r.value.data?.lines?.length || 0} répliques`);
       } else {
-        console.warn(`[parseScript]   → Chunk ${i + 1} rejeté: ${r.reason?.message || String(r.reason)}`);
+        const errMsg = r.reason?.message || String(r.reason);
+        addLog('error', `Chunk ${i + 1}/${chunks.length}: ${errMsg}`);
         chunkResults.push({ success: false, ci: i, data: null });
       }
     }
 
     const successCount = chunkResults.filter(r => r.success).length;
-    console.log(`[parseScript] ${successCount}/${chunkResults.length} chunks réussis`);
+    addLog('info', `Résumé: ${successCount}/${chunkResults.length} chunks réussis`);
 
     // ==========================================
     // STEP 7: DÉDUPLICATION & CONSOLIDATION
@@ -305,7 +320,7 @@ ${chunkText}`,
     });
     allCharacters = cleanedChars;
 
-    console.log(`[parseScript] FINAL: ${allCharacters.size} personnages, ${allLines.length} répliques, ${rawText.length} chars`);
+    addLog('info', `Consolidation: ${allCharacters.size} personnages, ${allLines.length} répliques`);
 
     // ==========================================
     // STEP 8: STATISTIQUES D'INTÉGRITÉ
@@ -361,15 +376,18 @@ ${chunkText}`,
     clearTimeout(globalTimeout);
 
     if (wasTruncated) {
-      console.warn('[parseScript] ⚠️ TEXTE TRONQUÉ: Le PDF dépassait 5MB. Les dernières parties n\'ont pas été traitées.');
+      addLog('warn', '⚠️ Texte tronqué: Le PDF dépassait 5MB.');
     }
 
     if (allLines.length === 0 && allCharacters.size === 0) {
+      addLog('error', 'Aucune réplique détectée');
       return Response.json(
-        { error: 'Aucune réplique détectée. Vérifiez le format du fichier.' },
+        { error: 'Aucune réplique détectée. Vérifiez le format du fichier.', logs },
         { status: 400 }
       );
     }
+
+    addLog('info', 'Succès: Analyse complète');
 
     return Response.json({
       title,
@@ -378,6 +396,7 @@ ${chunkText}`,
       rawText: rawText,
       wasTruncated: wasTruncated,
       extractionMethod: extractionMethod,
+      logs,
       stats: {
         originalLength,
         parsedLength,
@@ -394,7 +413,7 @@ ${chunkText}`,
       }
     });
   } catch (error) {
-    console.error('[parseScript] Erreur inattendue:', error.message);
-    return Response.json({ error: error.message }, { status: 500 });
+    addLog('error', `Erreur inattendue: ${error.message}`);
+    return Response.json({ error: error.message, logs }, { status: 500 });
   }
 });

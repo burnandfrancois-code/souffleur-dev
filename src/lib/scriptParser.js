@@ -1,6 +1,6 @@
 import { base44 } from '@/api/base44Client';
 
-export async function parseScriptWithLLM(fileUrl, fileName, onProgress) {
+export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) {
   try {
     onProgress?.(10);
 
@@ -12,11 +12,17 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress) {
 
     onProgress?.(80);
 
+    // Passer les logs au callback
+    if (onLogs && result.data?.logs) {
+      onLogs(result.data.logs);
+    }
+
     return {
       characters: result.data?.characters || [],
       lines: result.data?.lines || [],
       stats: result.data?.stats || {},
-      rawText: result.data?.rawText || ''
+      rawText: result.data?.rawText || '',
+      logs: result.data?.logs || []
     };
   } catch (error) {
     console.error('Error parsing script:', error);
