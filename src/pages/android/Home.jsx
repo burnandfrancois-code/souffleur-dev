@@ -61,6 +61,18 @@ export default function AndroidHome() {
     );
   }
 
+  // Debug: Version visible
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-2 px-4">
+          <p className="text-primary font-bold">Home v2 chargée</p>
+          <p className="text-xs text-muted-foreground">Redirection en cours...</p>
+        </div>
+      </div>
+    );
+  }
+
   const handleGenderChange = (char, gender) => {
     setCharacterGenders(prev => ({ ...prev, [char]: gender }));
   };
