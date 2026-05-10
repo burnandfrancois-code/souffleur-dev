@@ -38,7 +38,15 @@ export default function Home() {
   const [processingError, setProcessingError] = useState(null);
   
   useEffect(() => {
-    setIsAndroid(false); // Toujours false sur /desktop/
+    const isAndroidDevice = /Android/i.test(navigator.userAgent);
+    setIsAndroid(isAndroidDevice);
+    
+    // Rediriger vers /android/ si on est sur Android
+    if (isAndroidDevice) {
+      navigate('/android/');
+      return;
+    }
+    
     (async () => {
       try {
         const scripts = await base44.entities.Script.list('-created_date', 1);
