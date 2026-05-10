@@ -126,7 +126,7 @@ export default function ComparisonResult({ result, onRetry, onContinue }) {
         {/* Mots manquants (missing + attendus des wrong) */}
         {(missingWords.length > 0 || wrongWords.length > 0) && (
           <div className="rounded-xl border border-yellow-500/40 bg-yellow-950/60 p-3 space-y-2">
-            <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">— Attendu mais absent / faux</p>
+            <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">— Attendu mais absent</p>
             <div className="flex flex-wrap gap-1.5 items-center">
               {wordResults.map((w, i) => {
                 if (w.status === 'wrong' || w.status === 'missing') {
