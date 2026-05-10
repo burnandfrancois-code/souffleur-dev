@@ -227,6 +227,13 @@ export async function compareTexts(expectedText, spokenText) {
       }
     }
 
+    // Construire une map directe : expectedWordIndex -> spokenWord pour les "faux"
+    const wrongMap = new Map(); // ei -> spoken word string
+    for (const [uePos, usPos] of wrongPairs) {
+      const ei = unmatchedExpectedIndices[uePos];
+      wrongMap.set(ei, us[usPos]);
+    }
+
     const wordResults = [];
     let correctCount = 0;
 
@@ -235,15 +242,10 @@ export async function compareTexts(expectedText, spokenText) {
       if (matchedExpected.has(ei)) {
         wordResults.push({ word, status: 'correct', got: '' });
         correctCount++;
+      } else if (wrongMap.has(ei)) {
+        wordResults.push({ word, status: 'wrong', got: wrongMap.get(ei) });
       } else {
-        const uePos = unmatchedExpectedIndices.indexOf(ei);
-        if (wrongPairs.has(uePos)) {
-          const usPos = wrongPairs.get(uePos);
-          const spokenWord = us[usPos];
-          wordResults.push({ word, status: 'wrong', got: spokenWord });
-        } else {
-          wordResults.push({ word, status: 'missing', got: '' });
-        }
+        wordResults.push({ word, status: 'missing', got: '' });
       }
     }
 
