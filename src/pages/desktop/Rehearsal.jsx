@@ -56,6 +56,10 @@ export default function Rehearsal() {
     queryFn: () => base44.entities.Script.filter({ id: scriptId }),
     select: (data) => data[0],
     enabled: !!scriptId,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 
   const stripDirections = (text) => text?.replace(/\([^)]*\)?/g, '').replace(/\[[^\]]*\]?/g, '').replace(/\s+/g, ' ').trim() || '';
