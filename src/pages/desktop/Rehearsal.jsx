@@ -350,21 +350,27 @@ export default function Rehearsal() {
            className="bg-primary text-primary-foreground text-lg px-10 py-6 gap-3"
            onClick={async (e) => {
              e.preventDefault();
+             console.log('Bouton cliqué');
              try {
+               console.log('Demande d\'accès au microphone...');
                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+               console.log('Microphone autorisé, arrêt des tracks');
                stream.getTracks().forEach(track => track.stop());
                autoPlayRef.current = autoPlay;
                speechRateRef.current = speechRate;
+               console.log('Démarrage de la répétition, started=true');
                setStarted(true);
                const firstLine = lines[0];
                if (firstLine && normalize(firstLine.character) !== normalize(myCharacter) && autoPlay) {
+                 console.log('Lancement de la chaîne de parole');
                  launchSpeakChain(0, lines, myCharacter, characterGenders);
                }
              } catch (e) {
+               console.error('Erreur complète:', e);
                if (e.name === 'NotAllowedError') {
                  alert('Microphone refusé. Vérifiez les paramètres de votre navigateur.');
                } else {
-                 console.error('Erreur au démarrage:', e);
+                 alert(`Erreur: ${e.message || e.name || 'Erreur inconnue'}`);
                }
              }
            }}
