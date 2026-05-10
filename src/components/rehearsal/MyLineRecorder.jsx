@@ -21,12 +21,10 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   const lastOkTimeRef = useRef(0);
   const sessionIdRef = useRef(0); // ID unique par instance de reconnaissance
   const restartCountRef = useRef(0);
-  const restartTimeoutRef = useRef(null);
 
   const stopRecording = useCallback(() => {
     userStoppedRef.current = true;
     restartCountRef.current = 0;
-    if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
     sessionIdRef.current += 1; // invalide toute instance précédente
     if (recognitionRef.current) {
       try {
@@ -167,35 +165,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
         return;
       }
       
-      // Écoute "OK" pendant délai — relance si détecté avant timeout
-      let okDetected = false;
-      const okRec = new SpeechRecognition();
-      okRec.lang = 'fr-FR';
-      okRec.continuous = false;
-      okRec.interimResults = false;
-      
-      okRec.onresult = (event) => {
-        const text = event.results[0]?.[0]?.transcript?.toLowerCase().trim() || '';
-        if (text.includes('ok') || text.includes('okay') || text.includes('o.k.') || text.includes('oke')) {
-          okDetected = true;
-          if (restartTimeoutRef.current) clearTimeout(restartTimeoutRef.current);
-          if (sessionIdRef.current === mySession && !userStoppedRef.current) {
-            startRecordingRef.current();
-          }
-        }
-      };
-      
-      okRec.onerror = () => {};
-      okRec.onend = () => {};
-      
-      try { okRec.start(); } catch (e) {}
-      
-      restartTimeoutRef.current = setTimeout(() => {
-        try { okRec.abort(); } catch (e) {}
-        if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
-        if (okDetected) return;
-        startRecordingRef.current();
-      }, 3000);
+      startRecordingRef.current();
     };
 
     try {
