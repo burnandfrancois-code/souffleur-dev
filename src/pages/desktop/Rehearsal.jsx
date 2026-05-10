@@ -46,11 +46,6 @@ export default function DesktopRehearsal() {
     }
   }, []);
 
-  // Vérifier la permission automatiquement au démarrage
-  useEffect(() => {
-    requestMicPermission();
-  }, [requestMicPermission]);
-
   const { data: script, isLoading } = useQuery({
     queryKey: ['script', scriptId],
     queryFn: () => base44.entities.Script.filter({ id: scriptId }),
