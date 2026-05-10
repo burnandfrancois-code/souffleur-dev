@@ -66,30 +66,50 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
         )}
 
         {/* Texte complet avec points d'erreur */}
-        {wordResults.length > 0 && (
-          <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-2.5 space-y-1.5">
-            <p className="text-xs font-bold text-green-400 uppercase tracking-wider">✓ Votre texte</p>
-            <div className="flex flex-wrap gap-1.5 items-center">
-              {wordResults.map((w, i) => {
-                if (w.status === 'correct' || w.status === 'phonetic') {
-                  return (
-                    <span key={i} className="px-1.5 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-300 border border-green-500/30">
-                      {w.word}
-                    </span>
-                  );
-                } else if (w.status === 'wrong') {
-                  return (
-                    <span key={i} title={`Dit : "${w.got}"`} style={{ display: 'inline-block', width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#ef4444', flexShrink: 0 }} />
-                  );
-                } else {
-                  return (
-                    <span key={i} title={`Manquant : "${w.word}"`} style={{ display: 'inline-block', width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#eab308', flexShrink: 0 }} />
-                  );
-                }
-              })}
+        {wordResults.length > 0 && (() => {
+          const blocks = [];
+          wordResults.forEach((w) => {
+            const status = (w.status === 'correct' || w.status === 'phonetic') ? 'correct' : w.status;
+            const last = blocks[blocks.length - 1];
+            if (last && last.status === status) {
+              last.words.push(w);
+            } else {
+              blocks.push({ status, words: [w] });
+            }
+          });
+          return (
+            <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-2.5 space-y-1.5">
+              <p className="text-xs font-bold text-green-400 uppercase tracking-wider">✓ Votre texte</p>
+              <div className="flex flex-wrap gap-1.5 items-center">
+                {blocks.map((block, bi) => {
+                  if (block.status === 'correct') {
+                    return block.words.map((w, wi) => (
+                      <span key={`${bi}-${wi}`} className="px-1.5 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-300 border border-green-500/30">
+                        {w.word}
+                      </span>
+                    ));
+                  } else if (block.status === 'wrong') {
+                    return (
+                      <span key={bi} title={block.words.map(w => `Dit : "${w.got}"`).join(' | ')} style={{ display: 'inline-flex', gap: '3px', alignItems: 'center' }}>
+                        {block.words.map((w, wi) => (
+                          <span key={wi} style={{ display: 'inline-block', width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#ef4444', flexShrink: 0 }} />
+                        ))}
+                      </span>
+                    );
+                  } else {
+                    return (
+                      <span key={bi} title={block.words.map(w => `Manquant : "${w.word}"`).join(' | ')} style={{ display: 'inline-flex', gap: '3px', alignItems: 'center' }}>
+                        {block.words.map((w, wi) => (
+                          <span key={wi} style={{ display: 'inline-block', width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#eab308', flexShrink: 0 }} />
+                        ))}
+                      </span>
+                    );
+                  }
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Mots manquants */}
         {missingWords.length > 0 && (

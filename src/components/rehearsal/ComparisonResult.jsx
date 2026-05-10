@@ -41,30 +41,53 @@ export default function ComparisonResult({ result, onRetry, onContinue }) {
         )}
 
         {/* Texte complet avec points d'erreur */}
-        {wordResults.length > 0 && (
-          <div style={{ borderRadius: '12px', border: '1px solid rgba(74,222,128,0.4)', backgroundColor: 'rgba(20,83,45,0.7)', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <p style={{ fontSize: '11px', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.08em' }}>✓ Votre texte</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
-              {wordResults.map((w, i) => {
-                if (w.status === 'correct' || w.status === 'phonetic') {
-                  return (
-                    <span key={i} style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, backgroundColor: 'rgba(74,222,128,0.25)', color: '#bbf7d0', border: '1px solid rgba(74,222,128,0.5)' }}>
-                      {w.word}
-                    </span>
-                  );
-                } else if (w.status === 'wrong') {
-                  return (
-                    <span key={i} title={`Dit : "${w.got}"`} style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#ef4444', flexShrink: 0 }} />
-                  );
-                } else {
-                  return (
-                    <span key={i} title={`Manquant : "${w.word}"`} style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#eab308', flexShrink: 0 }} />
-                  );
-                }
-              })}
+        {wordResults.length > 0 && (() => {
+          // Regrouper les mots consécutifs en blocs
+          const blocks = [];
+          wordResults.forEach((w, i) => {
+            const status = (w.status === 'correct' || w.status === 'phonetic') ? 'correct' : w.status;
+            const last = blocks[blocks.length - 1];
+            if (last && last.status === status) {
+              last.words.push(w);
+            } else {
+              blocks.push({ status, words: [w] });
+            }
+          });
+          return (
+            <div style={{ borderRadius: '12px', border: '1px solid rgba(74,222,128,0.4)', backgroundColor: 'rgba(20,83,45,0.7)', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <p style={{ fontSize: '11px', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.08em' }}>✓ Votre texte</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+                {blocks.map((block, bi) => {
+                  if (block.status === 'correct') {
+                    return block.words.map((w, wi) => (
+                      <span key={`${bi}-${wi}`} style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, backgroundColor: 'rgba(74,222,128,0.25)', color: '#bbf7d0', border: '1px solid rgba(74,222,128,0.5)' }}>
+                        {w.word}
+                      </span>
+                    ));
+                  } else if (block.status === 'wrong') {
+                    const title = block.words.map(w => `Dit : "${w.got}"`).join(' | ');
+                    return (
+                      <span key={bi} title={title} style={{ display: 'inline-flex', gap: '3px', alignItems: 'center' }}>
+                        {block.words.map((w, wi) => (
+                          <span key={wi} style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#ef4444', flexShrink: 0 }} />
+                        ))}
+                      </span>
+                    );
+                  } else {
+                    const title = block.words.map(w => `Manquant : "${w.word}"`).join(' | ');
+                    return (
+                      <span key={bi} title={title} style={{ display: 'inline-flex', gap: '3px', alignItems: 'center' }}>
+                        {block.words.map((w, wi) => (
+                          <span key={wi} style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#eab308', flexShrink: 0 }} />
+                        ))}
+                      </span>
+                    );
+                  }
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Mots faux */}
         {wrongWords.length > 0 && (
