@@ -94,9 +94,12 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
                     );
                   } else if (block.status === 'wrong') {
                     return (
-                      <span key={bi} title={block.words.map(w => `Dit : "${w.got}"`).join(' | ')} style={{ display: 'inline-flex', gap: '3px', alignItems: 'center' }}>
+                      <span key={bi} title={block.words.map(w => `Dit : "${w.got}" au lieu de "${w.word}"`).join(' | ')} style={{ display: 'inline-flex', gap: '2px', alignItems: 'center' }}>
                         {block.words.map((w, wi) => (
-                          <span key={wi} style={{ display: 'inline-block', width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#ef4444', flexShrink: 0 }} />
+                          <React.Fragment key={wi}>
+                            <span style={{ display: 'inline-block', width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#ef4444', flexShrink: 0 }} />
+                            <span style={{ display: 'inline-block', width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#eab308', flexShrink: 0 }} />
+                          </React.Fragment>
                         ))}
                       </span>
                     );
@@ -115,23 +118,29 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
           );
         })()}
 
-        {/* Mots manquants */}
-        {missingWords.length > 0 && (
+        {/* Mots manquants (missing + attendus des wrong) */}
+        {(missingWords.length > 0 || wrongWords.length > 0) && (
           <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-2.5 space-y-1.5">
-            <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">— Manquants</p>
+            <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">— Attendu mais absent / faux</p>
             <div className="flex flex-wrap gap-1 items-center">
-              {missingWords.map((w, i) => {
-                const curIndex = w._idx;
-                const prevIndex = i > 0 ? missingWords[i - 1]._idx : -1;
-                const isGap = i > 0 && curIndex - prevIndex > 1;
-                return (
-                  <React.Fragment key={i}>
-                    {isGap && <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#4ade80', flexShrink: 0 }} />}
-                    <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 line-through">
-                      {w.word}
-                    </span>
-                  </React.Fragment>
-                );
+              {wordResults.map((w, i) => {
+                if (w.status === 'wrong' || w.status === 'missing') {
+                  const prevW = i > 0 ? wordResults[i - 1] : null;
+                  const isGap = prevW && prevW.status !== 'wrong' && prevW.status !== 'missing';
+                  return (
+                    <React.Fragment key={i}>
+                      {isGap && i > 0 && <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#4ade80', flexShrink: 0 }} />}
+                      <span className={`px-1.5 py-0.5 rounded text-xs font-medium border line-through ${
+                        w.status === 'wrong'
+                          ? 'bg-red-500/10 text-yellow-300 border-yellow-500/30'
+                          : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
+                      }`}>
+                        {w.word}
+                      </span>
+                    </React.Fragment>
+                  );
+                }
+                return null;
               })}
             </div>
           </div>
