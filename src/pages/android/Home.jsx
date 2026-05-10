@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ParseProgress from '@/components/upload/ParseProgress';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Theater, Sparkles, Mic, BookOpen, Play, Pencil, HelpCircle, CreditCard, AlertCircle, ChevronRight, List } from 'lucide-react';
+import { Theater, Sparkles, Mic, BookOpen, Play, Pencil, HelpCircle, CreditCard, AlertCircle, ChevronRight, List, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { base44 } from '@/api/base44Client';
@@ -15,7 +15,7 @@ import { useAuth } from '@/lib/AuthContext';
 
 export default function AndroidHome() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isLoadingAuth } = useAuth();
   const subStatus = user?.subscription_status || 'none';
   const urlParams = new URLSearchParams(window.location.search);
   const initialStep = urlParams.get('step') || 'upload';
@@ -32,6 +32,14 @@ export default function AndroidHome() {
   const [editingScriptId, setEditingScriptId] = useState(null);
   const [fileName, setFileName] = useState('');
   const [logs, setLogs] = useState([]);
+
+  if (isLoadingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   useEffect(() => {
     (async () => {
