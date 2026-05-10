@@ -179,6 +179,47 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
 
 
 
+  // Voice commands during result phase
+  useEffect(() => {
+    if (phase !== 'result' || isRecording) return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    let active = true;
+    let rec = null;
+
+    const start = () => {
+      if (!active) return;
+      rec = new SpeechRecognition();
+      rec.lang = 'fr-FR';
+      rec.continuous = false;
+      rec.interimResults = false;
+
+      rec.onresult = (event) => {
+        if (!active) return;
+        const text = event.results[0]?.[0]?.transcript?.toLowerCase().trim() || '';
+        if (text.includes('passer') || text.includes('suivant') || text.includes('continuer')) {
+          onContinue?.();
+        } else if (text.includes('réessayer') || text.includes('recommencer')) {
+          onRetry?.();
+        }
+      };
+
+      rec.onend = () => { if (active) setTimeout(start, 100); };
+      rec.onerror = (e) => { if (e.error !== 'aborted' && active) setTimeout(start, 300); };
+
+      try { rec.start(); } catch (e) {}
+    };
+
+    const timer = setTimeout(start, 200);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      if (rec) { try { rec.abort(); } catch (e) {} }
+    };
+  }, [phase, isRecording, onContinue, onRetry]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
