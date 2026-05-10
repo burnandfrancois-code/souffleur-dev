@@ -11,6 +11,7 @@ export function useSimpleVoiceInput() {
   const interimRef = useRef('');
   const lastOkTimeRef = useRef(0);
   const userStoppedRef = useRef(false);
+  const pendingTimersRef = useRef([]);
 
   const stop = useCallback(() => {
     userStoppedRef.current = true;
@@ -115,15 +116,17 @@ export function useSimpleVoiceInput() {
 
     rec.onend = () => {
       if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
+      setIsRecording(false);
       
-      // Redémarrer la reconnaissance si pas fermée intentionnellement
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.start();
-        } catch (e) {
-          // Déjà en cours
+      // Redémarrer après un délai si pas fermée intentionnellement
+      const timer = setTimeout(() => {
+        if (sessionIdRef.current === mySession && recognitionRef.current && !userStoppedRef.current) {
+          try {
+            recognitionRef.current.start();
+          } catch (e) {}
         }
-      }
+      }, 500);
+      pendingTimersRef.current.push(timer);
     };
 
     try {
