@@ -65,6 +65,13 @@ export default function AndroidRehearsal() {
 
   useEffect(() => () => cancelAll(), [cancelAll]);
 
+  // Auto-start partner lines on Android when arriving at a partner line
+  useEffect(() => {
+    if (!isMyLine && !isSpeaking && started && phase === 'line') {
+      launchSpeakChain(currentLineIndex);
+    }
+  }, [currentLineIndex, isMyLine, started, phase, isSpeaking, launchSpeakChain]);
+
   const launchSpeakChain = useCallback((index) => {
     speakPartnerLines(index, lines, myCharacter, characterGenders, stripDirections);
   }, [speakPartnerLines, lines, myCharacter, characterGenders]);
