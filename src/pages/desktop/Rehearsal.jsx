@@ -9,6 +9,7 @@ import { speakText, stopSpeaking } from '@/lib/speechServices';
 import { compareTexts } from '@/lib/scriptParser';
 import ComparisonResult from '@/components/rehearsal/ComparisonResult';
 import SessionSummary from '@/components/rehearsal/SessionSummary';
+import { useSimpleVoiceInput } from '@/hooks/useSimpleVoiceInput';
 
 export default function DesktopRehearsal() {
   const navigate = useNavigate();
@@ -24,15 +25,11 @@ export default function DesktopRehearsal() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [phase, setPhase] = useState('line');
   const [result, setResult] = useState(null);
-  const [transcript, setTranscript] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
   const [completed, setCompleted] = useState(new Set());
   const [scores, setScores] = useState([]);
   const [started, setStarted] = useState(false);
 
-  const recognitionRef = useRef(null);
-  const sessionRef = useRef(0);
-  const recordingStartedRef = useRef(false);
+  const voiceRec = useSimpleVoiceInput();
 
   const { data: script, isLoading } = useQuery({
     queryKey: ['script', scriptId],
@@ -54,92 +51,29 @@ export default function DesktopRehearsal() {
   const stripDirections = (text) => 
     text?.replace(/\([^)]*\)?/g, '').replace(/\[[^\]]*\]?/g, '').replace(/\s+/g, ' ').trim() || '';
 
-  // Start recording with auto-restart loop
-  const startRecording = useCallback(() => {
-    sessionRef.current += 1;
-    const session = sessionRef.current;
-    recordingStartedRef.current = true;
-    setTranscript('');
-    setIsRecording(true);
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    const rec = new SpeechRecognition();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = 'fr-FR';
-    recognitionRef.current = rec;
-
-    let finalWords = [];
-
-    rec.onresult = (e) => {
-      if (session !== sessionRef.current) return;
-
-      for (let i = 0; i < e.results.length; i++) {
-        if (e.results[i].isFinal) {
-          const word = e.results[i][0].transcript.trim();
-          if (word && !finalWords.includes(word)) finalWords.push(word);
-        }
-      }
-
-      let interim = '';
-      for (let i = e.results.length - 1; i >= 0; i--) {
-        if (!e.results[i].isFinal) {
-          interim = e.results[i][0].transcript.trim();
-          break;
-        }
-      }
-
-      const display = (finalWords.join(' ') + (interim ? ' ' + interim : '')).trim();
-      setTranscript(display);
-
-      const hasOk = display.split(/\s+/).some(w => /^ok$/i.test(w) || /^okay$/i.test(w));
-      if (hasOk) {
-        const text = display.split(/\s+/)
-          .filter(w => !/^ok$/i.test(w) && !/^okay$/i.test(w))
-          .join(' ')
-          .trim();
-        recordingStartedRef.current = false;
-        if (recognitionRef.current) {
-          try { recognitionRef.current.abort(); } catch (e) {}
-        }
-        setIsRecording(false);
-        submitRecording(text, session);
-      }
-    };
-
-    rec.onend = () => {
-      if (session !== sessionRef.current || !recordingStartedRef.current) return;
-      try { rec.start(); } catch (e) {}
-    };
-
-    try {
-      rec.start();
-    } catch (e) {
-      setIsRecording(false);
-    }
-  }, []);
-
-  const submitRecording = useCallback(async (text, session) => {
+  const submitRecording = useCallback(async (text) => {
+    voiceRec.stop();
     setPhase('comparing');
     const compResult = await compareTexts(stripDirections(currentLine.text), text);
-    if (session !== sessionRef.current) return;
     setResult(compResult);
     setScores(prev => [...prev, compResult.accuracy ?? 0]);
     if (compResult.perfect) {
       setCompleted(prev => new Set([...prev, currentIndex]));
     }
     setPhase('result');
-  }, [currentLine, currentIndex]);
+  }, [currentLine, currentIndex, voiceRec]);
 
   // Auto-start recording when arriving at my line
   useEffect(() => {
-    if (phase === 'line' && isMyLine && started && !isRecording && !recordingStartedRef.current) {
-      const timer = setTimeout(() => startRecording(), 100);
+    if (phase === 'line' && isMyLine && started && !voiceRec.isRecording) {
+      const timer = setTimeout(() => {
+        voiceRec.start((finalText) => {
+          submitRecording(finalText);
+        });
+      }, 100);
       return () => clearTimeout(timer);
     }
-  }, [phase, isMyLine, started, isRecording, startRecording]);
+  }, [phase, isMyLine, started, voiceRec, submitRecording]);
 
   // Auto-advance on perfect
   useEffect(() => {
@@ -155,43 +89,37 @@ export default function DesktopRehearsal() {
   const handleContinue = useCallback(() => {
     setResult(null);
     setPhase('line');
-    setTranscript('');
-    recordingStartedRef.current = false;
+    voiceRec.reset();
     setCurrentIndex(prev => prev + 1);
-  }, []);
+  }, [voiceRec]);
 
   const handleRetry = () => {
     setResult(null);
     setPhase('line');
-    setTranscript('');
-    recordingStartedRef.current = false;
+    voiceRec.reset();
   };
 
   const handleNext = () => {
-    recordingStartedRef.current = false;
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
-    }
-    setIsRecording(false);
+    voiceRec.stop();
     setResult(null);
     setPhase('line');
-    setTranscript('');
+    voiceRec.reset();
     setCurrentIndex(prev => prev + 1);
   };
 
   const speakPartner = useCallback(async () => {
-    recordingStartedRef.current = false;
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
-    }
-    setIsRecording(false);
+    voiceRec.stop();
     const gender = genders[currentLine.character] || 'male';
     await speakText(stripDirections(currentLine.text), 'fr-FR', gender, 1);
     // Auto-restart recording if it was my turn
     if (isMyLine) {
-      setTimeout(() => startRecording(), 300);
+      setTimeout(() => {
+        voiceRec.start((finalText) => {
+          submitRecording(finalText);
+        });
+      }, 300);
     }
-  }, [currentLine, genders, isMyLine, startRecording]);
+  }, [currentLine, genders, isMyLine, voiceRec, submitRecording]);
 
   if (isLoading) {
     return (
@@ -258,7 +186,7 @@ export default function DesktopRehearsal() {
                   setCompleted(new Set());
                   setScores([]);
                   setPhase('line');
-                  recordingStartedRef.current = false;
+                  voiceRec.reset();
                 }}
               />
             ) : currentLine && (
@@ -275,18 +203,18 @@ export default function DesktopRehearsal() {
                           <p className="text-sm text-muted-foreground mb-3">Votre réplique:</p>
                           <p className="text-lg leading-relaxed text-foreground mb-6">{currentLine.text}</p>
                           <div className={`rounded-full w-20 h-20 mx-auto flex items-center justify-center transition-all ${
-                            isRecording ? 'bg-destructive animate-pulse' : 'bg-primary'
+                            voiceRec.isRecording ? 'bg-destructive animate-pulse' : 'bg-primary'
                           }`}>
                             <div className="text-white text-2xl">🎤</div>
                           </div>
                           <p className="text-sm text-primary font-semibold mt-4">
-                            {isRecording ? '🔴 ENREGISTREMENT' : 'Microphone prêt'}
+                            {voiceRec.isRecording ? '🔴 ENREGISTREMENT' : 'Microphone prêt'}
                           </p>
                         </div>
 
-                        {transcript && (
+                        {voiceRec.transcript && (
                           <div className="bg-background border border-border rounded-lg p-4">
-                            <p className="text-sm text-foreground">{transcript}</p>
+                            <p className="text-sm text-foreground">{voiceRec.transcript}</p>
                           </div>
                         )}
 
@@ -305,7 +233,7 @@ export default function DesktopRehearsal() {
                     {phase === 'result' && result && (
                       <ComparisonResult
                         result={result}
-                        transcription={transcript}
+                        transcription={voiceRec.transcript}
                         onRetry={handleRetry}
                         onContinue={handleContinue}
                       />
