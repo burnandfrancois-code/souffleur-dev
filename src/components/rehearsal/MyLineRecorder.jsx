@@ -24,6 +24,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   const restartTimerRef = useRef(null);
 
   const stopRecording = useCallback(() => {
+    console.log('[STT] stopRecording appelé');
     userStoppedRef.current = true;
     restartCountRef.current = 0;
     sessionIdRef.current += 1; // invalide toute instance précédente
@@ -33,6 +34,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     }
     if (recognitionRef.current) {
       try {
+        console.log('[STT] abort appelé');
         recognitionRef.current.abort();
       } catch (e) {
         // Ignore
@@ -255,6 +257,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
 
   // Reset + auto-start when line changes
   useEffect(() => {
+    console.log('[STT] useEffect: line changed, stopRecording');
     stopRecording();
     finalWordsRef.current = [];
     interimRef.current = '';
@@ -265,6 +268,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       // Délai plus long à vitesses élevées pour laisser le temps de terminer sa phrase
       const delay = speechRate >= 2 ? 1500 : 1200;
       const timer = setTimeout(() => {
+        console.log('[STT] useEffect: auto-start after delay');
         startRecordingRef.current();
       }, delay);
       return () => clearTimeout(timer);
