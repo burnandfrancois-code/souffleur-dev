@@ -42,6 +42,7 @@ export async function unlockAudioForAndroid() {
 
 function getVoices() {
   return new Promise((resolve) => {
+    if (!window.speechSynthesis) { resolve([]); return; }
     const voices = window.speechSynthesis.getVoices();
     if (voices.length > 0) { resolve(voices); return; }
     // Sur Android, les voix se chargent de manière asynchrone
@@ -51,7 +52,7 @@ function getVoices() {
     };
     window.speechSynthesis.addEventListener('voiceschanged', handler);
     // Fallback si l'événement ne se déclenche pas
-    setTimeout(() => resolve(window.speechSynthesis.getVoices()), 1000);
+    setTimeout(() => resolve(window.speechSynthesis.getVoices() || []), 1000);
   });
 }
 
@@ -106,6 +107,7 @@ export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1,
       });
 
       // Sur Android, cancel() avant speak() évite les conflits
+      if (!window.speechSynthesis) { resolve(); return; }
       window.speechSynthesis.cancel();
       setTimeout(() => {
         if (signal?.aborted) { resolve(); return; }
