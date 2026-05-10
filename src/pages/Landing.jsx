@@ -1,10 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Theater, Mic, BookOpen, Sparkles, ArrowRight, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/lib/AuthContext';
 
 export default function Landing() {
+  const navigate = useNavigate();
+  const { isAuthenticated, isLoadingAuth, isLoadingPublicSettings } = useAuth();
+
+  useEffect(() => {
+    if (!isLoadingAuth && !isLoadingPublicSettings && isAuthenticated) {
+      navigate('/platform');
+    }
+  }, [isAuthenticated, isLoadingAuth, isLoadingPublicSettings]);
+
   const handleLogin = () => {
     base44.auth.redirectToLogin('/');
   };
