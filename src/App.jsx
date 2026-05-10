@@ -15,9 +15,11 @@ const Settings = lazy(() => import('@/pages/Settings'));
 const DesktopHome = lazy(() => import('@/pages/desktop/Home'));
 const DesktopRehearsal = lazy(() => import('@/pages/desktop/Rehearsal'));
 const DesktopMyScripts = lazy(() => import('@/pages/desktop/MyScripts'));
+const DesktopTarifs = lazy(() => import('@/pages/desktop/Tarifs'));
 const AndroidHome = lazy(() => import('@/pages/android/Home'));
 const AndroidRehearsal = lazy(() => import('@/pages/android/Rehearsal'));
 const AndroidMyScripts = lazy(() => import('@/pages/android/MyScripts'));
+const AndroidTarifs = lazy(() => import('@/pages/android/Tarifs'));
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -53,9 +55,11 @@ const AuthenticatedApp = () => {
         <Route path="/desktop/" element={<DesktopHome />} />
         <Route path="/desktop/rehearsal" element={<DesktopRehearsal />} />
         <Route path="/desktop/my-scripts" element={<DesktopMyScripts />} />
+        <Route path="/desktop/tarifs" element={<DesktopTarifs />} />
         <Route path="/android/" element={<AndroidHome />} />
         <Route path="/android/rehearsal" element={<AndroidRehearsal />} />
         <Route path="/android/my-scripts" element={<AndroidMyScripts />} />
+        <Route path="/android/tarifs" element={<AndroidTarifs />} />
         <Route path="*" element={<PageNotFound />} />
       </Routes>
     </Suspense>
