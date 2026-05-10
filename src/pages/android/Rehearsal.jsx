@@ -44,12 +44,17 @@ export default function AndroidRehearsal() {
     onSpeakingChange: (s) => setIsSpeaking(s),
   });
 
-  const { data: script, isLoading } = useQuery({
+  const { data: script, isLoading, error } = useQuery({
     queryKey: ['script', scriptId],
     queryFn: async () => {
       if (!scriptId) return null;
-      const result = await base44.entities.Script.filter({ id: scriptId });
-      return result?.[0] || null;
+      try {
+        const result = await base44.entities.Script.filter({ id: scriptId });
+        return result?.[0] || null;
+      } catch (err) {
+        console.error('Failed to fetch script:', err);
+        throw err;
+      }
     },
     enabled: !!scriptId,
     retry: 1,
