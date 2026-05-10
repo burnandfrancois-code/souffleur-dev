@@ -70,6 +70,76 @@ export async function verifyScriptIntegrity(rawText, parsedScript) {
   }
 }
 
+// Encodage phonétique simplifié pour le français
+function phoneticFR(word) {
+  return word
+    .toLowerCase()
+    // Suppressions/remplacements phonétiques français
+    .replace(/[aàâä]/g, 'a')
+    .replace(/[eéèêë]/g, 'e')
+    .replace(/[iîï]/g, 'i')
+    .replace(/[oôö]/g, 'o')
+    .replace(/[uùûü]/g, 'u')
+    .replace(/[yÿ]/g, 'i')
+    .replace(/ç/g, 's')
+    .replace(/œ/g, 'e')
+    .replace(/æ/g, 'e')
+    // Sons similaires
+    .replace(/ph/g, 'f')
+    .replace(/ch/g, 'x')
+    .replace(/gn/g, 'ni')
+    .replace(/qu/g, 'k')
+    .replace(/gu/g, 'g')
+    .replace(/eau|au|o/g, 'o')
+    .replace(/ain|ein|in|un/g, 'in')
+    .replace(/an|en|am|em/g, 'an')
+    .replace(/on|om/g, 'on')
+    .replace(/tion/g, 'sion')
+    .replace(/z/g, 's')
+    .replace(/x/g, 's')
+    // Consonnes finales muettes
+    .replace(/[dst]$/g, '')
+    .replace(/er$/g, 'e')
+    .replace(/ez$/g, 'e')
+    // Doubles consonnes
+    .replace(/(.)\1+/g, '$1')
+    // Supprimer les h
+    .replace(/h/g, '')
+    // Supprimer les e muets finaux
+    .replace(/e$/g, '');
+}
+
+function wordsMatch(a, b) {
+  if (a === b) return true;
+  // Tolérance si l'un contient l'autre (préfixe) pour mots courts
+  if (a.length >= 4 && b.startsWith(a)) return true;
+  if (b.length >= 4 && a.startsWith(b)) return true;
+  // Comparaison phonétique
+  const pa = phoneticFR(a);
+  const pb = phoneticFR(b);
+  if (pa === pb) return true;
+  // Distance de Levenshtein normalisée (tolérance ~20%)
+  const maxLen = Math.max(pa.length, pb.length);
+  if (maxLen === 0) return true;
+  const dist = levenshtein(pa, pb);
+  return dist / maxLen <= 0.25;
+}
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = [];
+  for (let i = 0; i <= m; i++) { dp[i] = [i]; }
+  for (let j = 0; j <= n; j++) { dp[0][j] = j; }
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i-1] === b[j-1]
+        ? dp[i-1][j-1]
+        : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+    }
+  }
+  return dp[m][n];
+}
+
 export async function compareTexts(expectedText, spokenText) {
   try {
     const normalize = (text) =>
@@ -95,7 +165,7 @@ export async function compareTexts(expectedText, spokenText) {
     }
     for (let row = 1; row <= m; row++) {
       for (let col = 1; col <= n; col++) {
-        if (expectedWords[row - 1] === spokenWords[col - 1]) {
+        if (wordsMatch(expectedWords[row - 1], spokenWords[col - 1])) {
           dp[row][col] = dp[row - 1][col - 1] + 1;
         } else {
           dp[row][col] = Math.max(dp[row - 1][col], dp[row][col - 1]);
@@ -108,7 +178,7 @@ export async function compareTexts(expectedText, spokenText) {
     const matchedSpoken = new Set();
     let row = m, col = n;
     while (row > 0 && col > 0) {
-      if (expectedWords[row - 1] === spokenWords[col - 1]) {
+      if (wordsMatch(expectedWords[row - 1], spokenWords[col - 1])) {
         matchedExpected.add(row - 1);
         matchedSpoken.add(col - 1);
         row--; col--;
