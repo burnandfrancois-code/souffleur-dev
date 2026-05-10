@@ -360,13 +360,60 @@ export default function Home() {
                  </div>
 
                 {parsedScript.characters?.length > 0 ? (
-                  <CharacterSelector
-                    characters={parsedScript.characters}
-                    selected={selectedCharacter}
-                    onSelect={handleCharacterSelect}
-                    genders={characterGenders}
-                    onGenderChange={handleGenderChange}
-                  />
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {parsedScript.characters.map((char, idx) => {
+                      const isSelected = selectedCharacter === char;
+                      return (
+                        <motion.div
+                          key={char}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: idx * 0.05 }}
+                          onClick={() => setSelectedCharacter(char)}
+                          className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                            isSelected
+                              ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20'
+                              : 'border-border hover:border-primary/50 bg-card'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className={`w-6 h-6 rounded-full ${isSelected ? 'bg-primary' : 'bg-secondary'} flex items-center justify-center text-xs`}>
+                              👤
+                            </div>
+                            <p className="font-bold text-foreground">{char}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleGenderChange(char, 'male');
+                              }}
+                              className={`flex-1 px-2 py-1 rounded-md text-xs font-semibold transition-all ${
+                                characterGenders[char] === 'male'
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                              }`}
+                            >
+                              ♂ H
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleGenderChange(char, 'female');
+                              }}
+                              className={`flex-1 px-2 py-1 rounded-md text-xs font-semibold transition-all ${
+                                characterGenders[char] === 'female'
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-secondary text-muted-foreground hover:bg-secondary/80'
+                              }`}
+                            >
+                              ♀ F
+                            </button>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     <p className="text-sm text-muted-foreground text-center">
