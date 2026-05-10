@@ -20,8 +20,8 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-      <div className={`rounded-2xl border-2 p-4 space-y-3 ${
-        isPerfect ? 'border-green-500/30 bg-green-500/5' : 'border-primary/30 bg-primary/5'
+      <div className={`rounded-2xl border-2 p-4 space-y-3 bg-black ${
+        isPerfect ? 'border-green-500/40' : 'border-primary/40'
       }`}>
         {/* Score */}
         <div className="flex items-center justify-center gap-3">
