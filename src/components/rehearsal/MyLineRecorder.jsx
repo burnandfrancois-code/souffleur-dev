@@ -164,15 +164,8 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     };
 
     rec.onend = () => {
-      console.log('[STT] onend - session valide?', sessionIdRef.current === mySession, 'user stopped?', userStoppedRef.current);
-      if (sessionIdRef.current !== mySession) return;
-      if (userStoppedRef.current) return;
-      // Redémarrer après un délai si le micro s'arrête
-      setTimeout(() => {
-        if (sessionIdRef.current === mySession && !userStoppedRef.current && recognitionRef.current) {
-          try { recognitionRef.current.start(); } catch (e) {}
-        }
-      }, 300);
+      // Avec continuous: true, le micro ne devrait pas s'arrêter
+      // Ignore les événements onend
     };
 
     try {
