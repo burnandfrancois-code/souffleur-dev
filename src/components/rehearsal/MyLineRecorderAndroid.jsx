@@ -191,15 +191,6 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
 
   return (
     <div className="space-y-3">
-      {/* Debug Logs */}
-      {debugLogs.length > 0 && (
-        <div className="bg-black border border-yellow-500/30 rounded-lg p-2 max-h-24 overflow-y-auto text-xs text-yellow-400 font-mono space-y-0.5">
-          {debugLogs.map((log, i) => (
-            <div key={i}>{log}</div>
-          ))}
-        </div>
-      )}
-
       {/* Error */}
       {sttError && (
         <motion.div
@@ -233,6 +224,15 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
           {isRecording ? '🎙 Parlez !' : '🎤 C\'est votre tour'}
         </p>
       </div>
+
+      {/* Debug Logs */}
+      {debugLogs.length > 0 && (
+        <div className="bg-black border border-yellow-500/30 rounded-lg p-2 max-h-24 overflow-y-auto text-xs text-yellow-400 font-mono space-y-0.5">
+          {debugLogs.map((log, i) => (
+            <div key={i}>{log}</div>
+          ))}
+        </div>
+      )}
 
       {/* Transcript */}
       <div className="bg-background border border-border rounded-lg px-3 py-2 min-h-[2rem] flex items-center">
