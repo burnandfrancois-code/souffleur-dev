@@ -11,8 +11,11 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
   const wrongWords   = wordResults.map((w, i) => ({ ...w, _idx: i })).filter(w => w.status === 'wrong');
   const missingWords = wordResults.map((w, i) => ({ ...w, _idx: i })).filter(w => w.status === 'missing');
 
-  const wrongPhrase   = wrongWords.map(w => w.word).join(' ');
-  const missingPhrase = missingWords.map(w => w.word).join(' ');
+  const spokenUnmatched = [
+    ...wrongWords.map(w => w.got).filter(Boolean),
+    ...(result.extra_spoken || [])
+  ];
+  const hasWrongOrExtra = spokenUnmatched.length > 0;
 
   const isPerfect       = result.perfect;
   const accuracy        = result.accuracy || 0;
@@ -41,27 +44,21 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
         )}
 
         {/* Mots faux */}
-        {wrongWords.length > 0 && (
+        {hasWrongOrExtra && (
           <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-2.5 space-y-1.5">
             <p className="text-xs font-bold text-red-400 uppercase tracking-wider">✗ Faux — vous avez dit :</p>
             <div className="flex flex-wrap gap-1 items-center">
-              {wrongWords.map((w, i) => {
-                const curIndex = w._idx;
-                const prevIndex = i > 0 ? wrongWords[i - 1]._idx : -1;
-                const isGap = i > 0 && curIndex - prevIndex > 1;
-                return (
-                  <React.Fragment key={i}>
-                    {isGap && <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#4ade80', flexShrink: 0 }} />}
-                    <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-300 border border-red-500/30">
-                      {w.got || '?'}
-                    </span>
-                  </React.Fragment>
-                );
-              })}
+              {spokenUnmatched.map((word, i) => (
+                <span key={i} className="px-1.5 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-300 border border-red-500/30">
+                  {word}
+                </span>
+              ))}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Attendu : {wrongWords.map(w => w.word).join(', ')}
-            </p>
+            {wrongWords.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Attendu : {wrongWords.map(w => w.word).join(', ')}
+              </p>
+            )}
           </div>
         )}
 

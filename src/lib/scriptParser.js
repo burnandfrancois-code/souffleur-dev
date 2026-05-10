@@ -229,6 +229,9 @@ export async function compareTexts(expectedText, spokenText) {
       }
     }
 
+    // Mots parlés non-matchés qui dépassent le nombre de mots attendus non-matchés
+    const extraSpoken = unmatchedSpokenWords.slice(unmatchedExpectedIndices.length);
+
     const missingCount = wordResults.filter(w => w.status === 'missing').length;
     const accuracy = m > 0 ? Math.round((correctCount / m) * 100) : 0;
 
@@ -238,6 +241,7 @@ export async function compareTexts(expectedText, spokenText) {
       word_results: wordResults,
       correctCount,
       missingCount,
+      extra_spoken: extraSpoken,
       extraCount: Math.max(0, n - matchedSpoken.size)
     };
   } catch (error) {
