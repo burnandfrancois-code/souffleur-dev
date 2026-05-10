@@ -14,17 +14,12 @@ export function useSimpleVoiceInput() {
   const pendingTimersRef = useRef([]);
   const okDetectedRef = useRef(false);
   const intentionallyStopping = useRef(false);
-  const keepAliveIntervalRef = useRef(null);
   const SpeechRecognitionRef = useRef(null);
 
   const stop = useCallback(() => {
     intentionallyStopping.current = true;
     userStoppedRef.current = true;
     sessionIdRef.current += 1;
-    if (keepAliveIntervalRef.current) {
-      clearInterval(keepAliveIntervalRef.current);
-      keepAliveIntervalRef.current = null;
-    }
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch (e) {}
     }
@@ -154,21 +149,6 @@ export function useSimpleVoiceInput() {
 
     try {
       rec.start();
-      
-      // Keep-alive: redémarrer avant timeout de 30 secondes
-      if (keepAliveIntervalRef.current) {
-        clearInterval(keepAliveIntervalRef.current);
-      }
-      keepAliveIntervalRef.current = setInterval(() => {
-        if (sessionIdRef.current === mySession && !okDetectedRef.current && !intentionallyStopping.current) {
-          try {
-            if (recognitionRef.current) {
-              recognitionRef.current.stop();
-              // onend va automatiquement redémarrer
-            }
-          } catch (e) {}
-        }
-      }, 20000); // Redémarrer toutes les 20 secondes pour éviter fermeture prématurée
     } catch (e) {
       setError({ message: `Erreur: ${e.message}` });
     }
@@ -184,9 +164,6 @@ export function useSimpleVoiceInput() {
 
   useEffect(() => {
     return () => {
-      if (keepAliveIntervalRef.current) {
-        clearInterval(keepAliveIntervalRef.current);
-      }
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch (e) {}
       }
