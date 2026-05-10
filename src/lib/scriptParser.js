@@ -111,9 +111,13 @@ function phoneticFR(word) {
 
 function wordsMatch(a, b) {
   if (a === b) return true;
-  // Tolérance si l'un contient l'autre (préfixe) pour mots courts
-  if (a.length >= 4 && b.startsWith(a)) return true;
-  if (b.length >= 4 && a.startsWith(b)) return true;
+  // Les mots très courts (≤3 lettres) doivent être exactement identiques
+  if (a.length <= 3 || b.length <= 3) {
+    return a === b;
+  }
+  // Tolérance préfixe uniquement pour mots longs (≥6 lettres)
+  if (a.length >= 6 && b.startsWith(a)) return true;
+  if (b.length >= 6 && a.startsWith(b)) return true;
   // Comparaison phonétique
   const pa = phoneticFR(a);
   const pb = phoneticFR(b);
@@ -122,7 +126,7 @@ function wordsMatch(a, b) {
   const maxLen = Math.max(pa.length, pb.length);
   if (maxLen === 0) return true;
   const dist = levenshtein(pa, pb);
-  return dist / maxLen <= 0.25;
+  return dist / maxLen <= 0.20;
 }
 
 function levenshtein(a, b) {
