@@ -71,12 +71,12 @@ export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1.
 
       // Map vitesses pour accélération
       const rateMap = {
-        1: 1.3,
-        1.5: 1.7,
-        2: 2.5,
-        3: 3.5
+        1: 2.5,
+        1.5: 3.0,
+        2: 3.5,
+        3: 4.5
       };
-      const actualRate = rateMap[rate] || rate;
+      const actualRate = Math.min(rateMap[rate] || rate, 4.5);
 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = lang;
