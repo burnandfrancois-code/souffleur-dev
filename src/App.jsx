@@ -2,19 +2,22 @@ import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
-import PlatformSelect from '@/pages/PlatformSelect';
-import Landing from '@/pages/Landing';
-import DesktopHome from '@/pages/desktop/Home';
-import DesktopRehearsal from '@/pages/desktop/Rehearsal';
-import DesktopMyScripts from '@/pages/desktop/MyScripts';
-import AndroidHome from '@/pages/android/Home';
-import AndroidRehearsal from '@/pages/android/Rehearsal';
-import AndroidMyScripts from '@/pages/android/MyScripts';
-import Settings from '@/pages/Settings';
-import CompleteProfile from '@/pages/CompleteProfile';
+
+// Lazy load all pages
+const Landing = lazy(() => import('@/pages/Landing'));
+const PlatformSelect = lazy(() => import('@/pages/PlatformSelect'));
+const CompleteProfile = lazy(() => import('@/pages/CompleteProfile'));
+const Settings = lazy(() => import('@/pages/Settings'));
+const DesktopHome = lazy(() => import('@/pages/desktop/Home'));
+const DesktopRehearsal = lazy(() => import('@/pages/desktop/Rehearsal'));
+const DesktopMyScripts = lazy(() => import('@/pages/desktop/MyScripts'));
+const AndroidHome = lazy(() => import('@/pages/android/Home'));
+const AndroidRehearsal = lazy(() => import('@/pages/android/Rehearsal'));
+const AndroidMyScripts = lazy(() => import('@/pages/android/MyScripts'));
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -41,19 +44,21 @@ const AuthenticatedApp = () => {
 
   // Render the main app
   return (
-    <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/platform" element={<PlatformSelect />} />
-      <Route path="/complete-profile" element={<CompleteProfile />} />
-      <Route path="/settings" element={<Settings />} />
-      <Route path="/desktop/" element={<DesktopHome />} />
-      <Route path="/desktop/rehearsal" element={<DesktopRehearsal />} />
-      <Route path="/desktop/my-scripts" element={<DesktopMyScripts />} />
-      <Route path="/android/" element={<AndroidHome />} />
-      <Route path="/android/rehearsal" element={<AndroidRehearsal />} />
-      <Route path="/android/my-scripts" element={<AndroidMyScripts />} />
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
+    <Suspense fallback={<div className="fixed inset-0 flex items-center justify-center"><div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div></div>}>
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/platform" element={<PlatformSelect />} />
+        <Route path="/complete-profile" element={<CompleteProfile />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/desktop/" element={<DesktopHome />} />
+        <Route path="/desktop/rehearsal" element={<DesktopRehearsal />} />
+        <Route path="/desktop/my-scripts" element={<DesktopMyScripts />} />
+        <Route path="/android/" element={<AndroidHome />} />
+        <Route path="/android/rehearsal" element={<AndroidRehearsal />} />
+        <Route path="/android/my-scripts" element={<AndroidMyScripts />} />
+        <Route path="*" element={<PageNotFound />} />
+      </Routes>
+    </Suspense>
   );
 };
 
