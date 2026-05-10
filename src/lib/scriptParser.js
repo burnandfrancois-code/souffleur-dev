@@ -190,49 +190,25 @@ export async function compareTexts(expectedText, spokenText) {
     }
 
     // Construire word_results pour chaque mot attendu
-    // On fait un second alignement local entre mots expected non-matchés et mots spoken non-matchés
-    // pour déterminer lesquels sont vraiment "faux" (un spoken correspond) vs "manquants" (rien dit)
+    // Stratégie : aligner séquentiellement les mots spoken non-matchés sur les mots expected non-matchés.
+    // Si un mot spoken non-matché est disponible → "faux" (peu importe la similarité).
+    // Si plus aucun mot spoken non-matché disponible → "manquant".
     const unmatchedExpectedIndices = [];
     for (let ei = 0; ei < m; ei++) {
       if (!matchedExpected.has(ei)) unmatchedExpectedIndices.push(ei);
     }
-    const unmatchedSpokenIndices = [];
+    const unmatchedSpokenWords = [];
     for (let si = 0; si < n; si++) {
-      if (!matchedSpoken.has(si)) unmatchedSpokenIndices.push(si);
+      if (!matchedSpoken.has(si)) unmatchedSpokenWords.push(spokenWords[si]);
     }
 
-    // Second LCS entre les deux listes non-matchées pour trouver les "faux" (appariements proches)
-    const ue = unmatchedExpectedIndices.map(i => expectedWords[i]);
-    const us = unmatchedSpokenIndices.map(i => spokenWords[i]);
-    const me2 = ue.length, ns2 = us.length;
-    const dp2 = Array.from({ length: me2 + 1 }, () => new Array(ns2 + 1).fill(0));
-    for (let i = 1; i <= me2; i++) {
-      for (let j = 1; j <= ns2; j++) {
-        dp2[i][j] = wordsMatch(ue[i-1], us[j-1])
-          ? dp2[i-1][j-1] + 1
-          : Math.max(dp2[i-1][j], dp2[i][j-1]);
-      }
-    }
-    // Reconstruire les paires faux (expected_idx -> spoken_idx)
-    const wrongPairs = new Map(); // unmatchedExpected position -> unmatchedSpoken position
-    let ri = me2, rj = ns2;
-    while (ri > 0 && rj > 0) {
-      if (wordsMatch(ue[ri-1], us[rj-1])) {
-        wrongPairs.set(ri-1, rj-1);
-        ri--; rj--;
-      } else if (dp2[ri-1][rj] >= dp2[ri][rj-1]) {
-        ri--;
-      } else {
-        rj--;
-      }
-    }
-
-    // Construire une map directe : expectedWordIndex -> spokenWord pour les "faux"
+    // Assigner séquentiellement les mots spoken non-matchés aux mots expected non-matchés
     const wrongMap = new Map(); // ei -> spoken word string
-    for (const [uePos, usPos] of wrongPairs) {
-      const ei = unmatchedExpectedIndices[uePos];
-      wrongMap.set(ei, us[usPos]);
-    }
+    unmatchedExpectedIndices.forEach((ei, pos) => {
+      if (pos < unmatchedSpokenWords.length) {
+        wrongMap.set(ei, unmatchedSpokenWords[pos]);
+      }
+    });
 
     const wordResults = [];
     let correctCount = 0;
