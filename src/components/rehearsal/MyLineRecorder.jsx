@@ -506,11 +506,11 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
         )}
 
         {/* Transcript display */}
-        {phase === 'line' && !trainingMode && (
-          <div className="bg-background border border-border rounded-xl px-4 py-3 mb-3 min-h-[2.5rem]">
+        {phase === 'line' && !trainingMode && transcript && transcript !== '🎤' && (
+          <div className="bg-background border border-primary/30 rounded-xl px-4 py-3 mb-3 min-h-[2.5rem]">
             <p className="text-foreground leading-relaxed">
-              {transcript && transcript !== '🎤' ? transcript : <span className="text-muted-foreground text-sm italic">En attente...</span>}
-              {isRecording && transcript && <span className="inline-block w-0.5 h-5 bg-primary ml-1 animate-pulse" />}
+              {transcript}
+              {isRecording && <span className="inline-block w-0.5 h-5 bg-primary ml-1 animate-pulse" />}
             </p>
           </div>
         )}
