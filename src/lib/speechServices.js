@@ -40,40 +40,78 @@ export async function unlockAudioForAndroid() {
   }
 }
 
+function getVoices() {
+  return new Promise((resolve) => {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) { resolve(voices); return; }
+    // Sur Android, les voix se chargent de manière asynchrone
+    const handler = () => {
+      resolve(window.speechSynthesis.getVoices());
+      window.speechSynthesis.removeEventListener('voiceschanged', handler);
+    };
+    window.speechSynthesis.addEventListener('voiceschanged', handler);
+    // Fallback si l'événement ne se déclenche pas
+    setTimeout(() => resolve(window.speechSynthesis.getVoices()), 1000);
+  });
+}
+
 export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1, signal) {
+  if (signal?.aborted) return;
+
+  // Charger les voix disponibles
+  const voices = await getVoices();
+
   return new Promise((resolve) => {
     try {
+      if (signal?.aborted) { resolve(); return; }
+
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = lang;
       utterance.rate = rate;
       utterance.pitch = gender === 'female' ? 1.3 : 0.8;
       utterance.volume = 1;
 
+      // Sélectionner une voix française si disponible
+      const frVoice = voices.find(v => v.lang.startsWith('fr') && (gender === 'female' ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('fem') || v.name.includes('Amélie') || v.name.includes('Marie') || v.name.includes('Audrey') : true))
+        || voices.find(v => v.lang.startsWith('fr'))
+        || voices.find(v => v.lang.startsWith('fr-'));
+      if (frVoice) utterance.voice = frVoice;
+
       currentUtterance = utterance;
 
-      utterance.onend = () => {
+      // Keepalive pour Chrome Android (bug: s'arrête après ~15s)
+      const keepaliveInterval = setInterval(() => {
+        if (window.speechSynthesis.speaking) {
+          window.speechSynthesis.pause();
+          window.speechSynthesis.resume();
+        }
+      }, 10000);
+
+      const cleanup = () => {
+        clearInterval(keepaliveInterval);
         currentUtterance = null;
-        resolve();
       };
 
+      utterance.onend = () => { cleanup(); resolve(); };
       utterance.onerror = (e) => {
         console.error('Speech synthesis error:', e);
-        currentUtterance = null;
+        cleanup();
         resolve();
       };
-
-      if (signal?.aborted) {
-        resolve();
-        return;
-      }
 
       signal?.addEventListener('abort', () => {
         window.speechSynthesis.cancel();
-        currentUtterance = null;
+        cleanup();
         resolve();
       });
 
-      window.speechSynthesis.speak(utterance);
+      // Sur Android, cancel() avant speak() évite les conflits
+      window.speechSynthesis.cancel();
+      setTimeout(() => {
+        if (signal?.aborted) { resolve(); return; }
+        window.speechSynthesis.speak(utterance);
+      }, 50);
+
     } catch (e) {
       console.error('Error in speakText:', e);
       resolve();
