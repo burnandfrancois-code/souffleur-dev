@@ -46,9 +46,14 @@ export default function AndroidRehearsal() {
 
   const { data: script, isLoading } = useQuery({
     queryKey: ['script', scriptId],
-    queryFn: () => base44.entities.Script.filter({ id: scriptId }),
-    select: (data) => data[0],
+    queryFn: async () => {
+      if (!scriptId) return null;
+      const result = await base44.entities.Script.filter({ id: scriptId });
+      return result?.[0] || null;
+    },
     enabled: !!scriptId,
+    retry: 1,
+    staleTime: Infinity,
   });
 
   const stripDirections = (text) => text?.replace(/\([^)]*\)?/g, '').replace(/\[[^\]]*\]?/g, '').replace(/\s+/g, ' ').trim() || '';
