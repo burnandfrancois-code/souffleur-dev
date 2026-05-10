@@ -150,6 +150,7 @@ export async function compareTexts(expectedText, spokenText) {
       text
         ?.toLowerCase()
         .trim()
+        .replace(/-/g, ' ')
         .replace(/[^\p{L}\p{N}\s]/gu, '')
         .replace(/\s+/g, ' ') || '';
 
