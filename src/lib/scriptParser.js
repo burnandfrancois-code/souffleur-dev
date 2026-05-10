@@ -233,6 +233,12 @@ export async function compareTexts(expectedText, spokenText) {
     // Mots parlés non-matchés qui dépassent le nombre de mots attendus non-matchés
     const extraSpoken = unmatchedSpokenWords.slice(unmatchedExpectedIndices.length);
 
+    // Garder les indices des mots spoken non-matchés pour détecter les écarts
+    const unmatchedSpokenIndices = [];
+    for (let si = 0; si < n; si++) {
+      if (!matchedSpoken.has(si)) unmatchedSpokenIndices.push(si);
+    }
+
     const missingCount = wordResults.filter(w => w.status === 'missing').length;
     const accuracy = m > 0 ? Math.round((correctCount / m) * 100) : 0;
 
@@ -243,7 +249,8 @@ export async function compareTexts(expectedText, spokenText) {
       correctCount,
       missingCount,
       extra_spoken: extraSpoken,
-      extraCount: Math.max(0, n - matchedSpoken.size)
+      extraCount: Math.max(0, n - matchedSpoken.size),
+      unmatchedSpokenIndices
     };
   } catch (error) {
     console.error('Error comparing texts:', error);
