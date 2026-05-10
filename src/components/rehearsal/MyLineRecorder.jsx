@@ -23,6 +23,8 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   const restartCountRef = useRef(0);
   const restartTimerRef = useRef(null);
 
+  const lastStartTimeRef = useRef(0);
+
   const stopRecording = useCallback(() => {
     console.log('[STT] stopRecording appelé');
     userStoppedRef.current = true;
@@ -188,6 +190,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
 
     try {
       console.log('[STT] 🎤 rec.start() appelé - lang:', rec.lang, 'continuous:', rec.continuous, 'interimResults:', rec.interimResults);
+      lastStartTimeRef.current = Date.now();
       rec.start();
       console.log('[STT] ✓ rec.start() exécuté avec succès');
     } catch (e) {
@@ -263,6 +266,13 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   // Reset + auto-start when line changes
   useEffect(() => {
     console.log('[STT] useEffect: line changed, stopRecording');
+    // Ne pas arrêter si on vient juste de démarrer (éviter les races)
+    const timeSinceStart = Date.now() - lastStartTimeRef.current;
+    if (timeSinceStart < 500) {
+      console.log('[STT] ⚠ Ignorer stopRecording, démarrage trop récent');
+      return;
+    }
+    
     stopRecording();
     finalWordsRef.current = [];
     interimRef.current = '';
