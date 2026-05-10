@@ -199,6 +199,9 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     finalWordsRef.current = [];
     interimRef.current = '';
     setTranscript('');
+    if (autoPlay && !trainingMode) {
+      setTimeout(() => startRecording(), 300);
+    }
   };
 
   const handleMicToggle = () => {

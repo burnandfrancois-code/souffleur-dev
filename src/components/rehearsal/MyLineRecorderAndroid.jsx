@@ -238,7 +238,9 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
               onClick={() => {
                 stopRecording();
                 finalWordsRef.current = [];
+                interimRef.current = '';
                 setTranscript('');
+                setTimeout(() => startRecording(), 300);
               }}
               className="text-xs text-muted-foreground gap-1"
             >
