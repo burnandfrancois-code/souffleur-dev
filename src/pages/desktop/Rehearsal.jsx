@@ -113,11 +113,16 @@ export default function DesktopRehearsal() {
     setCurrentIndex(prev => prev + 1);
   }, [voiceRec]);
 
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     setResult(null);
     setPhase('line');
     voiceRec.reset();
-  };
+    setTimeout(() => {
+      voiceRec.start((finalText) => {
+        submitRecording(finalText);
+      });
+    }, 200);
+  }, [voiceRec, submitRecording]);
 
   const handleNext = () => {
     voiceRec.stop();
