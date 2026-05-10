@@ -20,6 +20,15 @@ export default function AndroidHome() {
   const urlParams = new URLSearchParams(window.location.search);
   const initialStep = urlParams.get('step') || 'upload';
   
+  // Rediriger vers /desktop/ si pas Android
+  const isAndroidDevice = /Android/i.test(navigator.userAgent);
+  
+  useEffect(() => {
+    if (!isAndroidDevice) {
+      navigate('/desktop/');
+    }
+  }, [isAndroidDevice, navigate]);
+  
   const [step, setStep] = useState(initialStep);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
