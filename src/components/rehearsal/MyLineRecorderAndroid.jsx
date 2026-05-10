@@ -33,6 +33,15 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
     setIsRecording(false);
   }, []);
 
+  const restartTimeoutRef = useRef(null);
+  
+  const clearRestartTimeout = useCallback(() => {
+    if (restartTimeoutRef.current) {
+      clearTimeout(restartTimeoutRef.current);
+      restartTimeoutRef.current = null;
+    }
+  }, []);
+
   const addLog = (msg) => {
     setDebugLogs(prev => [...prev.slice(-9), msg]);
     console.log(msg);
@@ -153,9 +162,43 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
         return;
       }
       
-      addLog(`⏱ relance ${restartCountRef.current} après 3s...`);
-      setTimeout(() => {
+      addLog(`⏱ relance ${restartCountRef.current} après 3s (attente OK)...`);
+      let okDetected = false;
+      
+      // Écoute passive pendant le délai — interrompt si "OK" est détecté
+      const listenForOk = () => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) return;
+        
+        const okRec = new SpeechRecognition();
+        okRec.lang = 'fr-FR';
+        okRec.continuous = false;
+        okRec.interimResults = false;
+        
+        okRec.onresult = (event) => {
+          const text = event.results[0]?.[0]?.transcript?.toLowerCase().trim() || '';
+          if (text.includes('ok') || text.includes('okay') || text.includes('o.k.') || text.includes('oke')) {
+            okDetected = true;
+            addLog('✓ OK détecté pendant attente');
+            clearRestartTimeout();
+            if (sessionIdRef.current === mySession && !userStoppedRef.current) {
+              startRecordingRef.current();
+            }
+          }
+        };
+        
+        okRec.onerror = () => {};
+        okRec.onend = () => {};
+        
+        try { okRec.start(); } catch (e) {}
+      };
+      
+      listenForOk();
+      
+      restartTimeoutRef.current = setTimeout(() => {
         if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
+        if (okDetected) return;
+        addLog('⏱ timeout 3s atteint, relance');
         startRecordingRef.current();
       }, 3000);
     };
@@ -174,6 +217,7 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
 
   useEffect(() => {
     return () => {
+      clearRestartTimeout();
       if (recognitionRef.current) {
         try {
           recognitionRef.current.abort();
@@ -182,7 +226,7 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
         }
       }
     };
-  }, []);
+  }, [clearRestartTimeout]);
 
   useEffect(() => {
     if (autoPlay && !isRecording && !transcript && !autoStartedRef.current) {
