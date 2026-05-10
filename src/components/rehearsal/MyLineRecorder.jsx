@@ -92,21 +92,24 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     recognitionRef.current = rec;
 
     rec.onstart = () => {
-      console.log('[STT] ✓ onstart déclenché - session valide?', sessionIdRef.current === mySession, 'userStopped?', userStoppedRef.current);
-      if (sessionIdRef.current === mySession && !userStoppedRef.current) {
-        console.log('[STT] ✓ Micro actif, mise à jour isRecording');
+      const isValid = sessionIdRef.current === mySession && !userStoppedRef.current;
+      console.log('[STT] ✓ onstart déclenché - session valide?', sessionIdRef.current === mySession, 'userStopped?', userStoppedRef.current, '→', isValid ? '🎤 MICRO ACTIF' : '⚠ Ignorer');
+      if (isValid) {
         setIsRecording(true);
       }
     };
 
     rec.onresult = (event) => {
-      console.log('[STT] onresult - event.results.length:', event.results.length);
-      if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
+      console.log('[STT] 🎤 onresult déclenché - results.length:', event.results.length);
+      if (sessionIdRef.current !== mySession || userStoppedRef.current) {
+        console.log('[STT] ⚠ Ignorer onresult: session invalide ou userStopped');
+        return;
+      }
 
       for (let i = 0; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
           const word = event.results[i][0].transcript.trim();
-          console.log('[STT] Final word:', word);
+          console.log('[STT] ✓ Final word:', word);
           if (word && !finalWordsRef.current.includes(word)) {
             finalWordsRef.current.push(word);
           }
@@ -117,7 +120,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       for (let i = event.results.length - 1; i >= 0; i--) {
         if (!event.results[i].isFinal) {
           interimRef.current = event.results[i][0].transcript.trim();
-          console.log('[STT] Interim:', interimRef.current);
+          if (interimRef.current) console.log('[STT] ⟳ Interim:', interimRef.current);
           break;
         }
       }
@@ -125,7 +128,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       const fullText = finalWordsRef.current.join(' ') +
         (interimRef.current ? (finalWordsRef.current.length > 0 ? ' ' : '') + interimRef.current : '');
       const displayText = fullText.trim();
-      console.log('[STT] Display:', displayText);
+      if (displayText) console.log('[STT] 📝 Display:', displayText);
       setTranscript(displayText);
 
       const words = displayText.split(/\s+/);
