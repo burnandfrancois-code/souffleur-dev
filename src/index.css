@@ -4,17 +4,17 @@
 
 @layer base {
   :root {
-    --background: 0 0% 48%;
+    --background: 0 0% 32%;
     --foreground: 0 0% 98%;
-    --card: 0 0% 55%;
+    --card: 0 0% 40%;
     --card-foreground: 0 0% 98%;
-    --popover: 0 0% 55%;
+    --popover: 0 0% 40%;
     --popover-foreground: 0 0% 98%;
     --primary: 45 100% 50%;
     --primary-foreground: 0 0% 10%;
-    --secondary: 0 0% 60%;
+    --secondary: 0 0% 45%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 50%;
+    --muted: 0 0% 35%;
     --muted-foreground: 0 0% 85%;
     --accent: 45 100% 50%;
     --accent-foreground: 0 0% 10%;
@@ -40,20 +40,20 @@
   }
 
   .dark {
-    --background: 0 0% 40%;
-    --foreground: 0 0% 95%;
-    --card: 0 0% 50%;
-    --card-foreground: 0 0% 95%;
-    --popover: 0 0% 50%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 45 100% 55%;
-    --primary-foreground: 0 0% 15%;
-    --secondary: 0 0% 55%;
-    --secondary-foreground: 0 0% 95%;
-    --muted: 0 0% 45%;
-    --muted-foreground: 0 0% 80%;
-    --accent: 45 100% 55%;
-    --accent-foreground: 0 0% 15%;
+    --background: 0 0% 28%;
+    --foreground: 0 0% 96%;
+    --card: 0 0% 36%;
+    --card-foreground: 0 0% 96%;
+    --popover: 0 0% 36%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 45 100% 52%;
+    --primary-foreground: 0 0% 12%;
+    --secondary: 0 0% 42%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 0 0% 32%;
+    --muted-foreground: 0 0% 82%;
+    --accent: 45 100% 52%;
+    --accent-foreground: 0 0% 12%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 14.9%;
