@@ -209,14 +209,16 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       try { rec.start(); } catch (e) {}
     };
 
-    const timer = setTimeout(start, 200);
+    // Délai adapté à la vitesse pour laisser le temps au mic de démarrer
+    const startDelay = speechRate >= 2 ? 500 : 200;
+    const timer = setTimeout(start, startDelay);
 
     return () => {
       active = false;
       clearTimeout(timer);
       if (rec) { try { rec.abort(); } catch (e) {} }
     };
-  }, [phase, onContinue, onRetry]);
+  }, [phase, onContinue, onRetry, speechRate]);
 
   // Cleanup on unmount
   useEffect(() => {
