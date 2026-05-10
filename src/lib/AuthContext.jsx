@@ -16,12 +16,6 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     checkAppState();
-    // Fallback: after 5 seconds, unblock rendering even if loading hasn't finished
-    const timeout = setTimeout(() => {
-      setIsLoadingPublicSettings(false);
-      setIsLoadingAuth(false);
-    }, 5000);
-    return () => clearTimeout(timeout);
   }, []);
 
   const checkAppState = async () => {
