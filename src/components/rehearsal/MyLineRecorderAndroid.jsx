@@ -11,6 +11,7 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
   const [isSpeakingLine, setIsSpeakingLine] = useState(false);
   const [debugLogs, setDebugLogs] = useState([]);
   const [hasStarted, setHasStarted] = useState(false);
+  const autoStartedRef = useRef(false);
 
   const recognitionRef = useRef(null);
   const userStoppedRef = useRef(false);
@@ -19,12 +20,10 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
   const interimRef = useRef('');
   const lastOkTimeRef = useRef(0);
   const startRecordingRef = useRef(null);
-  const autoStartedRef = useRef(false);
   const restartCountRef = useRef(0);
 
   const stopRecording = useCallback(() => {
     userStoppedRef.current = true;
-    autoStartedRef.current = false;
     restartCountRef.current = 0;
     sessionIdRef.current += 1;
     if (recognitionRef.current) {
@@ -148,14 +147,14 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
       if (userStoppedRef.current) return;
       
       restartCountRef.current += 1;
-      if (restartCountRef.current > 3) {
+      if (restartCountRef.current > 5) {
         addLog('❌ trop de relances, arrêt');
         setSttError({ message: 'Micro ne détecte rien — vérifiez la permission' });
         return;
       }
       
-      addLog(`↻ relance ${restartCountRef.current} immédiatement...`);
-      startRecordingRef.current();
+      addLog(`↻ relance ${restartCountRef.current}...`);
+      const delay = setTimeout(() => startRecordingRef.current(), 500);
     };
 
     try {
@@ -183,12 +182,11 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
   }, []);
 
   useEffect(() => {
-    if (autoPlay && hasStarted && !isRecording && !transcript && !autoStartedRef.current) {
-      autoStartedRef.current = true;
-      const timer = setTimeout(startRecording, 300);
+    if (autoPlay && hasStarted && !isRecording && !transcript) {
+      const timer = setTimeout(startRecording, 200);
       return () => clearTimeout(timer);
     }
-  }, [autoPlay, hasStarted, startRecording]);
+  }, [autoPlay, hasStarted, isRecording, transcript, startRecording]);
 
   const handleMicToggle = () => {
     if (isRecording) {
@@ -227,26 +225,26 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
           </button>
           <p className="text-xs text-muted-foreground mt-3">Cliquez pour activer le micro</p>
         </div>
-      ) : (
-        <div className={`rounded-xl border-2 p-4 text-center transition-all ${
-          isRecording ? 'border-destructive bg-destructive/10' : 'border-primary bg-primary/10'
-        }`}>
+      ) : isRecording ? (
+        <div className="rounded-xl border-2 border-destructive bg-destructive/10 p-4 text-center">
           <button
             onClick={handleMicToggle}
-            disabled={false}
-            className={`relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all mb-3 ${
-              isRecording ? 'bg-destructive shadow-lg shadow-destructive/50' : 'bg-primary shadow-lg shadow-primary/30'
-            }`}
+            className="relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all mb-3 bg-destructive shadow-lg shadow-destructive/50"
           >
-            {isRecording && <span className="absolute inset-0 rounded-full bg-destructive/50 animate-ping" />}
-            {isRecording
-              ? <MicOff className="w-8 h-8 text-white relative z-10" />
-              : <Mic className="w-8 h-8 text-primary-foreground relative z-10" />
-            }
+            <span className="absolute inset-0 rounded-full bg-destructive/50 animate-ping" />
+            <MicOff className="w-8 h-8 text-white relative z-10" />
           </button>
-          <p className={`text-sm font-semibold ${isRecording ? 'text-destructive' : 'text-primary'}`}>
-            {isRecording ? '🎙 Parlez !' : '🎤 C\'est votre tour'}
-          </p>
+          <p className="text-sm font-semibold text-destructive">🎙 Parlez !</p>
+        </div>
+      ) : (
+        <div className="rounded-xl border-2 border-primary bg-primary/10 p-4 text-center">
+          <button
+            onClick={handleMicToggle}
+            className="relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all mb-3 bg-primary shadow-lg shadow-primary/30 hover:scale-105"
+          >
+            <Mic className="w-8 h-8 text-primary-foreground relative z-10" />
+          </button>
+          <p className="text-sm font-semibold text-primary">🎤 C'est votre tour</p>
         </div>
       )}
 
