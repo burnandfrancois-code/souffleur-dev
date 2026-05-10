@@ -102,6 +102,8 @@ export function useSimpleVoiceInput() {
       if (e.error === 'not-allowed') {
         setError({ message: 'Permission micro refusée' });
         stop();
+      } else if (e.error === 'network') {
+        // Ignorer les erreurs réseau, elles sont généralement temporaires
       }
     };
 
