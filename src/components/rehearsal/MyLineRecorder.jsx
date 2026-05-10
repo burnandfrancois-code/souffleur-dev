@@ -364,7 +364,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
           </p>
           {isRecording && autoPlay && (
             <p className="text-sm text-muted-foreground mt-1 italic">
-              Dites votre réplique et terminez par <span className="font-bold text-destructive text-base not-italic">OK</span>
+              Dites votre réplique, <span className="font-bold text-destructive text-base not-italic">attendez 2 ou 3 secondes</span> puis dites <span className="font-bold text-destructive text-base not-italic">OK</span>
             </p>
           )}
         </div>
