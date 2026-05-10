@@ -109,11 +109,11 @@ export default function ComparisonResult({ result, transcription, onRetry, onCon
           <div className="rounded-xl border border-red-500/40 bg-red-950/60 p-3 space-y-2">
             <p className="text-xs font-bold text-red-400 uppercase tracking-wider">✗ Faux — vous avez dit :</p>
             <div className="flex flex-wrap gap-1.5 items-center">
-              {spokenUnmatched.map((word, i) => {
-                const isGap = i > 0 && result.unmatchedSpokenIndices && 
-                  (result.unmatchedSpokenIndices[i] - result.unmatchedSpokenIndices[i - 1] > 1);
+              {(result.unmatchedSpokenIndices || []).map((idx, pos) => {
+                const word = spokenUnmatched[pos];
+                const isGap = pos > 0 && (result.unmatchedSpokenIndices[pos] - result.unmatchedSpokenIndices[pos - 1] > 1);
                 return (
-                  <React.Fragment key={i}>
+                  <React.Fragment key={idx}>
                     {isGap && <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#4ade80', flexShrink: 0 }} />}
                     <span className="px-2 py-0.5 rounded-md text-sm font-medium bg-red-500/30 text-red-200 border border-red-400/50">
                       {word}

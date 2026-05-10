@@ -48,11 +48,11 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
           <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-2.5 space-y-1.5">
             <p className="text-xs font-bold text-red-400 uppercase tracking-wider">✗ Faux — vous avez dit :</p>
             <div className="flex flex-wrap gap-1 items-center">
-              {spokenUnmatched.map((word, i) => {
-                const isGap = i > 0 && result.unmatchedSpokenIndices && 
-                  (result.unmatchedSpokenIndices[i] - result.unmatchedSpokenIndices[i - 1] > 1);
+              {(result.unmatchedSpokenIndices || []).map((idx, pos) => {
+                const word = spokenUnmatched[pos];
+                const isGap = pos > 0 && (result.unmatchedSpokenIndices[pos] - result.unmatchedSpokenIndices[pos - 1] > 1);
                 return (
-                  <React.Fragment key={i}>
+                  <React.Fragment key={idx}>
                     {isGap && <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#4ade80', flexShrink: 0 }} />}
                     <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-300 border border-red-500/30">
                       {word}
