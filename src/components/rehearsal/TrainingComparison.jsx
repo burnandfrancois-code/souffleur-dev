@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Mic, MicOff } from 'lucide-react';
 
-export default function TrainingComparison({ originalText, transcript, isRecording }) {
+export default function TrainingComparison({ originalText, transcript, isRecording, onMicToggle }) {
   const stripDirections = (text) => text?.replace(/\([^)]*\)?/g, '').replace(/\[[^\]]*\]?/g, '').trim() || '';
   
   const original = stripDirections(originalText);
@@ -37,15 +38,25 @@ export default function TrainingComparison({ originalText, transcript, isRecordi
         </div>
       </div>
 
-      {transcript && (
-        <div className="space-y-2 pt-2 border-t border-border">
+      <div className="space-y-2 pt-2 border-t border-border">
+        <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">Votre transcription :</p>
-          <p className="text-sm text-foreground italic">
-            {transcript}
-            {isRecording && <span className="inline-block w-0.5 h-4 bg-primary ml-1 animate-pulse" />}
-          </p>
+          <button
+            onClick={onMicToggle}
+            className={`p-2 rounded-full transition-all ${
+              isRecording
+                ? 'bg-destructive text-white'
+                : 'bg-primary/20 text-primary hover:bg-primary/30'
+            }`}
+          >
+            {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </button>
         </div>
-      )}
+        <p className="text-sm text-foreground italic">
+          {transcript || <span className="text-muted-foreground">En attente...</span>}
+          {isRecording && <span className="inline-block w-0.5 h-4 bg-primary ml-1 animate-pulse" />}
+        </p>
+      </div>
     </div>
   );
 }

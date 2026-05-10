@@ -415,6 +415,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
                 originalText={line.text}
                 transcript={transcript}
                 isRecording={isRecording}
+                onMicToggle={handleMicToggle}
               />
             </motion.div>
           )}
