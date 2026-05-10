@@ -83,11 +83,15 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
               <div className="flex flex-wrap gap-1.5 items-center">
                 {blocks.map((block, bi) => {
                   if (block.status === 'correct') {
-                    return block.words.map((w, wi) => (
-                      <span key={`${bi}-${wi}`} className="px-1.5 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-300 border border-green-500/30">
-                        {w.word}
-                      </span>
-                    ));
+                    return (
+                      <React.Fragment key={bi}>
+                        {block.words.map((w, wi) => (
+                          <span key={wi} className="px-1.5 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-300 border border-green-500/30">
+                            {w.word}
+                          </span>
+                        ))}
+                      </React.Fragment>
+                    );
                   } else if (block.status === 'wrong') {
                     return (
                       <span key={bi} title={block.words.map(w => `Dit : "${w.got}"`).join(' | ')} style={{ display: 'inline-flex', gap: '3px', alignItems: 'center' }}>

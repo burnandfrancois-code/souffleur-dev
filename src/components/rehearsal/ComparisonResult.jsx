@@ -59,24 +59,26 @@ export default function ComparisonResult({ result, onRetry, onContinue }) {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
                 {blocks.map((block, bi) => {
                   if (block.status === 'correct') {
-                    return block.words.map((w, wi) => (
-                      <span key={`${bi}-${wi}`} style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, backgroundColor: 'rgba(74,222,128,0.25)', color: '#bbf7d0', border: '1px solid rgba(74,222,128,0.5)' }}>
-                        {w.word}
-                      </span>
-                    ));
-                  } else if (block.status === 'wrong') {
-                    const title = block.words.map(w => `Dit : "${w.got}"`).join(' | ');
                     return (
-                      <span key={bi} title={title} style={{ display: 'inline-flex', gap: '3px', alignItems: 'center' }}>
+                      <React.Fragment key={bi}>
+                        {block.words.map((w, wi) => (
+                          <span key={wi} style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, backgroundColor: 'rgba(74,222,128,0.25)', color: '#bbf7d0', border: '1px solid rgba(74,222,128,0.5)' }}>
+                            {w.word}
+                          </span>
+                        ))}
+                      </React.Fragment>
+                    );
+                  } else if (block.status === 'wrong') {
+                    return (
+                      <span key={bi} title={block.words.map(w => `Dit : "${w.got}"`).join(' | ')} style={{ display: 'inline-flex', gap: '3px', alignItems: 'center' }}>
                         {block.words.map((w, wi) => (
                           <span key={wi} style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#ef4444', flexShrink: 0 }} />
                         ))}
                       </span>
                     );
                   } else {
-                    const title = block.words.map(w => `Manquant : "${w.word}"`).join(' | ');
                     return (
-                      <span key={bi} title={title} style={{ display: 'inline-flex', gap: '3px', alignItems: 'center' }}>
+                      <span key={bi} title={block.words.map(w => `Manquant : "${w.word}"`).join(' | ')} style={{ display: 'inline-flex', gap: '3px', alignItems: 'center' }}>
                         {block.words.map((w, wi) => (
                           <span key={wi} style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#eab308', flexShrink: 0 }} />
                         ))}
