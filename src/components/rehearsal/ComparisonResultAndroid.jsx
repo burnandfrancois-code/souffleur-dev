@@ -42,18 +42,11 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
 
         {/* Mots corrects */}
         {correctWords.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Corrects :</p>
+          <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-2.5 space-y-1.5">
+            <p className="text-xs font-bold text-green-400 uppercase tracking-wider">✓ Corrects</p>
             <div className="flex flex-wrap gap-1">
               {correctWords.map((w, i) => (
-                <span key={i} style={{
-                  color: '#4ade80',
-                  backgroundColor: 'rgba(74,222,128,0.12)',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  fontWeight: 500,
-                  fontSize: '0.8rem',
-                }}>
+                <span key={i} className="px-1.5 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-300 border border-green-500/30">
                   {w.word}
                 </span>
               ))}
@@ -63,60 +56,34 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
 
         {/* Mots faux */}
         {wrongWords.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Vous avez dit faux :</p>
-            <span style={{
-              color: '#f87171',
-              backgroundColor: 'rgba(248,113,113,0.12)',
-              padding: '3px 8px',
-              borderRadius: '6px',
-              fontWeight: 500,
-              fontSize: '0.85rem',
-              display: 'inline-block',
-              lineHeight: '1.6',
-            }}>
-              {wrongWords.map(w => w.got).filter(Boolean).join(' ')}
-            </span>
+          <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-2.5 space-y-1.5">
+            <p className="text-xs font-bold text-red-400 uppercase tracking-wider">✗ Faux — vous avez dit :</p>
+            <div className="flex flex-wrap gap-1">
+              {wrongWords.map((w, i) => (
+                <span key={i} className="px-1.5 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-300 border border-red-500/30">
+                  {w.got || '?'}
+                </span>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Attendu : {wrongWords.map(w => w.word).join(', ')}
+            </p>
           </div>
         )}
 
         {/* Mots manquants */}
         {missingWords.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Manquants :</p>
-            <span style={{
-              color: '#ffeb3b',
-              backgroundColor: 'rgba(255,235,59,0.15)',
-              padding: '3px 8px',
-              borderRadius: '6px',
-              fontWeight: 500,
-              fontSize: '0.85rem',
-              textDecoration: 'line-through',
-              display: 'inline-block',
-              lineHeight: '1.6',
-            }}>
-              {missingWords.map(w => w.word).join(' ')}
-            </span>
+          <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-2.5 space-y-1.5">
+            <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">— Manquants</p>
+            <div className="flex flex-wrap gap-1">
+              {missingWords.map((w, i) => (
+                <span key={i} className="px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 line-through">
+                  {w.word}
+                </span>
+              ))}
+            </div>
           </div>
         )}
-
-        {/* Légende */}
-        <div className="flex flex-wrap gap-3 pt-2 border-t border-border/50">
-          <span className="flex items-center gap-1 text-xs text-green-400">
-            <span className="w-2 h-2 rounded-full bg-green-400 inline-block" /> Correct
-          </span>
-          {wrongPhrase && (
-            <span className="flex items-center gap-1 text-xs text-red-400">
-              <span className="w-2 h-2 rounded-full bg-red-400 inline-block" /> Faux
-            </span>
-          )}
-          {missingPhrase && (
-            <span className="flex items-center gap-1 text-xs text-yellow-400">
-              <span className="w-2 h-2 rounded-full bg-yellow-400 inline-block" />
-              <span style={{ textDecoration: 'line-through' }}>Manquant</span>
-            </span>
-          )}
-        </div>
 
         {/* Boutons */}
         <div className="flex gap-2 pt-1">
