@@ -85,39 +85,75 @@ export async function compareTexts(expectedText, spokenText) {
     const expectedWords = normalizedExpected.split(' ').filter(w => w);
     const spokenWords = normalizedSpoken.split(' ').filter(w => w);
 
+    const m = expectedWords.length;
+    const n = spokenWords.length;
+
+    // LCS avec programmation dynamique
+    const dp = [];
+    for (let row = 0; row <= m; row++) {
+      dp[row] = new Array(n + 1).fill(0);
+    }
+    for (let row = 1; row <= m; row++) {
+      for (let col = 1; col <= n; col++) {
+        if (expectedWords[row - 1] === spokenWords[col - 1]) {
+          dp[row][col] = dp[row - 1][col - 1] + 1;
+        } else {
+          dp[row][col] = Math.max(dp[row - 1][col], dp[row][col - 1]);
+        }
+      }
+    }
+
+    // Reconstruire les indices matchés
+    const matchedExpected = new Set();
+    const matchedSpoken = new Set();
+    let row = m, col = n;
+    while (row > 0 && col > 0) {
+      if (expectedWords[row - 1] === spokenWords[col - 1]) {
+        matchedExpected.add(row - 1);
+        matchedSpoken.add(col - 1);
+        row--; col--;
+      } else if (dp[row - 1][col] >= dp[row][col - 1]) {
+        row--;
+      } else {
+        col--;
+      }
+    }
+
+    // Construire word_results pour chaque mot attendu
+    const usedSpoken = new Set(matchedSpoken);
     const wordResults = [];
     let correctCount = 0;
-    let missingCount = 0;
-    let extraCount = 0;
 
-    expectedWords.forEach((word, i) => {
-      if (spokenWords[i] === word) {
+    for (let ei = 0; ei < m; ei++) {
+      const word = expectedWords[ei];
+      if (matchedExpected.has(ei)) {
         wordResults.push({ word, status: 'correct', got: '' });
         correctCount++;
-      } else if (spokenWords[i]) {
-        wordResults.push({ word, status: 'wrong', got: spokenWords[i] });
       } else {
-        wordResults.push({ word, status: 'missing', got: '' });
-        missingCount++;
+        // Chercher le premier mot spoken non utilisé
+        let bestIdx = -1;
+        for (let si = 0; si < n; si++) {
+          if (!usedSpoken.has(si)) { bestIdx = si; break; }
+        }
+        if (bestIdx !== -1) {
+          usedSpoken.add(bestIdx);
+          wordResults.push({ word, status: 'wrong', got: spokenWords[bestIdx] });
+        } else {
+          wordResults.push({ word, status: 'missing', got: '' });
+        }
       }
-    });
+    }
 
-    spokenWords.slice(expectedWords.length).forEach((word) => {
-      wordResults.push({ word, status: 'extra', got: word });
-      extraCount++;
-    });
-
-    const accuracy = expectedWords.length > 0
-      ? Math.round((correctCount / expectedWords.length) * 100)
-      : 0;
+    const missingCount = wordResults.filter(w => w.status === 'missing').length;
+    const accuracy = m > 0 ? Math.round((correctCount / m) * 100) : 0;
 
     return {
       accuracy,
-      perfect: accuracy === 100 && missingCount === 0 && extraCount === 0,
+      perfect: accuracy === 100 && missingCount === 0,
       word_results: wordResults,
       correctCount,
       missingCount,
-      extraCount
+      extraCount: Math.max(0, n - matchedSpoken.size)
     };
   } catch (error) {
     console.error('Error comparing texts:', error);
