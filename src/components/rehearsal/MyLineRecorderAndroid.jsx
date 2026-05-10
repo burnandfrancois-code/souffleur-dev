@@ -9,6 +9,7 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
   const [transcript, setTranscript] = useState('');
   const [sttError, setSttError] = useState(null);
   const [isSpeakingLine, setIsSpeakingLine] = useState(false);
+  const [debugLogs, setDebugLogs] = useState([]);
 
   const recognitionRef = useRef(null);
   const userStoppedRef = useRef(false);
@@ -29,6 +30,11 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
     }
     setIsRecording(false);
   }, []);
+
+  const addLog = (msg) => {
+    setDebugLogs(prev => [...prev.slice(-9), msg]);
+    console.log(msg);
+  };
 
   const startRecording = useCallback(() => {
     sessionIdRef.current += 1;
@@ -59,19 +65,19 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
     recognitionRef.current = rec;
 
     rec.onstart = () => {
-      console.log('🎤 onstart - recording started');
+      addLog('🎤 onstart - recording started');
       if (sessionIdRef.current === mySession && !userStoppedRef.current) setIsRecording(true);
     };
 
     rec.onresult = (event) => {
-      console.log('🎤 onresult -', event.results.length, 'résultats');
+      addLog(`🎤 onresult - ${event.results.length} résultats`);
       if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
 
       // Collecter tous les résultats finaux
       for (let i = 0; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
           const word = event.results[i][0].transcript.trim();
-          console.log('✓ Final:', word);
+          addLog(`✓ Final: ${word}`);
           if (word && !finalWordsRef.current.includes(word)) {
             finalWordsRef.current.push(word);
           }
@@ -125,7 +131,7 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
     };
 
     rec.onerror = (e) => {
-      console.log('❌ onerror -', e.error);
+      addLog(`❌ onerror - ${e.error}`);
       if (sessionIdRef.current !== mySession) return;
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         stopRecording();
@@ -144,10 +150,10 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
     };
 
     try {
-      console.log('🎤 rec.start() appelé');
+      addLog('🎤 rec.start() appelé');
       rec.start();
     } catch (e) {
-      console.error('❌ rec.start() erreur:', e.message);
+      addLog(`❌ rec.start() erreur: ${e.message}`);
       setSttError({ message: `Erreur: ${e.message}` });
       recognitionRef.current = null;
     }
@@ -185,6 +191,15 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
 
   return (
     <div className="space-y-3">
+      {/* Debug Logs */}
+      {debugLogs.length > 0 && (
+        <div className="bg-black border border-yellow-500/30 rounded-lg p-2 max-h-24 overflow-y-auto text-xs text-yellow-400 font-mono space-y-0.5">
+          {debugLogs.map((log, i) => (
+            <div key={i}>{log}</div>
+          ))}
+        </div>
+      )}
+
       {/* Error */}
       {sttError && (
         <motion.div
