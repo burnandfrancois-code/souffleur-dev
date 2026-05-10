@@ -9,7 +9,7 @@ export default function TrainingComparison({ originalText, transcript, isRecordi
   const spoken = transcript.toLowerCase();
 
   return (
-    <div className="bg-secondary/50 border border-border rounded-xl p-4 space-y-3">
+    <div className="bg-black border border-border rounded-xl p-4 space-y-3">
       <p className="text-xs font-semibold text-muted-foreground uppercase">Mode entraînement</p>
       
       <div className="space-y-2">
@@ -26,8 +26,8 @@ export default function TrainingComparison({ originalText, transcript, isRecordi
                 animate={{ opacity: 1 }}
                 className={`px-2 py-1 rounded text-xs font-medium ${
                   isFound 
-                    ? 'bg-green-500/20 text-green-600 border border-green-500/30'
-                    : 'bg-gray-500/20 text-gray-600'
+                    ? 'bg-green-500/20 text-green-300 border border-green-500/30'
+                    : 'bg-gray-700/50 text-white'
                 }`}
               >
                 {word}
