@@ -55,11 +55,12 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
   useEffect(() => { startRecordingRef.current = startRecording; }, [startRecording]);
 
   useImperativeHandle(ref, () => ({
-    stopRecording
-  }), [stopRecording]);
+    stopRecording: voiceRec.stop,
+    reset: voiceRec.reset
+  }), [voiceRec.stop, voiceRec.reset]);
 
   // Comparaison + handling résultat
-  const handleSubmitRecording = async (spokenText) => {
+  const handleSubmitRecording = useCallback(async (spokenText) => {
     compareSessionRef.current += 1;
     const session = compareSessionRef.current;
     
@@ -70,7 +71,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
     
     setComparisonResult(result);
     setPhase('result');
-  };
+  }, [currentLineClean.text]);
 
   // Auto-advance après résultat
   useEffect(() => {
@@ -92,8 +93,9 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
   const handleContinue = useCallback(() => {
     setComparisonResult(null);
     setPhase('line');
+    voiceRec.reset();
     onLineAdvance?.();
-  }, [onLineAdvance]);
+  }, [onLineAdvance, voiceRec]);
 
   const handleRetry = useCallback(() => {
     setComparisonResult(null);
@@ -102,6 +104,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
 
   // TTS partenaire seul
   const handleSpeakPartnerLine = useCallback(async () => {
+    stopAll();
     setIsSpeakingPartner(true);
     const controller = new AbortController();
     
@@ -110,7 +113,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
     
     await speakText(stripDirections(line.text), 'fr-FR', gender, speechRateRef.current, controller.signal);
     setIsSpeakingPartner(false);
-  }, [line, script]);
+  }, [line, script, stopAll]);
 
   // Reset + auto-start when line changes
   useEffect(() => {
@@ -130,7 +133,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
         voiceRec.pendingTimersRef.current = voiceRec.pendingTimersRef.current.filter(t => t !== timer);
       };
     }
-  }, [line, trainingMode, voiceRec]);
+  }, [line, trainingMode, voiceRec.reset]);
 
   const isRecording = voiceRec.isRecording;
   const handleMicToggle = () => {
@@ -151,6 +154,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
 
   const handleSkip = () => {
     stopAll();
+    voiceRec.reset();
     onLineAdvance?.();
   };
 
@@ -171,7 +175,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
             onClick={async () => {
               const wasRecording = isRecording;
               if (isRecording) {
-                stopRecording();
+                voiceRec.stop();
                 await new Promise(r => setTimeout(r, 350));
               }
               setIsSpeakingMyLine(true);
