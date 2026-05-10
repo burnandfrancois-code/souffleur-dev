@@ -138,7 +138,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
               if (sessionIdRef.current !== capturedSession) return;
               stopRecording();
               onSubmitRef.current(finalText);
-            }, 200);
+            }, 600);
           }
         }
       }
