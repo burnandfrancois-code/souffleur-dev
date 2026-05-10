@@ -41,7 +41,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   const startRecordingRef = useRef(null);
 
   const startRecording = useCallback(() => {
-    // Arrêter proprement toute instance existante
+    userStoppedRef.current = false;
     sessionIdRef.current += 1;
     const mySession = sessionIdRef.current;
 
@@ -50,7 +50,6 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       recognitionRef.current = null;
     }
 
-    userStoppedRef.current = false;
     lastOkTimeRef.current = 0;
     finalWordsRef.current = [];
     interimRef.current = '';
