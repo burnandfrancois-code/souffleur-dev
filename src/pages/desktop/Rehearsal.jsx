@@ -356,7 +356,7 @@ export default function Rehearsal() {
               autoPlayRef.current = autoPlay;
               speechRateRef.current = speechRate;
               setStarted(true);
-              await unlockAudioForDesktop();
+              unlockAudioForDesktop().catch(() => {});
               const firstLine = lines[0];
               if (firstLine && normalize(firstLine.character) !== normalize(myCharacter) && autoPlay) {
                 launchSpeakChain(0, lines, myCharacter, characterGenders);

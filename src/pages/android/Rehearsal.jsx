@@ -191,7 +191,7 @@ export default function AndroidRehearsal() {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             stream.getTracks().forEach(track => track.stop());
             setStarted(true);
-            await unlockAudioForAndroid();
+            unlockAudioForAndroid().catch(() => {});
             const firstLine = lines[0];
             if (firstLine && normalize(firstLine.character) !== normalize(myCharacter)) {
               speakPartnerLines(0, lines, myCharacter, characterGenders, stripDirections);
