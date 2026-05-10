@@ -185,16 +185,16 @@ export default function Rehearsal() {
   };
 
   useEffect(() => {
-    const accuracy = comparisonResult?.accuracy ?? 0;
-    const hasMissingWords = (comparisonResult?.word_results || []).some(w => w.status === 'missing');
-    const shouldAdvance = (comparisonResult?.perfect || accuracy >= 100) && !hasMissingWords;
-    if (phase === 'result' && shouldAdvance && autoPlayRef.current) {
-      const timer = setTimeout(() => {
-        if (autoPlayRef.current) handleContinue();
-      }, 1200);
-      return () => clearTimeout(timer);
-    }
-  }, [phase, comparisonResult]);
+     const accuracy = comparisonResult?.accuracy ?? 0;
+     const hasMissingWords = (comparisonResult?.word_results || []).some(w => w.status === 'missing');
+     const shouldAdvance = (comparisonResult?.perfect || accuracy >= 100) && !hasMissingWords;
+     if (phase === 'result' && shouldAdvance && autoPlayRef.current) {
+       const timer = setTimeout(() => {
+         if (autoPlayRef.current) handleContinue();
+       }, 1200);
+       return () => clearTimeout(timer);
+     }
+   }, [phase, comparisonResult, handleContinue]);
 
   const handleRetry = () => {
     setComparisonResult(null);
