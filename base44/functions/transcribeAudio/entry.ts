@@ -18,10 +18,17 @@ Deno.serve(async (req) => {
     }
 
     // Convertir base64 en Uint8Array
-    const binaryString = atob(audioBase64.split(',')[1] || audioBase64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+    const cleanBase64 = audioBase64.includes(',') ? audioBase64.split(',')[1] : audioBase64;
+    let bytes;
+    try {
+      const binaryString = atob(cleanBase64);
+      bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+    } catch (e) {
+      console.error('[Whisper] Base64 decode error:', e.message);
+      return Response.json({ error: 'Invalid audio format' }, { status: 400 });
     }
 
     // Créer FormData avec le fichier audio
@@ -30,19 +37,24 @@ Deno.serve(async (req) => {
     formData.append('model', 'whisper-1');
     formData.append('language', 'fr');
 
+    const apiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!apiKey) {
+      console.error('[Whisper] Missing OPENAI_API_KEY');
+      return Response.json({ error: 'API key not configured' }, { status: 500 });
+    }
+
     // Appeler OpenAI Whisper API
-    const headers = new Headers();
-    headers.append('Authorization', `Bearer ${Deno.env.get('OPENAI_API_KEY')}`);
-    
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
-      headers: headers,
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+      },
       body: formData,
     });
 
     if (!response.ok) {
       const err = await response.text();
-      console.error('[Whisper] Error:', err);
+      console.error('[Whisper] API Error:', response.status, err);
       return Response.json({ error: 'Transcription failed', details: err }, { status: 500 });
     }
 
@@ -53,7 +65,7 @@ Deno.serve(async (req) => {
       success: true,
     });
   } catch (error) {
-    console.error('[transcribeAudio] Error:', error);
+    console.error('[transcribeAudio] Error:', error.message, error.stack);
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
