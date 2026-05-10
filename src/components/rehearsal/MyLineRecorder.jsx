@@ -38,6 +38,8 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   const onSubmitRef = useRef(onSubmit);
   useEffect(() => { onSubmitRef.current = onSubmit; }, [onSubmit]);
 
+  const startRecordingRef = useRef(null);
+
   const startRecording = useCallback(() => {
     // Arrêter proprement toute instance existante
     sessionIdRef.current += 1;
@@ -137,15 +139,13 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     };
 
     rec.onend = () => {
-      // Ignorer si cette instance n'est plus la session active
       if (sessionIdRef.current !== mySession) return;
       if (userStoppedRef.current) return;
-      // Relancer la même instance (elle s'est arrêtée pour silence/timeout navigateur)
-      try {
-        rec.start();
-      } catch (e) {
-        // ignore
-      }
+      // Chrome interdit de relancer la même instance — on schedule un nouveau startRecording
+      setTimeout(() => {
+        if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
+        startRecordingRef.current();
+      }, 150);
     };
 
     try {
@@ -155,6 +155,8 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       recognitionRef.current = null;
     }
   }, [stopRecording]);
+
+  useEffect(() => { startRecordingRef.current = startRecording; }, [startRecording]);
 
   useImperativeHandle(ref, () => ({
     stopRecording
