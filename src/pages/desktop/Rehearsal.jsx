@@ -207,12 +207,12 @@ export default function Rehearsal() {
     }
   }, [phase, comparisonResult]);
 
-  const handleRetry = () => {
+  const handleRetry = useCallback(() => {
     setComparisonResult(null);
     setPhase('line');
-  };
+  }, []);
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     const idx = currentLineIndexRef.current;
     if (comparisonResult?.perfect) {
       setCompletedMyLines(prev => new Set([...prev, idx]));
@@ -231,7 +231,7 @@ export default function Rehearsal() {
     if (nextIsPartner && autoPlayRef.current) {
       launchSpeakChain(nextIndex, lines, myCharacter, characterGenders);
     }
-  };
+  }, [lines, myCharacter, characterGenders, launchSpeakChain, comparisonResult]);
 
   // Écoute vocale passive pendant la phase 'result' pour détecter "passer"
   useEffect(() => {

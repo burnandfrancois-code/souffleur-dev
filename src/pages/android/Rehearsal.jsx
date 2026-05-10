@@ -95,9 +95,9 @@ export default function AndroidRehearsal() {
     }
   }, [phase, comparisonResult]);
 
-  const handleRetry = () => { setComparisonResult(null); setPhase('line'); };
+  const handleRetry = useCallback(() => { setComparisonResult(null); setPhase('line'); }, []);
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     const idx = currentLineIndexRef.current;
     if (comparisonResult?.perfect) setCompletedMyLines(prev => new Set([...prev, idx]));
     const nextIndex = idx + 1;
@@ -109,7 +109,7 @@ export default function AndroidRehearsal() {
     if (normalize(nextLine.character) !== normalize(myCharacter)) {
       speakPartnerLines(nextIndex, lines, myCharacter, characterGenders, stripDirections);
     }
-  };
+  }, [lines, myCharacter, characterGenders, speakPartnerLines, comparisonResult]);
 
   // Écoute vocale passive pendant la phase 'result' pour détecter "passer"
   useEffect(() => {
