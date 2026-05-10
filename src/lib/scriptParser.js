@@ -209,9 +209,11 @@ export async function compareTexts(expectedText, spokenText) {
 
     // Assigner séquentiellement les mots spoken non-matchés aux mots expected non-matchés
     const wrongMap = new Map(); // ei -> spoken word string
+    const unmatchedSpokenIndices = [];
     unmatchedExpectedIndices.forEach((ei, pos) => {
       if (pos < unmatchedSpokenWords.length) {
         wrongMap.set(ei, unmatchedSpokenWords[pos]);
+        unmatchedSpokenIndices.push(pos);
       }
     });
 
@@ -243,7 +245,8 @@ export async function compareTexts(expectedText, spokenText) {
       correctCount,
       missingCount,
       extra_spoken: extraSpoken,
-      extraCount: Math.max(0, n - matchedSpoken.size)
+      extraCount: Math.max(0, n - matchedSpoken.size),
+      unmatchedSpokenIndices
     };
   } catch (error) {
     console.error('Error comparing texts:', error);
