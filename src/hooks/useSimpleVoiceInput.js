@@ -123,12 +123,29 @@ export function useSimpleVoiceInput() {
     rec.onend = () => {
       if (sessionIdRef.current !== mySession || intentionallyStopping.current || okDetectedRef.current) return;
       
-      // Redémarrer seulement si fermeture accidentelle
-      if (recognitionRef.current && !intentionallyStopping.current) {
+      // Redémarrer avec nouvelle instance si fermeture accidentelle
+      const timer = setTimeout(() => {
+        if (sessionIdRef.current !== mySession || intentionallyStopping.current || okDetectedRef.current) return;
+        
         try {
-          recognitionRef.current.start();
+          const newRec = new SpeechRecognition();
+          newRec.continuous = true;
+          newRec.interimResults = true;
+          newRec.lang = 'fr-FR';
+          recognitionRef.current = newRec;
+          
+          newRec.onstart = () => {
+            if (sessionIdRef.current === mySession) setIsRecording(true);
+          };
+          
+          newRec.onresult = rec.onresult;
+          newRec.onerror = rec.onerror;
+          newRec.onend = rec.onend;
+          
+          newRec.start();
         } catch (e) {}
-      }
+      }, 100);
+      pendingTimersRef.current.push(timer);
     };
 
     try {
