@@ -13,6 +13,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   const [trainingMode, setTrainingMode] = useState(false);
   const [isSpeakingMyLine, setIsSpeakingMyLine] = useState(false);
   const [sttError, setSttError] = useState(null);
+  const [hasStarted, setHasStarted] = useState(false);
 
   const recognitionRef = useRef(null);
   const userStoppedRef = useRef(false);
@@ -244,7 +245,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     setTranscript('');
     setSttError(null);
 
-    if (autoPlay && !trainingMode) {
+    if (autoPlay && hasStarted && !trainingMode) {
       // Délai plus long à vitesses élevées pour laisser le temps de terminer sa phrase
       const delay = speechRate >= 2 ? 1500 : 1200;
       const timer = setTimeout(() => {
@@ -252,7 +253,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       }, delay);
       return () => clearTimeout(timer);
     }
-  }, [line, autoPlay, trainingMode, speechRate]);
+  }, [line, autoPlay, hasStarted, trainingMode, speechRate]);
 
   const handleSubmit = () => {
     const final = transcript.trim();
@@ -285,32 +286,46 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     >
       <div className="flex-1 min-w-0 max-w-[90%]">
 
-        {/* Listen to my line */}
-        <div className="flex justify-center mb-3">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isSpeakingMyLine}
-            onClick={async () => {
-              const wasRecording = isRecording;
-              if (isRecording) {
-                stopRecording();
-                await new Promise(r => setTimeout(r, 350));
+        {/* Start or Listen to my line */}
+        <div className="flex justify-center gap-2 mb-3">
+          {!hasStarted ? (
+            <Button
+              size="sm"
+              onClick={() => {
+                setHasStarted(true);
+                setTimeout(() => startRecording(), 100);
+              }}
+              className="gap-2 bg-primary text-primary-foreground"
+            >
+              <Mic className="w-4 h-4" />
+              Démarrer
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isSpeakingMyLine}
+              onClick={async () => {
+                const wasRecording = isRecording;
+                if (isRecording) {
+                  stopRecording();
+                  await new Promise(r => setTimeout(r, 350));
+                }
+                setIsSpeakingMyLine(true);
+                await speakText(line.text, 'fr-FR', 'male', speechRate);
+                setIsSpeakingMyLine(false);
+                if (wasRecording && autoPlay) {
+                  setTimeout(() => startRecording(), 200);
+                }
+              }}
+              className="gap-2 text-muted-foreground border-border"
+            >
+              {isSpeakingMyLine
+                ? <><Loader2 className="w-4 h-4 animate-spin" />Lecture...</>
+                : <><Volume2 className="w-4 h-4 text-primary" />Écouter ma réplique</>
               }
-              setIsSpeakingMyLine(true);
-              await speakText(line.text, 'fr-FR', 'male', speechRate);
-              setIsSpeakingMyLine(false);
-              if (wasRecording && autoPlay) {
-                setTimeout(() => startRecording(), 200);
-              }
-            }}
-            className="gap-2 text-muted-foreground border-border"
-          >
-            {isSpeakingMyLine
-              ? <><Loader2 className="w-4 h-4 animate-spin" />Lecture...</>
-              : <><Volume2 className="w-4 h-4 text-primary" />Écouter ma réplique</>
-            }
-          </Button>
+            </Button>
+          )}
         </div>
 
         {/* Error */}

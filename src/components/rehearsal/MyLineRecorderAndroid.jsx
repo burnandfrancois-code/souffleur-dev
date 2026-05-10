@@ -10,6 +10,7 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
   const [sttError, setSttError] = useState(null);
   const [isSpeakingLine, setIsSpeakingLine] = useState(false);
   const [debugLogs, setDebugLogs] = useState([]);
+  const [hasStarted, setHasStarted] = useState(false);
 
   const recognitionRef = useRef(null);
   const userStoppedRef = useRef(false);
@@ -182,12 +183,12 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
   }, []);
 
   useEffect(() => {
-    if (autoPlay && !isRecording && !transcript && !autoStartedRef.current) {
+    if (autoPlay && hasStarted && !isRecording && !transcript && !autoStartedRef.current) {
       autoStartedRef.current = true;
       const timer = setTimeout(startRecording, 300);
       return () => clearTimeout(timer);
     }
-  }, [autoPlay, startRecording]);
+  }, [autoPlay, hasStarted, startRecording]);
 
   const handleMicToggle = () => {
     if (isRecording) {
@@ -211,27 +212,43 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
         </motion.div>
       )}
 
-      {/* Mic button */}
-      <div className={`rounded-xl border-2 p-4 text-center transition-all ${
-        isRecording ? 'border-destructive bg-destructive/10' : 'border-primary bg-primary/10'
-      }`}>
-        <button
-          onClick={handleMicToggle}
-          disabled={false}
-          className={`relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all mb-3 ${
-            isRecording ? 'bg-destructive shadow-lg shadow-destructive/50' : 'bg-primary shadow-lg shadow-primary/30'
-          }`}
-        >
-          {isRecording && <span className="absolute inset-0 rounded-full bg-destructive/50 animate-ping" />}
-          {isRecording
-            ? <MicOff className="w-8 h-8 text-white relative z-10" />
-            : <Mic className="w-8 h-8 text-primary-foreground relative z-10" />
-          }
-        </button>
-        <p className={`text-sm font-semibold ${isRecording ? 'text-destructive' : 'text-primary'}`}>
-          {isRecording ? '🎙 Parlez !' : '🎤 C\'est votre tour'}
-        </p>
-      </div>
+      {/* Mic button or start prompt */}
+      {!hasStarted ? (
+        <div className="rounded-xl border-2 border-primary bg-primary/10 p-6 text-center">
+          <p className="text-sm text-primary mb-3">Prêt à commencer ?</p>
+          <button
+            onClick={() => {
+              setHasStarted(true);
+              setTimeout(() => startRecording(), 100);
+            }}
+            className="relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all bg-primary shadow-lg shadow-primary/30 hover:scale-105"
+          >
+            <Mic className="w-8 h-8 text-primary-foreground relative z-10" />
+          </button>
+          <p className="text-xs text-muted-foreground mt-3">Cliquez pour activer le micro</p>
+        </div>
+      ) : (
+        <div className={`rounded-xl border-2 p-4 text-center transition-all ${
+          isRecording ? 'border-destructive bg-destructive/10' : 'border-primary bg-primary/10'
+        }`}>
+          <button
+            onClick={handleMicToggle}
+            disabled={false}
+            className={`relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all mb-3 ${
+              isRecording ? 'bg-destructive shadow-lg shadow-destructive/50' : 'bg-primary shadow-lg shadow-primary/30'
+            }`}
+          >
+            {isRecording && <span className="absolute inset-0 rounded-full bg-destructive/50 animate-ping" />}
+            {isRecording
+              ? <MicOff className="w-8 h-8 text-white relative z-10" />
+              : <Mic className="w-8 h-8 text-primary-foreground relative z-10" />
+            }
+          </button>
+          <p className={`text-sm font-semibold ${isRecording ? 'text-destructive' : 'text-primary'}`}>
+            {isRecording ? '🎙 Parlez !' : '🎤 C\'est votre tour'}
+          </p>
+        </div>
+      )}
 
       {/* Debug Logs */}
       {debugLogs.length > 0 && (
