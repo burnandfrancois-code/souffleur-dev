@@ -20,7 +20,7 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) 
     });
 
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Parsing timeout après 5 minutes')), 300000)
+      setTimeout(() => reject(new Error('Timeout: analyse des répliques trop longue (>120s). Le fichier est peut-être trop gros.')), 120000)
     );
 
     const result = await Promise.race([parsePromise, timeoutPromise]);
