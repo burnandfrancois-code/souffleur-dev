@@ -19,6 +19,11 @@ export default function AndroidRehearsal() {
   const navigate = useNavigate();
   const urlParams = new URLSearchParams(window.location.search);
   const scriptId = urlParams.get('scriptId');
+  
+  // Debug log visible
+  useEffect(() => {
+    console.log('AndroidRehearsal page loaded, scriptId:', scriptId);
+  }, [scriptId]);
 
   const [currentLineIndex, setCurrentLineIndex] = useState(0);
   const [phase, setPhase] = useState('line');
