@@ -164,13 +164,11 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     };
 
     rec.onend = () => {
+      console.log('[STT] onend - session valide?', sessionIdRef.current === mySession, 'user stopped?', userStoppedRef.current);
       if (sessionIdRef.current !== mySession) return;
       if (userStoppedRef.current) return;
-      restartTimerRef.current = setTimeout(() => {
-        if (sessionIdRef.current === mySession && !userStoppedRef.current) {
-          startRecordingRef.current();
-        }
-      }, 300);
+      // Avec continuous: true, ne pas redémarrer automatiquement
+      // Le navigateur gère l'écoute en continu
     };
 
     try {
