@@ -114,12 +114,12 @@ export default function ComparisonResult({ result, transcription, onRetry, onCon
                 {spokenUnmatched.map((word, i) => {
                   const showGap = i > 0 && indices[i] - indices[i - 1] > 1;
                   return (
-                    <React.Fragment key={i}>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {showGap && <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#4ade80', flexShrink: 0 }} />}
                       <span className="px-2 py-0.5 rounded-md text-sm font-medium bg-red-500/30 text-red-200 border border-red-400/50">
                         {word}
                       </span>
-                    </React.Fragment>
+                    </div>
                   );
                 })}
               </div>

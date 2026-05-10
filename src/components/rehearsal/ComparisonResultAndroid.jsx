@@ -53,12 +53,12 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
                 {spokenUnmatched.map((word, i) => {
                   const showGap = i > 0 && indices[i] - indices[i - 1] > 1;
                   return (
-                    <React.Fragment key={i}>
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {showGap && <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#4ade80', flexShrink: 0 }} />}
                       <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-300 border border-red-500/30">
                         {word}
                       </span>
-                    </React.Fragment>
+                    </div>
                   );
                 })}
               </div>
