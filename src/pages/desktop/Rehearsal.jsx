@@ -163,97 +163,11 @@ export default function DesktopRehearsal() {
   if (!started) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6 px-4">
-        <AnimatePresence>
-          {!micPermissionChecked && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-            >
-              <div className="bg-card rounded-2xl border border-border p-8 max-w-sm space-y-6 shadow-lg">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="bg-primary/20 p-4 rounded-full">
-                    <Mic className="w-8 h-8 text-primary" />
-                  </div>
-                  <h2 className="text-xl font-bold text-foreground">Accès au microphone</h2>
-                </div>
-                <p className="text-center text-muted-foreground">
-                  La répétition nécessite l'accès à votre microphone pour enregistrer vos répliques.
-                </p>
-                <Button size="lg" onClick={requestMicPermission} className="w-full">
-                  Autoriser le microphone
-                </Button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         <Theater className="w-12 h-12 text-primary" />
         <h1 className="text-2xl font-bold">{script.title}</h1>
         <p className="text-muted-foreground">Rôle: <span className="text-primary font-semibold">{myCharacter}</span></p>
         <p className="text-sm text-muted-foreground">{lines.length} répliques • {myLineCount} à jouer</p>
-        
-        {micPermissionChecked && !micAllowed && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
-          >
-            <div className="bg-card rounded-2xl border border-border p-8 max-w-2xl max-h-96 overflow-y-auto space-y-6 shadow-lg">
-              <div>
-                <h2 className="text-2xl font-bold text-destructive mb-3">Microphone non autorisé</h2>
-                <p className="text-muted-foreground mb-6">Le navigateur ou Windows 11 a refusé l'accès. Voici comment corriger :</p>
-              </div>
-
-              <div className="space-y-4">
-                <div className="border-l-4 border-primary pl-4">
-                  <h3 className="font-semibold text-foreground mb-2">1. Réessayer avec le navigateur</h3>
-                  <p className="text-sm text-muted-foreground mb-2">Cherchez l'icône du microphone dans la barre d'adresse et cliquez dessus :</p>
-                  <div className="bg-secondary/50 p-3 rounded text-xs text-foreground">
-                    ✓ Cliquez sur l'icône microphone (🎤) à côté de l'URL
-                    <br />✓ Sélectionnez "Autoriser"
-                    <br />✓ Acceptez la permission du navigateur
-                  </div>
-                </div>
-
-                <div className="border-l-4 border-primary pl-4">
-                  <h3 className="font-semibold text-foreground mb-2">2. Vérifier les paramètres Windows 11</h3>
-                  <p className="text-sm text-muted-foreground mb-2">Si ça ne marche pas, vérifiez Windows :</p>
-                  <div className="bg-secondary/50 p-3 rounded text-xs text-foreground space-y-1">
-                    ✓ Allez à <strong>Paramètres → Confidentialité et sécurité → Microphone</strong>
-                    <br />✓ Activez "Accès au microphone"
-                    <br />✓ Autorisez l'accès pour votre navigateur (Chrome, Edge, etc.)
-                    <br />✓ Redémarrez le navigateur
-                  </div>
-                </div>
-
-                <div className="border-l-4 border-primary pl-4">
-                  <h3 className="font-semibold text-foreground mb-2">3. Vérifier le matériel</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Assurez-vous que votre microphone est connecté et fonctionne (testez-le ailleurs si possible).
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-3 items-center justify-between">
-                <Button size="lg" variant="outline" onClick={() => {
-                  setMicAllowed(true);
-                  setMicPermissionChecked(true);
-                }} className="flex-1">
-                  Continuer quand même
-                </Button>
-                <Button size="lg" onClick={requestMicPermission} className="flex-1">
-                  Réessayer
-                </Button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-        
-        {micPermissionChecked && micAllowed && (
-          <Button size="lg" onClick={() => setStarted(true)}>Commencer la répétition</Button>
-        )}
+        <Button size="lg" onClick={() => setStarted(true)}>Commencer la répétition</Button>
       </div>
     );
   }
