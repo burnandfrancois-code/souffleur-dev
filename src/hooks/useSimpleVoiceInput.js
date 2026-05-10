@@ -131,11 +131,7 @@ export function useSimpleVoiceInput() {
       }
     };
 
-    try {
-      rec.start();
-    } catch (e) {
-      setError({ message: `Erreur: ${e.message}` });
-    }
+    rec.start();
   }, [stop]);
 
   const reset = useCallback(() => {
