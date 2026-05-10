@@ -1,9 +1,46 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, AlertTriangle, XCircle, RotateCcw } from 'lucide-react';
 
 export default function ComparisonResult({ result, onRetry, onContinue }) {
+  const onContinueRef = useRef(onContinue);
+  const onRetryRef = useRef(onRetry);
+  useEffect(() => { onContinueRef.current = onContinue; }, [onContinue]);
+  useEffect(() => { onRetryRef.current = onRetry; }, [onRetry]);
+
+  useEffect(() => {
+    if (!result) return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const rec = new SpeechRecognition();
+    rec.lang = 'fr-FR';
+    rec.continuous = false;
+    rec.interimResults = false;
+
+    rec.onresult = (event) => {
+      const text = event.results[0]?.[0]?.transcript?.toLowerCase().trim() || '';
+      if (text.includes('passer') || text.includes('suivant') || text.includes('continuer')) {
+        onContinueRef.current();
+      } else if (text.includes('réessayer') || text.includes('recommencer') || text.includes('retry')) {
+        onRetryRef.current();
+      }
+    };
+
+    rec.onend = () => {
+      // relancer en boucle tant qu'on est sur l'écran résultat
+      try { rec.start(); } catch (e) {}
+    };
+
+    try { rec.start(); } catch (e) {}
+
+    return () => {
+      rec.onend = null;
+      try { rec.abort(); } catch (e) {}
+    };
+  }, [result]);
+
   if (!result) return null;
 
   const wordResults = (result.word_results || []).map(w => ({ ...w, got: w.got || '' }));
@@ -143,6 +180,11 @@ export default function ComparisonResult({ result, onRetry, onContinue }) {
             </div>
           </div>
         )}
+
+        {/* Hint vocal */}
+        <p className="text-center text-xs text-muted-foreground italic">
+          Dites <span className="text-primary font-semibold not-italic">"passer"</span> pour continuer
+        </p>
 
         {/* Boutons */}
         <div className="flex gap-3 justify-center pt-2">
