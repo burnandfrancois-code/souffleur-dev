@@ -56,7 +56,7 @@ function getVoices() {
   });
 }
 
-export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1.3, signal) {
+export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1.0, signal) {
   if (signal?.aborted) return;
 
   // Déverrouiller l'audio sur desktop si nécessaire
