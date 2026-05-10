@@ -17,9 +17,11 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
   const interimRef = useRef('');
   const lastOkTimeRef = useRef(0);
   const startRecordingRef = useRef(null);
+  const autoStartedRef = useRef(false);
 
   const stopRecording = useCallback(() => {
     userStoppedRef.current = true;
+    autoStartedRef.current = false;
     sessionIdRef.current += 1;
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch (e) {}
@@ -160,11 +162,12 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
   }, []);
 
   useEffect(() => {
-    if (autoPlay && !isRecording && !transcript) {
+    if (autoPlay && !isRecording && !transcript && !autoStartedRef.current) {
+      autoStartedRef.current = true;
       const timer = setTimeout(startRecording, 300);
       return () => clearTimeout(timer);
     }
-  }, [autoPlay, isRecording, transcript, startRecording]);
+  }, [autoPlay, startRecording]);
 
   const handleMicToggle = () => {
     if (isRecording) {
