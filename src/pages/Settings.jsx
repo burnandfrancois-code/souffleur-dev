@@ -40,7 +40,7 @@ export default function Settings() {
       <header className="px-6 py-4 border-b border-border/50">
         <div className="max-w-5xl mx-auto flex items-center gap-3">
           <Theater className="w-7 h-7 text-primary" />
-          <h1 className="text-xl font-bold text-foreground">Paramètres</h1>
+          <h1 className="font-display text-xl font-bold text-foreground">Paramètres</h1>
         </div>
       </header>
 
@@ -49,20 +49,20 @@ export default function Settings() {
 
           {/* Subscription */}
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-foreground">Abonnement</h2>
+            <h2 className="font-display text-lg font-bold text-foreground">Abonnement</h2>
             <div className="bg-card border border-border rounded-xl p-4 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <Crown className="w-5 h-5 text-primary shrink-0" />
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Formule actuelle</p>
-                  <p className={`text-xs ${planInfo.color}`}>{planInfo.label}</p>
+                  <p className="text-sm font-body font-semibold text-foreground">Formule actuelle</p>
+                  <p className={`text-xs font-body ${planInfo.color}`}>{planInfo.label}</p>
                 </div>
               </div>
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => navigate('/tarifs')}
-                className="border-primary/40 text-primary hover:bg-primary/10 gap-2 shrink-0"
+                className="border-primary/40 text-primary hover:bg-primary/10 font-body gap-2 shrink-0"
               >
                 <CreditCard className="w-4 h-4" />
                 {subStatus === 'active' ? 'Changer' : 'Voir les offres'}
@@ -72,10 +72,10 @@ export default function Settings() {
 
           {/* Voice Test */}
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-foreground">Outils</h2>
+            <h2 className="font-display text-lg font-bold text-foreground">Outils</h2>
             <div className="bg-card border border-border rounded-xl p-4">
               <Link to="/voice-test">
-                <Button variant="outline" className="w-full gap-2 border-primary/40 text-primary hover:bg-primary/10">
+                <Button variant="outline" className="w-full gap-2 border-primary/40 text-primary hover:bg-primary/10 font-body">
                   <Volume2 className="w-4 h-4" />
                   Tester les voix (debug)
                 </Button>
@@ -84,9 +84,9 @@ export default function Settings() {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-lg font-bold text-foreground">Compte</h2>
+            <h2 className="font-display text-lg font-bold text-foreground">Compte</h2>
             <div className="bg-card border border-destructive/40 rounded-xl p-4 space-y-3">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground font-body">
                 Supprimer votre compte effacera tous vos textes et données de façon permanente.
               </p>
               <Button

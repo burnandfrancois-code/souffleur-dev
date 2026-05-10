@@ -19,11 +19,6 @@ export default function AndroidRehearsal() {
   const navigate = useNavigate();
   const urlParams = new URLSearchParams(window.location.search);
   const scriptId = urlParams.get('scriptId');
-  
-  // Debug log visible
-  useEffect(() => {
-    console.log('AndroidRehearsal page loaded, scriptId:', scriptId);
-  }, [scriptId]);
 
   const [currentLineIndex, setCurrentLineIndex] = useState(0);
   const [phase, setPhase] = useState('line');
@@ -41,7 +36,9 @@ export default function AndroidRehearsal() {
   const myLineRecorderRef = useRef(null);
   const compareSessionRef = useRef(0);
 
-  useEffect(() => { currentLineIndexRef.current = currentLineIndex; }, [currentLineIndex]);
+  useEffect(() => {
+    currentLineIndexRef.current = currentLineIndex;
+  }, [currentLineIndex]);
 
   const { speakPartnerLines, speakSingleLine, cancelAll } = usePartnerSpeaker({
     speechRateRef,
@@ -49,21 +46,11 @@ export default function AndroidRehearsal() {
     onSpeakingChange: (s) => setIsSpeaking(s),
   });
 
-  const { data: script, isLoading, error } = useQuery({
+  const { data: script, isLoading } = useQuery({
     queryKey: ['script', scriptId],
-    queryFn: async () => {
-      if (!scriptId) return null;
-      try {
-        const result = await base44.entities.Script.filter({ id: scriptId });
-        return result?.[0] || null;
-      } catch (err) {
-        console.error('Failed to fetch script:', err);
-        throw err;
-      }
-    },
+    queryFn: () => base44.entities.Script.filter({ id: scriptId }),
+    select: (data) => data[0],
     enabled: !!scriptId,
-    retry: 1,
-    staleTime: Infinity,
   });
 
   const stripDirections = (text) => text?.replace(/\([^)]*\)?/g, '').replace(/\[[^\]]*\]?/g, '').replace(/\s+/g, ' ').trim() || '';
@@ -83,13 +70,6 @@ export default function AndroidRehearsal() {
   const launchSpeakChain = useCallback((index) => {
     speakPartnerLines(index, lines, myCharacter, characterGenders, stripDirections);
   }, [speakPartnerLines, lines, myCharacter, characterGenders]);
-
-  // Auto-start partner lines on Android when arriving at a partner line
-  useEffect(() => {
-    if (!isMyLine && !isSpeaking && started && phase === 'line') {
-      launchSpeakChain(currentLineIndex);
-    }
-  }, [currentLineIndex, isMyLine, started, phase, isSpeaking, launchSpeakChain]);
 
   const handleSubmitRecording = async (spokenText) => {
     const idx = currentLineIndexRef.current;
@@ -117,9 +97,12 @@ export default function AndroidRehearsal() {
     }
   }, [phase, comparisonResult]);
 
-  const handleRetry = useCallback(() => { setComparisonResult(null); setPhase('line'); }, []);
+  const handleRetry = () => {
+    setComparisonResult(null);
+    setPhase('line');
+  };
 
-  const handleContinue = useCallback(() => {
+  const handleContinue = () => {
     const idx = currentLineIndexRef.current;
     if (comparisonResult?.perfect) setCompletedMyLines(prev => new Set([...prev, idx]));
     const nextIndex = idx + 1;
@@ -131,59 +114,16 @@ export default function AndroidRehearsal() {
     if (normalize(nextLine.character) !== normalize(myCharacter)) {
       speakPartnerLines(nextIndex, lines, myCharacter, characterGenders, stripDirections);
     }
-  }, [lines, myCharacter, characterGenders, speakPartnerLines, comparisonResult]);
-
-  // Écoute vocale passive pendant la phase 'result' pour détecter "passer"
-  useEffect(() => {
-    if (phase !== 'result') return;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    let active = true;
-    let rec = null;
-
-    const start = () => {
-      if (!active) return;
-      rec = new SpeechRecognition();
-      rec.lang = 'fr-FR';
-      rec.continuous = false;
-      rec.interimResults = false;
-
-      rec.onresult = (event) => {
-        if (!active) return;
-        const text = event.results[0]?.[0]?.transcript?.toLowerCase().trim() || '';
-        if (text.includes('passer') || text.includes('suivant') || text.includes('continuer')) {
-          handleContinue();
-        } else if (text.includes('réessayer') || text.includes('recommencer')) {
-          handleRetry();
-        }
-      };
-
-      rec.onend = () => { if (active) setTimeout(start, 100); };
-      rec.onerror = (e) => { if (e.error !== 'aborted' && active) setTimeout(start, 300); };
-
-      try { rec.start(); } catch (e) {}
-    };
-
-    const timer = setTimeout(start, 400);
-
-    return () => {
-      active = false;
-      clearTimeout(timer);
-      if (rec) { try { rec.abort(); } catch (e) {} }
-    };
-  }, [phase, handleContinue, handleRetry]);
+  };
 
   const handleNextLine = () => {
     const nextIndex = currentLineIndex + 1;
     const nextLine = lines[nextIndex];
     cancelAll();
-    setPhase('line');
-    setComparisonResult(null);
     setCurrentLineIndex(nextIndex);
     if (!nextLine) return;
     if (normalize(nextLine.character) !== normalize(myCharacter)) {
-      launchSpeakChain(nextIndex);
+      speakPartnerLines(nextIndex, lines, myCharacter, characterGenders, stripDirections);
     }
   };
 
@@ -210,67 +150,16 @@ export default function AndroidRehearsal() {
     if (cur < indices.length - 1) goToMyLine(indices[cur + 1]);
   };
 
-  // Missing scriptId — show error immediately
-  if (!scriptId) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="space-y-4 max-w-md w-full">
-          <p className="text-destructive font-bold text-center text-lg">Erreur: pas de script</p>
-          <p className="text-xs text-muted-foreground text-center">L'URL doit contenir ?scriptId=...</p>
-          <Button onClick={() => navigate('/android/')} variant="outline" className="w-full">Retour</Button>
-        </div>
-      </div>
-    );
-  }
-
-  // DEBUG - Show loading state
-  if (!script && isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center space-y-4 px-4">
-          <p className="text-primary font-bold text-base">Chargement...</p>
-          <p className="text-muted-foreground text-xs">scriptId: {scriptId}</p>
-          {error && <p className="text-destructive text-xs break-all">{String(error?.message || error)}</p>}
-          <Loader2 className="w-6 h-6 text-primary animate-spin mx-auto mt-4" />
-        </div>
-      </div>
-    );
-  }
-
   if (isLoading) return (
     <div className="min-h-screen flex items-center justify-center">
       <Loader2 className="w-8 h-8 text-primary animate-spin" />
     </div>
   );
 
-  if (error) return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="space-y-4 max-w-md w-full">
-        <p className="text-destructive font-bold text-center text-lg">Erreur de chargement</p>
-        <div className="bg-card border border-border rounded-lg p-3 text-xs text-foreground overflow-auto max-h-60">
-          <pre className="whitespace-pre-wrap break-words font-mono">
-            {error?.message || JSON.stringify(error)}
-          </pre>
-        </div>
-        <button
-          onClick={() => {
-            const text = error?.message || JSON.stringify(error);
-            navigator.clipboard.writeText(text);
-            alert('Erreur copiée au presse-papiers');
-          }}
-          className="w-full bg-primary text-primary-foreground py-2 rounded-lg text-sm font-semibold"
-        >
-          Copier l'erreur
-        </button>
-        <Button onClick={() => navigate('/android/')} variant="outline" className="w-full">Retour</Button>
-      </div>
-    </div>
-  );
-
   if (!script || lines.length === 0) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center space-y-4 px-4">
-        <p className="text-foreground text-lg font-bold">Texte introuvable</p>
+        <p className="text-foreground font-display text-lg font-bold">Texte introuvable</p>
         <Button onClick={() => navigate('/android/')} className="bg-primary text-primary-foreground">Retour</Button>
       </div>
     </div>
@@ -280,14 +169,14 @@ export default function AndroidRehearsal() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-6 px-4 py-8">
       <div className="text-center space-y-2">
         <Theater className="w-10 h-10 text-primary mx-auto" />
-        <h1 className="text-xl font-bold text-foreground">{script.title}</h1>
-        <p className="text-sm text-primary font-semibold">{myCharacter}</p>
-        <p className="text-xs text-muted-foreground">{myLineCount} répliques à jouer</p>
+        <h1 className="font-display text-xl font-bold text-foreground">{script.title}</h1>
+        <p className="font-body text-sm text-primary font-semibold">{myCharacter}</p>
+        <p className="font-body text-xs text-muted-foreground">{myLineCount} répliques à jouer</p>
       </div>
 
       <Button
         size="lg"
-        className="w-full max-w-xs bg-primary text-primary-foreground text-base gap-2 mt-4"
+        className="w-full max-w-xs bg-primary text-primary-foreground font-body text-base gap-2 mt-4"
         onClick={async () => {
           setStarted(true);
           await unlockAudioForAndroid();
@@ -312,8 +201,8 @@ export default function AndroidRehearsal() {
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div className="min-w-0">
-              <h1 className="text-sm font-bold text-foreground truncate">{script.title}</h1>
-              <p className="text-xs text-primary">{myCharacter}</p>
+              <h1 className="font-display text-sm font-bold text-foreground truncate">{script.title}</h1>
+              <p className="text-xs text-primary font-body">{myCharacter}</p>
             </div>
           </div>
           <Theater className="w-5 h-5 text-primary shrink-0" />
@@ -340,7 +229,7 @@ export default function AndroidRehearsal() {
         <div className="w-full max-w-2xl mx-auto space-y-3">
           {currentLine?.act && (
             <div className="flex justify-center">
-              <span className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">
+              <span className="text-xs font-body text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">
                 {currentLine.act && `Acte ${currentLine.act}`}{currentLine.scene && ` · Scène ${currentLine.scene}`}
               </span>
             </div>
@@ -355,7 +244,7 @@ export default function AndroidRehearsal() {
                   <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${isMyPastLine ? 'bg-primary/20 text-primary' : 'bg-secondary text-muted-foreground'}`}>
                     {line.character?.charAt(0)?.toUpperCase()}
                   </div>
-                  <div className={`rounded-lg px-2.5 py-1.5 text-xs ${isMyPastLine ? 'bg-primary/5 border border-primary/20 rounded-tr-sm' : 'bg-secondary/50 border border-border rounded-tl-sm'}`}>
+                  <div className={`rounded-lg px-2.5 py-1.5 text-xs font-body ${isMyPastLine ? 'bg-primary/5 border border-primary/20 rounded-tr-sm' : 'bg-secondary/50 border border-border rounded-tl-sm'}`}>
                     {stripDirections(line.text)}
                   </div>
                 </div>
@@ -381,15 +270,7 @@ export default function AndroidRehearsal() {
               <div key={currentLineIndex} className="space-y-3">
                 {isMyLine ? (
                   <>
-                    {phase === 'line' && (
-                      <MyLineRecorder 
-                        ref={myLineRecorderRef}
-                        line={currentLineClean} 
-                        onSubmit={handleSubmitRecording} 
-                        onSkip={handleNextLine} 
-                        autoPlay={true} 
-                      />
-                    )}
+                    {phase === 'line' && <MyLineRecorder ref={myLineRecorderRef} line={currentLineClean} onSubmit={handleSubmitRecording} onSkip={handleNextLine} autoPlay={true} />}
                     {phase === 'comparing' && (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center py-6">
                         <Loader2 className="w-6 h-6 text-primary animate-spin" />
@@ -406,13 +287,13 @@ export default function AndroidRehearsal() {
                     />
                     {!isSpeaking && (
                       <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="flex justify-center">
-                        <Button onClick={handleNextLine} className="bg-primary text-primary-foreground text-sm gap-2 w-full max-w-xs">
+                        <Button onClick={handleNextLine} className="bg-primary text-primary-foreground font-body text-sm gap-2 w-full max-w-xs">
                           Suivant <ChevronRight className="w-4 h-4" />
                         </Button>
                       </motion.div>
                     )}
                     {isSpeaking && (
-                      <p className="text-xs text-muted-foreground text-center italic">Lecture en cours…</p>
+                      <p className="text-xs text-muted-foreground text-center font-body italic">Lecture en cours…</p>
                     )}
                   </div>
                 )}
@@ -428,7 +309,7 @@ export default function AndroidRehearsal() {
             <button onClick={goToPrevMyLine} className="p-1 rounded hover:bg-primary/30 hover:text-primary transition-all">
               <ChevronLeft className="w-4 h-4 text-primary" />
             </button>
-            <span className="text-xs font-bold text-primary -ml-0.5">Ma</span>
+            <span className="text-xs font-body font-bold text-primary -ml-0.5">Ma</span>
           </div>
 
           <button
@@ -440,7 +321,7 @@ export default function AndroidRehearsal() {
           </button>
 
           <div className="flex items-center gap-0">
-            <span className="text-xs font-bold text-primary -mr-0.5">Ma</span>
+            <span className="text-xs font-body font-bold text-primary -mr-0.5">Ma</span>
             <button onClick={goToNextMyLine} className="p-1 rounded hover:bg-primary/30 hover:text-primary transition-all">
               <ChevronRight className="w-4 h-4 text-primary" />
             </button>
@@ -475,7 +356,7 @@ export default function AndroidRehearsal() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
             className="fixed top-20 left-4 right-4 z-50 bg-card/95 backdrop-blur-sm border border-border rounded-lg p-4 max-h-96 overflow-y-auto shadow-xl">
             <div className="flex items-center justify-between gap-2 mb-3">
-              <p className="text-xs font-semibold text-muted-foreground uppercase">Mes répliques</p>
+              <p className="text-xs font-body font-semibold text-muted-foreground uppercase">Mes répliques</p>
               <div className="flex gap-2">
                 <button onClick={goToPrevMyLine} className="p-2 rounded hover:bg-secondary text-foreground hover:text-primary transition-all">
                   <ChevronLeft className="w-4 h-4" />
@@ -492,7 +373,7 @@ export default function AndroidRehearsal() {
                 const isCurrent = i === currentLineIndex;
                 return (
                   <button key={i} onClick={() => { cancelAll(); setCurrentLineIndex(i); setShowLinesList(false); setPhase('line'); setComparisonResult(null); }}
-                    className={`w-full text-left px-2 py-1.5 rounded text-xs transition-all ${isCurrent ? 'bg-primary/20 border border-primary text-foreground' : isCompleted ? 'bg-green-500/10 text-green-400' : 'bg-secondary/50 hover:bg-secondary text-muted-foreground'}`}>
+                    className={`w-full text-left px-2 py-1.5 rounded text-xs font-body transition-all ${isCurrent ? 'bg-primary/20 border border-primary text-foreground' : isCompleted ? 'bg-green-500/10 text-green-400' : 'bg-secondary/50 hover:bg-secondary text-muted-foreground'}`}>
                     <div className="truncate">{isCompleted && '✓ '}{stripDirections(line.text)}</div>
                   </button>
                 );
