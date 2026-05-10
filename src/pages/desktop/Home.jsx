@@ -38,7 +38,7 @@ export default function Home() {
   const [processingError, setProcessingError] = useState(null);
   
   useEffect(() => {
-    setIsAndroid(/Android/i.test(navigator.userAgent));
+    setIsAndroid(false); // Toujours false sur /desktop/
     (async () => {
       try {
         const scripts = await base44.entities.Script.list('-created_date', 1);
