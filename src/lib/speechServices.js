@@ -59,6 +59,9 @@ function getVoices() {
 export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1, signal) {
   if (signal?.aborted) return;
 
+  // Déverrouiller l'audio sur desktop si nécessaire
+  await unlockAudioForDesktop();
+
   // Charger les voix disponibles
   const voices = await getVoices();
 
