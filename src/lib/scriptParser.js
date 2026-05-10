@@ -146,7 +146,7 @@ export async function compareTexts(expectedText, spokenText) {
       text
         ?.toLowerCase()
         .trim()
-        .replace(/[^\w\s]/g, '')
+        .replace(/[^\p{L}\p{N}\s]/gu, '')
         .replace(/\s+/g, ' ') || '';
 
     const normalizedExpected = normalize(expectedText);
