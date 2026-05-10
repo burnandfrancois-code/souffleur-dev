@@ -132,11 +132,11 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
     rec.onend = () => {
       if (sessionIdRef.current !== mySession) return;
       if (userStoppedRef.current) return;
-      // Créer une nouvelle instance (Chrome interdit de relancer la même)
+      // Attendre 2s avant de relancer (évite boucles rapides)
       setTimeout(() => {
         if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
         startRecordingRef.current();
-      }, 150);
+      }, 2000);
     };
 
     try {
