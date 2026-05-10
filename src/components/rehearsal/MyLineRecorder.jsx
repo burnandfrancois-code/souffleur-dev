@@ -13,7 +13,6 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   const [trainingMode, setTrainingMode] = useState(false);
   const [isSpeakingMyLine, setIsSpeakingMyLine] = useState(false);
   const [sttError, setSttError] = useState(null);
-  const [hasStarted, setHasStarted] = useState(false);
 
   const recognitionRef = useRef(null);
   const userStoppedRef = useRef(false);
@@ -245,7 +244,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     setTranscript('');
     setSttError(null);
 
-    if (autoPlay && hasStarted && !trainingMode) {
+    if (autoPlay && !trainingMode) {
       // Délai plus long à vitesses élevées pour laisser le temps de terminer sa phrase
       const delay = speechRate >= 2 ? 1500 : 1200;
       const timer = setTimeout(() => {
@@ -253,7 +252,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       }, delay);
       return () => clearTimeout(timer);
     }
-  }, [line, autoPlay, hasStarted, trainingMode, speechRate]);
+  }, [line, autoPlay, trainingMode, speechRate]);
 
   const handleSubmit = () => {
     const final = transcript.trim();
@@ -286,46 +285,32 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     >
       <div className="flex-1 min-w-0 max-w-[90%]">
 
-        {/* Start or Listen to my line */}
-        <div className="flex justify-center gap-2 mb-3">
-          {!hasStarted ? (
-            <Button
-              size="sm"
-              onClick={() => {
-                setHasStarted(true);
-                setTimeout(() => startRecording(), 100);
-              }}
-              className="gap-2 bg-primary text-primary-foreground"
-            >
-              <Mic className="w-4 h-4" />
-              Démarrer
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isSpeakingMyLine}
-              onClick={async () => {
-                const wasRecording = isRecording;
-                if (isRecording) {
-                  stopRecording();
-                  await new Promise(r => setTimeout(r, 350));
-                }
-                setIsSpeakingMyLine(true);
-                await speakText(line.text, 'fr-FR', 'male', speechRate);
-                setIsSpeakingMyLine(false);
-                if (wasRecording && autoPlay) {
-                  setTimeout(() => startRecording(), 200);
-                }
-              }}
-              className="gap-2 text-muted-foreground border-border"
-            >
-              {isSpeakingMyLine
-                ? <><Loader2 className="w-4 h-4 animate-spin" />Lecture...</>
-                : <><Volume2 className="w-4 h-4 text-primary" />Écouter ma réplique</>
+        {/* Listen to my line */}
+        <div className="flex justify-center mb-3">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isSpeakingMyLine}
+            onClick={async () => {
+              const wasRecording = isRecording;
+              if (isRecording) {
+                stopRecording();
+                await new Promise(r => setTimeout(r, 350));
               }
-            </Button>
-          )}
+              setIsSpeakingMyLine(true);
+              await speakText(line.text, 'fr-FR', 'male', speechRate);
+              setIsSpeakingMyLine(false);
+              if (wasRecording && autoPlay) {
+                setTimeout(() => startRecording(), 200);
+              }
+            }}
+            className="gap-2 text-muted-foreground border-border"
+          >
+            {isSpeakingMyLine
+              ? <><Loader2 className="w-4 h-4 animate-spin" />Lecture...</>
+              : <><Volume2 className="w-4 h-4 text-primary" />Écouter ma réplique</>
+            }
+          </Button>
         </div>
 
         {/* Error */}
@@ -343,67 +328,51 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
           </motion.div>
         )}
 
-        {/* Start or Recording banner */}
-        {!hasStarted ? (
-          <div className="rounded-2xl border-2 border-primary bg-primary/10 p-6 mb-3 text-center">
-            <p className="text-sm text-primary mb-3">Prêt à commencer ?</p>
-            <button
-              onClick={() => {
-                setHasStarted(true);
-                setTimeout(() => startRecording(), 100);
-              }}
-              className="relative w-24 h-24 rounded-full mx-auto flex items-center justify-center transition-all bg-primary shadow-lg shadow-primary/30 hover:scale-105 mb-3"
-            >
-              <Mic className="w-10 h-10 text-primary-foreground relative z-10" />
-            </button>
-            <p className="text-xs text-muted-foreground">Cliquez pour activer le micro</p>
-          </div>
-        ) : (
-          <div className={`
-            rounded-2xl border-2 p-5 mb-3 text-center transition-all duration-300
-            ${isRecording
-              ? 'border-destructive bg-destructive/10'
-              : 'border-primary bg-primary/10'
-            }
-          `}>
-            <div className="flex items-center justify-center gap-3 mb-3">
-              {isRecording && <span className="w-3 h-3 rounded-full bg-destructive animate-ping" />}
-              <p className={`font-bold text-xl ${isRecording ? 'text-destructive' : 'text-primary'}`}>
-                {isRecording ? '🎙 Parlez maintenant !' : '🎤 C\'est votre tour'}
-              </p>
-            </div>
-
-            {/* Mic button */}
-            <button
-              onClick={handleMicToggle}
-              disabled={isComparing}
-              className={`
-                relative w-24 h-24 rounded-full mx-auto flex items-center justify-center transition-all
-                ${isRecording
-                  ? 'bg-destructive shadow-2xl shadow-destructive/50'
-                  : 'bg-primary shadow-xl shadow-primary/30 hover:scale-105'
-                }
-              `}
-            >
-              {isRecording && (
-                <span className="absolute inset-0 rounded-full bg-destructive/50 animate-ping" />
-              )}
-              {isRecording
-                ? <MicOff className="w-10 h-10 text-white relative z-10" />
-                : <Mic className="w-10 h-10 text-primary-foreground relative z-10" />
-              }
-            </button>
-
-            <p className="text-sm text-muted-foreground mt-2">
-              {isRecording ? 'Appuyez pour arrêter' : 'Appuyez pour commencer'}
+        {/* Recording banner */}
+        <div className={`
+          rounded-2xl border-2 p-5 mb-3 text-center transition-all duration-300
+          ${isRecording
+            ? 'border-destructive bg-destructive/10'
+            : 'border-primary bg-primary/10'
+          }
+        `}>
+          <div className="flex items-center justify-center gap-3 mb-3">
+            {isRecording && <span className="w-3 h-3 rounded-full bg-destructive animate-ping" />}
+            <p className={`font-bold text-xl ${isRecording ? 'text-destructive' : 'text-primary'}`}>
+              {isRecording ? '🎙 Parlez maintenant !' : '🎤 C\'est votre tour'}
             </p>
-            {isRecording && autoPlay && (
-              <p className="text-sm text-muted-foreground mt-1 italic">
-                Dites votre réplique, <span className="font-bold text-destructive text-base not-italic">attendez 2 ou 3 secondes</span> puis dites <span className="font-bold text-destructive text-base not-italic">OK</span>
-              </p>
-            )}
           </div>
-        )}
+
+          {/* Mic button */}
+          <button
+            onClick={handleMicToggle}
+            disabled={isComparing}
+            className={`
+              relative w-24 h-24 rounded-full mx-auto flex items-center justify-center transition-all
+              ${isRecording
+                ? 'bg-destructive shadow-2xl shadow-destructive/50'
+                : 'bg-primary shadow-xl shadow-primary/30 hover:scale-105'
+              }
+            `}
+          >
+            {isRecording && (
+              <span className="absolute inset-0 rounded-full bg-destructive/50 animate-ping" />
+            )}
+            {isRecording
+              ? <MicOff className="w-10 h-10 text-white relative z-10" />
+              : <Mic className="w-10 h-10 text-primary-foreground relative z-10" />
+            }
+          </button>
+
+          <p className="text-sm text-muted-foreground mt-2">
+            {isRecording ? 'Appuyez pour arrêter' : 'Appuyez pour commencer'}
+          </p>
+          {isRecording && autoPlay && (
+            <p className="text-sm text-muted-foreground mt-1 italic">
+              Dites votre réplique, <span className="font-bold text-destructive text-base not-italic">attendez 2 ou 3 secondes</span> puis dites <span className="font-bold text-destructive text-base not-italic">OK</span>
+            </p>
+          )}
+        </div>
 
         {/* Modes */}
         <div className="flex items-center justify-between mb-2">
