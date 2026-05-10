@@ -118,8 +118,8 @@ export function useSimpleVoiceInput() {
       if (sessionIdRef.current !== mySession) return;
       if (e.error === 'not-allowed') {
         setError({ message: 'Permission micro refusée' });
+        stop();
       }
-      stop();
     };
 
     rec.onend = () => {
