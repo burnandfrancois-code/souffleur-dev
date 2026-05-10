@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Theater, ChevronRight, ChevronLeft, Trophy, Loader2, Mic, FastForward, Rewind, Zap, Hand, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { speakText, stopSpeaking, unlockAudioForDesktop, unlockAudioContextDesktop } from '@/lib/speechServices';
+import { speakText, stopSpeaking, unlockAudioForDesktop } from '@/lib/speechServices';
 import { compareTexts } from '@/lib/scriptParser';
 import PartnerLine from '@/components/rehearsal/PartnerLine';
 import MyLineRecorder from '@/components/rehearsal/MyLineRecorder';
@@ -22,7 +22,6 @@ export default function Rehearsal() {
   const [currentLineIndex, setCurrentLineIndex] = useState(0);
   const [phase, setPhase] = useState('line');
   const [comparisonResult, setComparisonResult] = useState(null);
-  const [lastTranscription, setLastTranscription] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [completedMyLines, setCompletedMyLines] = useState(new Set());
   const [lineScores, setLineScores] = useState([]);
@@ -30,8 +29,7 @@ export default function Rehearsal() {
   const [autoPlay, setAutoPlay] = useState(() => localStorage.getItem('souffleur_autoplay') !== 'false');
   const [showMyLines, setShowMyLines] = useState(false);
   const [speechRate, setSpeechRate] = useState(() => parseFloat(localStorage.getItem('souffleur_rate') || '1'));
-  const isAndroid = /Android/i.test(navigator.userAgent);
-  const autoAdvanceThreshold = isAndroid ? 80 : 100;
+
   const scrollRef = useRef(null);
   const myLineRecorderRef = useRef(null);
   const autoPlayRef = useRef(autoPlay);
@@ -68,7 +66,6 @@ export default function Rehearsal() {
   const lines = script?.lines || [];
   const myCharacter = script?.my_character;
   const characterGenders = script?.character_genders || {};
-  const getGender = (character) => characterGenders[character] || 'male';
   const currentLine = lines[currentLineIndex];
   const currentLineClean = currentLine ? { ...currentLine, text: stripDirections(currentLine.text) } : null;
   const normalize = (s) => s?.trim().toLowerCase();
@@ -92,7 +89,7 @@ export default function Rehearsal() {
 
   const stopAll = useCallback(() => {
     if (myLineRecorderRef.current) {
-      myLineRecorderRef.current.stopRecording();
+      myLineRecorderRef.current.stop();
     }
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -103,28 +100,6 @@ export default function Rehearsal() {
     pendingTimersRef.current = [];
     speakSessionRef.current += 1;
     compareSessionRef.current += 1;
-  }, []);
-
-  const stopSpeakingOnly = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-    stopSpeaking();
-    pendingTimersRef.current.forEach(clearTimeout);
-    pendingTimersRef.current = [];
-    speakSessionRef.current += 1;
-  }, []);
-
-  const cancelAll = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-    stopSpeaking();
-    pendingTimersRef.current.forEach(clearTimeout);
-    pendingTimersRef.current = [];
-    speakSessionRef.current += 1;
   }, []);
 
   const speakAndAdvance = useCallback(async (startIndex, linesArr, myChar, genders, session, signal) => {
@@ -165,7 +140,7 @@ export default function Rehearsal() {
     pendingTimersRef.current = [];
     speakSessionRef.current += 1;
     const session = speakSessionRef.current;
-    
+
     const timer = setTimeout(() => {
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -175,11 +150,11 @@ export default function Rehearsal() {
   }, [speakAndAdvance]);
 
   const handleSpeakPartnerLine = async (text, character) => {
-    cancelAll();
+    stopAll();
     setIsSpeaking(true);
     const controller = new AbortController();
     abortControllerRef.current = controller;
-    await speakText(text, 'fr-FR', getGender(character), speechRate, controller.signal);
+    await speakText(text, 'fr-FR', characterGenders[character] || 'male', speechRate, controller.signal);
     setIsSpeaking(false);
   };
 
@@ -188,7 +163,6 @@ export default function Rehearsal() {
     const lineText = currentLineClean.text;
     compareSessionRef.current += 1;
     const session = compareSessionRef.current;
-    setLastTranscription(spokenText);
     setPhase('comparing');
     const result = await compareTexts(lineText, spokenText);
     if (compareSessionRef.current !== session) return;
@@ -204,7 +178,7 @@ export default function Rehearsal() {
   useEffect(() => {
     const accuracy = comparisonResult?.accuracy ?? 0;
     const hasMissingWords = (comparisonResult?.word_results || []).some(w => w.status === 'missing');
-    const shouldAdvance = (comparisonResult?.perfect || accuracy >= autoAdvanceThreshold) && !hasMissingWords;
+    const shouldAdvance = (comparisonResult?.perfect || accuracy >= 100) && !hasMissingWords;
     if (phase === 'result' && shouldAdvance && autoPlayRef.current) {
       const timer = setTimeout(() => {
         if (autoPlayRef.current) handleContinue();
@@ -213,12 +187,12 @@ export default function Rehearsal() {
     }
   }, [phase, comparisonResult]);
 
-  const handleRetry = useCallback(() => {
+  const handleRetry = () => {
     setComparisonResult(null);
     setPhase('line');
-  }, []);
+  };
 
-  const handleContinue = useCallback(() => {
+  const handleContinue = () => {
     const idx = currentLineIndexRef.current;
     if (comparisonResult?.perfect) {
       setCompletedMyLines(prev => new Set([...prev, idx]));
@@ -237,51 +211,10 @@ export default function Rehearsal() {
     if (nextIsPartner && autoPlayRef.current) {
       launchSpeakChain(nextIndex, lines, myCharacter, characterGenders);
     }
-  }, [lines, myCharacter, characterGenders, launchSpeakChain, comparisonResult]);
-
-  // Écoute vocale passive pendant la phase 'result' pour détecter "passer"
-  useEffect(() => {
-    if (phase !== 'result') return;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
-
-    let active = true;
-    let rec = null;
-
-    const start = () => {
-      if (!active) return;
-      rec = new SpeechRecognition();
-      rec.lang = 'fr-FR';
-      rec.continuous = false;
-      rec.interimResults = false;
-
-      rec.onresult = (event) => {
-        if (!active) return;
-        const text = event.results[0]?.[0]?.transcript?.toLowerCase().trim() || '';
-        if (text.includes('passer') || text.includes('suivant') || text.includes('continuer')) {
-          handleContinue();
-        } else if (text.includes('réessayer') || text.includes('recommencer')) {
-          handleRetry();
-        }
-      };
-
-      rec.onend = () => { if (active) setTimeout(start, 100); };
-      rec.onerror = (e) => { if (e.error !== 'aborted' && active) setTimeout(start, 300); };
-
-      try { rec.start(); } catch (e) {}
-    };
-
-    const timer = setTimeout(start, 400);
-
-    return () => {
-      active = false;
-      clearTimeout(timer);
-      if (rec) { try { rec.abort(); } catch (e) {} }
-    };
-  }, [phase, handleContinue, handleRetry]);
+  };
 
   const handleJumpTo = (idx) => {
-    stopSpeakingOnly();
+    stopAll();
     setPhase('line');
     setComparisonResult(null);
     setTimeout(() => {
@@ -295,7 +228,7 @@ export default function Rehearsal() {
 
   const goToPrevLine = () => {
     if (currentLineIndex > 0) {
-      stopSpeakingOnly();
+      stopAll();
       setPhase('line');
       setComparisonResult(null);
       setTimeout(() => {
@@ -307,7 +240,7 @@ export default function Rehearsal() {
   const handleNextPartnerLine = () => {
     const nextIndex = currentLineIndex + 1;
     const nextLine = lines[nextIndex];
-    cancelAll();
+    stopAll();
     setCurrentLineIndex(nextIndex);
 
     if (!nextLine) return;
@@ -319,7 +252,7 @@ export default function Rehearsal() {
         const controller = new AbortController();
         abortControllerRef.current = controller;
         setIsSpeaking(true);
-        speakText(stripDirections(nextLine.text), 'fr-FR', getGender(nextLine.character), speechRate, controller.signal)
+        speakText(stripDirections(nextLine.text), 'fr-FR', characterGenders[nextLine.character] || 'male', speechRate, controller.signal)
           .then(() => setIsSpeaking(false));
       }
     }
@@ -541,31 +474,14 @@ export default function Rehearsal() {
                 {isMyLine ? (
                   <div className="space-y-4">
                     {phase === 'line' && (
-                      <>
-                        <MyLineRecorder
-                          ref={myLineRecorderRef}
-                          line={currentLineClean}
-                          onSubmit={handleSubmitRecording}
-                          onSkip={() => {
-                            const nextIndex = currentLineIndex + 1;
-                            const nextLine = lines[nextIndex];
-                            stopAll();
-                            setPhase('line');
-                            setComparisonResult(null);
-                            setCurrentLineIndex(nextIndex);
-                            if (nextLine && normalize(nextLine.character) !== normalize(myCharacter) && autoPlay) {
-                              launchSpeakChain(nextIndex, lines, myCharacter, characterGenders);
-                            }
-                          }}
-                        isComparing={false}
-                        autoPlay={autoPlay}
-                        speechRate={speechRate}
-                        phase={phase}
-                        onContinue={handleContinue}
-                        onRetry={handleRetry}
-                        />
-                      </>
-                      )}
+                      <MyLineRecorder
+                        ref={myLineRecorderRef}
+                        line={currentLineClean}
+                        script={script}
+                        myCharacter={myCharacter}
+                        onLineAdvance={handleContinue}
+                      />
+                    )}
                     {phase === 'comparing' && (
                       <motion.div
                         initial={{ opacity: 0 }}
@@ -579,7 +495,6 @@ export default function Rehearsal() {
                     {phase === 'result' && (
                       <ComparisonResult
                         result={comparisonResult}
-                        transcription={lastTranscription}
                         onRetry={handleRetry}
                         onContinue={handleContinue}
                       />
@@ -678,7 +593,7 @@ export default function Rehearsal() {
                 onClick={() => {
                   const idx = lines.findLastIndex((l, i) => i < currentLineIndex && normalize(l.character) === normalize(myCharacter));
                   if (idx !== -1) {
-                    stopSpeakingOnly();
+                    stopAll();
                     setPhase('line');
                     setComparisonResult(null);
                     setTimeout(() => {
@@ -716,7 +631,7 @@ export default function Rehearsal() {
                 onClick={() => {
                   const idx = lines.findIndex((l, i) => i > currentLineIndex && normalize(l.character) === normalize(myCharacter));
                   if (idx === -1) return;
-                  stopSpeakingOnly();
+                  stopAll();
                   setPhase('line');
                   setComparisonResult(null);
                   setTimeout(() => setCurrentLineIndex(idx), 100);
