@@ -73,11 +73,11 @@ export default function ComparisonResult({ result, onRetry, onContinue }) {
 
         {/* Mots corrects — en bas */}
         {correctWords.length > 0 && (
-          <div className="rounded-xl border border-green-500/40 bg-green-950/60 p-3 space-y-2">
-            <p className="text-xs font-bold text-green-400 uppercase tracking-wider">✓ Corrects</p>
-            <div className="flex flex-wrap gap-1.5">
+          <div style={{ borderRadius: '12px', border: '1px solid rgba(74,222,128,0.4)', backgroundColor: 'rgba(20,83,45,0.7)', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <p style={{ fontSize: '11px', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.08em' }}>✓ Corrects</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
               {correctWords.map((w, i) => (
-                <span key={i} className="px-2 py-0.5 rounded-md text-sm font-medium bg-green-500/25 text-green-200 border border-green-400/50">
+                <span key={i} style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, backgroundColor: 'rgba(74,222,128,0.25)', color: '#bbf7d0', border: '1px solid rgba(74,222,128,0.5)' }}>
                   {w.word}
                 </span>
               ))}
