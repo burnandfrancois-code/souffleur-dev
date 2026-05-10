@@ -38,8 +38,6 @@ export default function Rehearsal() {
   const [autoPlay, setAutoPlay] = useState(() => localStorage.getItem('souffleur_autoplay') !== 'false');
   const [showMyLines, setShowMyLines] = useState(false);
   const [speechRate, setSpeechRate] = useState(() => parseFloat(localStorage.getItem('souffleur_rate') || '1'));
-  const [showMicPermission, setShowMicPermission] = useState(false);
-  const [micPermissionDenied, setMicPermissionDenied] = useState(false);
 
   const scrollRef = useRef(null);
   const myLineRecorderRef = useRef(null);
@@ -350,7 +348,22 @@ export default function Rehearsal() {
         <Button
           size="lg"
           className="bg-primary text-primary-foreground text-lg px-10 py-6 gap-3"
-          onClick={() => setShowMicPermission(true)}
+          onClick={async (e) => {
+            e.preventDefault();
+            try {
+              await navigator.mediaDevices.getUserMedia({ audio: true });
+              autoPlayRef.current = autoPlay;
+              speechRateRef.current = speechRate;
+              setStarted(true);
+              await unlockAudioForDesktop();
+              const firstLine = lines[0];
+              if (firstLine && normalize(firstLine.character) !== normalize(myCharacter) && autoPlay) {
+                launchSpeakChain(0, lines, myCharacter, characterGenders);
+              }
+            } catch (e) {
+              alert('Microphone refusé. Vérifiez les paramètres de votre navigateur.');
+            }
+          }}
         >
           <Mic className="w-6 h-6" />
           Commencer la répétition
@@ -569,74 +582,6 @@ export default function Rehearsal() {
               onJumpTo={handleJumpTo}
               onClose={() => setShowMyLines(false)}
             />
-          </>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showMicPermission && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black"
-              onClick={() => setShowMicPermission(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed inset-0 z-50 flex items-center justify-center px-4"
-            >
-              <div className="bg-card border border-border rounded-xl p-6 max-w-md shadow-xl space-y-4">
-                <div className="text-center space-y-2">
-                  <Mic className="w-10 h-10 text-primary mx-auto" />
-                  <h2 className="text-xl font-bold text-foreground">Autoriser le microphone</h2>
-                  <p className="text-sm text-muted-foreground">
-                    SOUFFLEUR a besoin d'accéder à votre microphone pour enregistrer vos répliques et analyser votre prononciation.
-                  </p>
-                </div>
-
-                {micPermissionDenied && (
-                  <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
-                    Permission refusée. Vérifiez les paramètres de votre navigateur pour autoriser le micro.
-                  </div>
-                )}
-
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowMicPermission(false)}
-                    className="flex-1"
-                  >
-                    Annuler
-                  </Button>
-                  <Button
-                    onClick={async () => {
-                      try {
-                        await navigator.mediaDevices.getUserMedia({ audio: true });
-                        autoPlayRef.current = autoPlay;
-                        speechRateRef.current = speechRate;
-                        setShowMicPermission(false);
-                        setMicPermissionDenied(false);
-                        setStarted(true);
-                        await unlockAudioForDesktop();
-                        const firstLine = lines[0];
-                        if (firstLine && normalize(firstLine.character) !== normalize(myCharacter) && autoPlay) {
-                          launchSpeakChain(0, lines, myCharacter, characterGenders);
-                        }
-                      } catch (e) {
-                        setMicPermissionDenied(true);
-                      }
-                    }}
-                    className="flex-1 bg-primary text-primary-foreground"
-                  >
-                    Autoriser
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
           </>
         )}
       </AnimatePresence>

@@ -38,8 +38,6 @@ export default function AndroidRehearsal() {
   const [started, setStarted] = useState(false);
   const [showLinesList, setShowLinesList] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
-  const [showMicPermission, setShowMicPermission] = useState(false);
-  const [micPermissionDenied, setMicPermissionDenied] = useState(false);
 
   const autoAdvanceThreshold = 80;
   const speechRateRef = useRef(1);
@@ -188,7 +186,19 @@ export default function AndroidRehearsal() {
       <Button
         size="lg"
         className="w-full max-w-xs bg-primary text-primary-foreground font-body text-base gap-2 mt-4"
-        onClick={() => setShowMicPermission(true)}
+        onClick={async () => {
+          try {
+            await navigator.mediaDevices.getUserMedia({ audio: true });
+            setStarted(true);
+            await unlockAudioForAndroid();
+            const firstLine = lines[0];
+            if (firstLine && normalize(firstLine.character) !== normalize(myCharacter)) {
+              speakPartnerLines(0, lines, myCharacter, characterGenders, stripDirections);
+            }
+          } catch (e) {
+            alert('Microphone refusé. Vérifiez les paramètres de votre navigateur.');
+          }
+        }}
       >
         <Mic className="w-5 h-5" />
         Commencer
@@ -389,72 +399,6 @@ export default function AndroidRehearsal() {
 
       <AnimatePresence>
         {showVoiceModal && <VoiceAccess onClose={() => setShowVoiceModal(false)} />}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showMicPermission && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black"
-              onClick={() => setShowMicPermission(false)}
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed inset-0 z-50 flex items-center justify-center px-4"
-            >
-              <div className="bg-card border border-border rounded-xl p-6 max-w-md shadow-xl space-y-4">
-                <div className="text-center space-y-2">
-                  <Mic className="w-10 h-10 text-primary mx-auto" />
-                  <h2 className="text-lg font-bold text-foreground">Autoriser le microphone</h2>
-                  <p className="text-xs text-muted-foreground">
-                    SOUFFLEUR a besoin d'accéder à votre microphone pour enregistrer vos répliques.
-                  </p>
-                </div>
-
-                {micPermissionDenied && (
-                  <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-xs text-destructive">
-                    Permission refusée. Vérifiez les paramètres de votre navigateur.
-                  </div>
-                )}
-
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowMicPermission(false)}
-                    className="flex-1 text-xs"
-                  >
-                    Annuler
-                  </Button>
-                  <Button
-                    onClick={async () => {
-                      try {
-                        await navigator.mediaDevices.getUserMedia({ audio: true });
-                        setShowMicPermission(false);
-                        setMicPermissionDenied(false);
-                        setStarted(true);
-                        await unlockAudioForAndroid();
-                        const firstLine = lines[0];
-                        if (firstLine && normalize(firstLine.character) !== normalize(myCharacter)) {
-                          speakPartnerLines(0, lines, myCharacter, characterGenders, stripDirections);
-                        }
-                      } catch (e) {
-                        setMicPermissionDenied(true);
-                      }
-                    }}
-                    className="flex-1 bg-primary text-primary-foreground text-xs"
-                  >
-                    Autoriser
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
       </AnimatePresence>
     </div>
   );
