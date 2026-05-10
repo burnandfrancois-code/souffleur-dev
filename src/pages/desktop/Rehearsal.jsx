@@ -291,6 +291,15 @@ export default function Rehearsal() {
     );
   }
 
+  useEffect(() => {
+    if (!isMyLine || phase !== 'line' || !started || !myLineRecorderRef.current) return;
+    
+    const timer = setTimeout(() => {
+      myLineRecorderRef.current.startRecording?.();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [isMyLine, phase, started]);
+
   if (!started) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-8 px-4">
@@ -481,13 +490,13 @@ export default function Rehearsal() {
                 {isMyLine ? (
                   <div className="space-y-4">
                     {phase === 'line' && (
-                      <MyLineRecorder
-                        ref={myLineRecorderRef}
-                        line={currentLineClean}
-                        script={script}
-                        myCharacter={myCharacter}
-                        onLineAdvance={handleContinue}
-                      />
+                       <MyLineRecorder
+                         ref={myLineRecorderRef}
+                         line={currentLineClean}
+                         script={script}
+                         myCharacter={myCharacter}
+                         onLineAdvance={handleContinue}
+                       />
                     )}
                     {phase === 'comparing' && (
                       <motion.div
