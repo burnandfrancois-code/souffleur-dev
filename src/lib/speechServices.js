@@ -115,7 +115,7 @@ export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1,
       setTimeout(() => {
         if (signal?.aborted) { resolve(); return; }
         window.speechSynthesis.speak(utterance);
-      }, 50);
+      }, 150);
 
     } catch (e) {
       console.error('Error in speakText:', e);
