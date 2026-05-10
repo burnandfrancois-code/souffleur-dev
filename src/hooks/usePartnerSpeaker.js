@@ -42,11 +42,13 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
         return;
       }
 
+      // Continue in auto mode (this will loop back if next line is also partner's)
       index++;
     }
 
+    // If we've reached the end of lines
     onSpeakingChange(false);
-  }, [onLineChange, onSpeakingChange]);
+  }, [onLineChange, onSpeakingChange, speechRateRef]);
 
   const speakSingleLine = useCallback(async (text, character, genders, stripDirections) => {
     if (abortControllerRef.current) abortControllerRef.current.abort();
