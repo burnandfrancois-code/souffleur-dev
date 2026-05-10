@@ -10,8 +10,10 @@ export function useSimpleVoiceInput() {
   const finalWordsRef = useRef([]);
   const interimRef = useRef('');
   const lastOkTimeRef = useRef(0);
+  const userStoppedRef = useRef(false);
 
   const stop = useCallback(() => {
+    userStoppedRef.current = true;
     sessionIdRef.current += 1;
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch (e) {}
@@ -22,6 +24,7 @@ export function useSimpleVoiceInput() {
   const start = useCallback((onFinalTranscript) => {
     sessionIdRef.current += 1;
     const mySession = sessionIdRef.current;
+    userStoppedRef.current = false;
 
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch (e) {}
@@ -111,7 +114,7 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onend = () => {
-      if (sessionIdRef.current !== mySession) return;
+      if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
       
       // Redémarrer la reconnaissance si pas fermée intentionnellement
       if (recognitionRef.current) {
