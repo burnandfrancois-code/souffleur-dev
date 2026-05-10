@@ -210,6 +210,21 @@ export default function AndroidRehearsal() {
     if (cur < indices.length - 1) goToMyLine(indices[cur + 1]);
   };
 
+  // Debug: afficher immédiatement
+  if (!started && !script) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center space-y-4 px-4">
+          <p className="text-primary font-bold text-base">Page chargée v2</p>
+          <p className="text-muted-foreground text-xs">scriptId: {scriptId}</p>
+          <p className="text-muted-foreground text-xs">isLoading: {isLoading ? 'oui' : 'non'}</p>
+          {error && <p className="text-destructive text-xs break-words">{error.message}</p>}
+          <Loader2 className="w-6 h-6 text-primary animate-spin mx-auto mt-4" />
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading) return (
     <div className="min-h-screen flex items-center justify-center">
       <Loader2 className="w-8 h-8 text-primary animate-spin" />
