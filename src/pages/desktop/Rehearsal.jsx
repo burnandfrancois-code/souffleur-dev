@@ -35,6 +35,9 @@ export default function DesktopRehearsal() {
 
   const requestMicPermission = useCallback(async () => {
     try {
+      // Petit délai pour laisser Windows appliquer la permission
+      await new Promise(r => setTimeout(r, 500));
+      
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach(track => track.stop());
       setMicAllowed(true);
