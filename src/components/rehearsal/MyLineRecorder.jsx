@@ -20,9 +20,11 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   const interimRef = useRef('');
   const lastOkTimeRef = useRef(0);
   const sessionIdRef = useRef(0); // ID unique par instance de reconnaissance
+  const restartCountRef = useRef(0);
 
   const stopRecording = useCallback(() => {
     userStoppedRef.current = true;
+    restartCountRef.current = 0;
     sessionIdRef.current += 1; // invalide toute instance précédente
     if (recognitionRef.current) {
       try {
@@ -156,11 +158,18 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     rec.onend = () => {
       if (sessionIdRef.current !== mySession) return;
       if (userStoppedRef.current) return;
+      
+      restartCountRef.current += 1;
+      if (restartCountRef.current > 3) {
+        setSttError({ message: '⚠️ Micro inactif après 3 tentatives\n\nVérifiez que le micro fonctionne et que la permission est accordée.' });
+        return;
+      }
+      
       // Chrome interdit de relancer la même instance — on schedule un nouveau startRecording
       setTimeout(() => {
         if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
         startRecordingRef.current();
-      }, 150);
+      }, 3000);
     };
 
     try {
