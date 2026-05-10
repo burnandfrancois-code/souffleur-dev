@@ -152,7 +152,7 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
 
         {/* Hint vocal */}
         <p className="text-center text-xs text-muted-foreground italic">
-          Dites <span className="text-primary font-semibold not-italic">"passer"</span> pour continuer
+          Dites <span className="text-white font-semibold not-italic">"passer"</span> pour continuer
         </p>
 
         {/* Boutons */}

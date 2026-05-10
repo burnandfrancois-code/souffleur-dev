@@ -153,7 +153,7 @@ export default function ComparisonResult({ result, onRetry, onContinue }) {
 
         {/* Hint vocal */}
         <p className="text-center text-xs text-muted-foreground italic">
-          Dites <span className="text-primary font-semibold not-italic">"passer"</span> pour continuer ou <span className="text-yellow-400 font-semibold not-italic">"réessayer"</span>
+          Dites <span className="text-white font-semibold not-italic">"passer"</span> pour continuer ou <span className="text-yellow-400 font-semibold not-italic">"réessayer"</span>
         </p>
 
         {/* Boutons */}
