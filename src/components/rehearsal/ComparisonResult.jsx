@@ -107,13 +107,7 @@ export default function ComparisonResult({ result, onRetry, onContinue }) {
                   (result.unmatchedSpokenIndices[i] - result.unmatchedSpokenIndices[i - 1] > 1);
                 return (
                   <React.Fragment key={i}>
-                    {i > 0 && (
-                      isGap ? (
-                        <span style={{ display: 'inline-block', width: '1px', height: '20px', backgroundColor: '#4ade80', flexShrink: 0 }} />
-                      ) : (
-                        <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#4ade80', flexShrink: 0 }} />
-                      )
-                    )}
+                    {isGap && <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#4ade80', flexShrink: 0 }} />}
                     <span className="px-2 py-0.5 rounded-md text-sm font-medium bg-red-500/30 text-red-200 border border-red-400/50">
                       {word}
                     </span>
