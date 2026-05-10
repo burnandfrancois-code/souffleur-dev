@@ -348,19 +348,8 @@ export default function Rehearsal() {
         <Button
            size="lg"
            className="bg-primary text-primary-foreground text-lg px-10 py-6 gap-3"
-           onClick={async (e) => {
+           onClick={(e) => {
              e.preventDefault();
-             try {
-               await navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-                 stream.getTracks().forEach(track => track.stop());
-               });
-             } catch (e) {
-               // Ignore microphone errors in preview/sandbox
-               if (e.name === 'NotAllowedError') {
-                 alert('Microphone refusé. Vérifiez les paramètres de votre navigateur.');
-                 return;
-               }
-             }
              autoPlayRef.current = autoPlay;
              speechRateRef.current = speechRate;
              setStarted(true);
