@@ -111,8 +111,15 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onend = () => {
-      if (sessionIdRef.current === mySession) {
-        setIsRecording(false);
+      if (sessionIdRef.current !== mySession) return;
+      
+      // Redémarrer la reconnaissance si pas fermée intentionnellement
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.start();
+        } catch (e) {
+          // Déjà en cours
+        }
       }
     };
 
