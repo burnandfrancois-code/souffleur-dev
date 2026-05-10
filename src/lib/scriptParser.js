@@ -111,22 +111,22 @@ function phoneticFR(word) {
 
 function wordsMatch(a, b) {
   if (a === b) return true;
-  // Les mots très courts (≤3 lettres) doivent être exactement identiques
-  if (a.length <= 3 || b.length <= 3) {
+  // Les mots très courts (≤2 lettres) doivent être exactement identiques
+  if (a.length <= 2 || b.length <= 2) {
     return a === b;
   }
-  // Tolérance préfixe uniquement pour mots longs (≥6 lettres)
-  if (a.length >= 6 && b.startsWith(a)) return true;
-  if (b.length >= 6 && a.startsWith(b)) return true;
+  // Tolérance préfixe pour mots moyens/longs (≥4 lettres)
+  if (a.length >= 4 && b.startsWith(a)) return true;
+  if (b.length >= 4 && a.startsWith(b)) return true;
   // Comparaison phonétique
   const pa = phoneticFR(a);
   const pb = phoneticFR(b);
   if (pa === pb) return true;
-  // Distance de Levenshtein normalisée (tolérance ~20%)
+  // Distance de Levenshtein normalisée (tolérance ~25%)
   const maxLen = Math.max(pa.length, pb.length);
   if (maxLen === 0) return true;
   const dist = levenshtein(pa, pb);
-  return dist / maxLen <= 0.20;
+  return dist / maxLen <= 0.25;
 }
 
 function levenshtein(a, b) {
