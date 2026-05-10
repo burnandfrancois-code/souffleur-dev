@@ -120,7 +120,7 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
 
         {/* Boutons */}
         <div className="flex gap-2 pt-1">
-          <Button variant="outline" size="sm" onClick={onRetry} className="flex-1 gap-1 text-xs">
+          <Button variant="outline" size="sm" onClick={onRetry} className="flex-1 gap-1 text-xs text-yellow-400 border-yellow-400/50 hover:text-yellow-300">
             <RotateCcw className="w-3 h-3" />
             Réessayer
           </Button>

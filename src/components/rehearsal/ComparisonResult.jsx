@@ -120,7 +120,7 @@ export default function ComparisonResult({ result, onRetry, onContinue }) {
 
         {/* Boutons */}
         <div className="flex gap-3 justify-center pt-2">
-          <Button variant="outline" onClick={onRetry} className="gap-2">
+          <Button variant="outline" onClick={onRetry} className="gap-2 text-yellow-400 border-yellow-400/50 hover:text-yellow-300">
             <RotateCcw className="w-4 h-4" />
             Réessayer
           </Button>
