@@ -40,13 +40,30 @@ export default function ComparisonResult({ result, onRetry, onContinue }) {
           <p className="text-muted-foreground text-center text-sm">{result.feedback}</p>
         )}
 
-        {/* Mots corrects */}
-        {correctWords.length > 0 && (
-          <div className="rounded-xl border border-green-500/30 bg-green-500/5 p-3 space-y-2">
-            <p className="text-xs font-bold text-green-400 uppercase tracking-wider">✓ Corrects</p>
+        {/* Mots faux */}
+        {wrongWords.length > 0 && (
+          <div className="rounded-xl border border-red-500/40 bg-red-950/60 p-3 space-y-2">
+            <p className="text-xs font-bold text-red-400 uppercase tracking-wider">✗ Faux — vous avez dit :</p>
             <div className="flex flex-wrap gap-1.5">
-              {correctWords.map((w, i) => (
-                <span key={i} className="px-2 py-0.5 rounded-md text-sm font-medium bg-green-500/20 text-green-300 border border-green-500/30">
+              {wrongWords.map((w, i) => (
+                <span key={i} className="px-2 py-0.5 rounded-md text-sm font-medium bg-red-500/30 text-red-200 border border-red-400/50">
+                  {w.got || '?'}
+                </span>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400">
+              Attendu : <span className="text-gray-200 italic">{wrongWords.map(w => w.word).join(', ')}</span>
+            </p>
+          </div>
+        )}
+
+        {/* Mots manquants */}
+        {missingWords.length > 0 && (
+          <div className="rounded-xl border border-yellow-500/40 bg-yellow-950/60 p-3 space-y-2">
+            <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">— Manquants</p>
+            <div className="flex flex-wrap gap-1.5">
+              {missingWords.map((w, i) => (
+                <span key={i} className="px-2 py-0.5 rounded-md text-sm font-medium bg-yellow-500/20 text-yellow-200 border border-yellow-400/50 line-through">
                   {w.word}
                 </span>
               ))}
@@ -54,30 +71,13 @@ export default function ComparisonResult({ result, onRetry, onContinue }) {
           </div>
         )}
 
-        {/* Mots faux */}
-        {wrongWords.length > 0 && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-3 space-y-2">
-            <p className="text-xs font-bold text-red-400 uppercase tracking-wider">✗ Faux — vous avez dit :</p>
+        {/* Mots corrects — en bas */}
+        {correctWords.length > 0 && (
+          <div className="rounded-xl border border-green-500/40 bg-green-950/60 p-3 space-y-2">
+            <p className="text-xs font-bold text-green-400 uppercase tracking-wider">✓ Corrects</p>
             <div className="flex flex-wrap gap-1.5">
-              {wrongWords.map((w, i) => (
-                <span key={i} className="px-2 py-0.5 rounded-md text-sm font-medium bg-red-500/20 text-red-300 border border-red-500/30">
-                  {w.got || '?'}
-                </span>
-              ))}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Attendu : <span className="text-white/70 italic">{wrongWords.map(w => w.word).join(', ')}</span>
-            </p>
-          </div>
-        )}
-
-        {/* Mots manquants */}
-        {missingWords.length > 0 && (
-          <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-3 space-y-2">
-            <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">— Manquants</p>
-            <div className="flex flex-wrap gap-1.5">
-              {missingWords.map((w, i) => (
-                <span key={i} className="px-2 py-0.5 rounded-md text-sm font-medium bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 line-through">
+              {correctWords.map((w, i) => (
+                <span key={i} className="px-2 py-0.5 rounded-md text-sm font-medium bg-green-500/25 text-green-200 border border-green-400/50">
                   {w.word}
                 </span>
               ))}
