@@ -98,7 +98,7 @@ export default function Rehearsal() {
 
   const stopAll = useCallback(() => {
     if (myLineRecorderRef.current) {
-      myLineRecorderRef.current.stop();
+      myLineRecorderRef.current.stopRecording();
     }
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
