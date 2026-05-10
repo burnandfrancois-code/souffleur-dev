@@ -85,11 +85,18 @@ export default function AndroidHome() {
     setLogs([]);
     
     try {
-      const result = await parseScriptWithLLM(url, uploadedFileName, (progressValue) => {
+      // Timeout global: 90s max (fallback si le backend traîne)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Analyse bloquée — le backend ne répond pas. Essayez avec un fichier plus petit.')), 90000)
+      );
+
+      const parsePromise = parseScriptWithLLM(url, uploadedFileName, (progressValue) => {
         setProgress(progressValue);
       }, (fileLogs) => {
         setLogs(fileLogs);
       });
+
+      const result = await Promise.race([parsePromise, timeoutPromise]);
       
       if (!result?.characters || result.characters.length === 0) {
         toast.error('Impossible d\'extraire les personnages. Vérifiez le fichier.');
