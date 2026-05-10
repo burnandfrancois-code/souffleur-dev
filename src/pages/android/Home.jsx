@@ -33,14 +33,6 @@ export default function AndroidHome() {
   const [fileName, setFileName] = useState('');
   const [logs, setLogs] = useState([]);
 
-  if (isLoadingAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-    );
-  }
-
   useEffect(() => {
     (async () => {
       try {
@@ -60,6 +52,14 @@ export default function AndroidHome() {
       setStep(newStep);
     }
   }, [window.location.search]);
+
+  if (isLoadingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+      </div>
+    );
+  }
 
   const handleGenderChange = (char, gender) => {
     setCharacterGenders(prev => ({ ...prev, [char]: gender }));
