@@ -33,22 +33,23 @@ export default function DesktopRehearsal() {
 
   const voiceRec = useSimpleVoiceInput();
 
-  const requestMicPermission = async () => {
+  const requestMicPermission = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach(track => track.stop());
       setMicAllowed(true);
       setMicPermissionChecked(true);
     } catch (e) {
+      console.error('Mic error:', e);
       setMicAllowed(false);
       setMicPermissionChecked(true);
     }
-  };
+  }, []);
 
   // Vérifier la permission automatiquement au démarrage
   useEffect(() => {
     requestMicPermission();
-  }, []);
+  }, [requestMicPermission]);
 
   const { data: script, isLoading } = useQuery({
     queryKey: ['script', scriptId],
