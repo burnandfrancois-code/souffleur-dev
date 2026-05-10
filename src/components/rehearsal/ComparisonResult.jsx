@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, AlertTriangle, XCircle, RotateCcw } from 'lucide-react';
 
-export default function ComparisonResult({ result, onRetry, onContinue }) {
+export default function ComparisonResult({ result, transcription, onRetry, onContinue }) {
   if (!result) return null;
 
   const wordResults = (result.word_results || []).map(w => ({ ...w, got: w.got || '' }));
@@ -37,6 +37,13 @@ export default function ComparisonResult({ result, onRetry, onContinue }) {
           )}
           <span className="text-3xl font-bold text-foreground">{Math.round(accuracy)}%</span>
         </div>
+
+        {/* Transcription */}
+        {transcription && (
+          <div className="bg-background/50 border border-border rounded-xl px-4 py-3">
+            <p className="text-sm text-foreground">{transcription}</p>
+          </div>
+        )}
 
         {/* Feedback */}
         {result.feedback && (

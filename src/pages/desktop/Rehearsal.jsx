@@ -22,6 +22,7 @@ export default function Rehearsal() {
   const [currentLineIndex, setCurrentLineIndex] = useState(0);
   const [phase, setPhase] = useState('line');
   const [comparisonResult, setComparisonResult] = useState(null);
+  const [lastTranscription, setLastTranscription] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [completedMyLines, setCompletedMyLines] = useState(new Set());
   const [lineScores, setLineScores] = useState([]);
@@ -187,6 +188,7 @@ export default function Rehearsal() {
     const lineText = currentLineClean.text;
     compareSessionRef.current += 1;
     const session = compareSessionRef.current;
+    setLastTranscription(spokenText);
     setPhase('comparing');
     const result = await compareTexts(lineText, spokenText);
     if (compareSessionRef.current !== session) return;
@@ -577,6 +579,7 @@ export default function Rehearsal() {
                     {phase === 'result' && (
                       <ComparisonResult
                         result={comparisonResult}
+                        transcription={lastTranscription}
                         onRetry={handleRetry}
                         onContinue={handleContinue}
                       />
