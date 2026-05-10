@@ -355,13 +355,14 @@ export default function Rehearsal() {
               stream.getTracks().forEach(track => track.stop());
               autoPlayRef.current = autoPlay;
               speechRateRef.current = speechRate;
-              await unlockAudioForDesktop();
               setStarted(true);
+              await unlockAudioForDesktop();
               const firstLine = lines[0];
               if (firstLine && normalize(firstLine.character) !== normalize(myCharacter) && autoPlay) {
                 launchSpeakChain(0, lines, myCharacter, characterGenders);
               }
             } catch (e) {
+              setStarted(false);
               if (e.name === 'NotAllowedError') {
                 alert('Microphone refusé. Vérifiez les paramètres de votre navigateur.');
               }

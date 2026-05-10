@@ -190,13 +190,14 @@ export default function AndroidRehearsal() {
           try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             stream.getTracks().forEach(track => track.stop());
-            await unlockAudioForAndroid();
             setStarted(true);
+            await unlockAudioForAndroid();
             const firstLine = lines[0];
             if (firstLine && normalize(firstLine.character) !== normalize(myCharacter)) {
               speakPartnerLines(0, lines, myCharacter, characterGenders, stripDirections);
             }
           } catch (e) {
+            setStarted(false);
             if (e.name === 'NotAllowedError') {
               alert('Microphone refusé. Vérifiez les paramètres de votre navigateur.');
             }
