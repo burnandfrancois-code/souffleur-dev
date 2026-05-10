@@ -12,6 +12,7 @@ export function useSimpleVoiceInput() {
   const lastOkTimeRef = useRef(0);
   const userStoppedRef = useRef(false);
   const pendingTimersRef = useRef([]);
+  const okDetectedRef = useRef(false);
 
   const stop = useCallback(() => {
     userStoppedRef.current = true;
@@ -36,7 +37,7 @@ export function useSimpleVoiceInput() {
     finalWordsRef.current = [];
     interimRef.current = '';
     lastOkTimeRef.current = 0;
-    let okDetected = false;
+    okDetectedRef.current = false;
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -86,8 +87,8 @@ export function useSimpleVoiceInput() {
       const words = displayText.split(/\s+/);
       const hasOk = words.some(w => /^ok$/i.test(w.toLowerCase()) || /^okay$/i.test(w.toLowerCase()) || /^o\.k\.$/i.test(w.toLowerCase()));
 
-      if (hasOk && !okDetected) {
-        okDetected = true;
+      if (hasOk && !okDetectedRef.current) {
+        okDetectedRef.current = true;
         const now = Date.now();
         if (now - lastOkTimeRef.current > 1000) {
           lastOkTimeRef.current = now;
@@ -117,10 +118,10 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onend = () => {
-      if (sessionIdRef.current !== mySession || userStoppedRef.current || okDetected) return;
+      if (sessionIdRef.current !== mySession || userStoppedRef.current || okDetectedRef.current) return;
       
       // Redémarrer immédiatement si pas fermée et OK pas détecté
-      if (recognitionRef.current && !userStoppedRef.current && !okDetected) {
+      if (recognitionRef.current && !userStoppedRef.current && !okDetectedRef.current) {
         try {
           recognitionRef.current.start();
         } catch (e) {}
