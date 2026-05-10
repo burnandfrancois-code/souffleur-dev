@@ -170,7 +170,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       setSttError({ message: `⚠️ Erreur micro: ${e.message}` });
       recognitionRef.current = null;
     }
-  }, [stopRecording]);
+  }, [stopRecording, listenForCommands, onVoiceCommand]);
 
   useEffect(() => { startRecordingRef.current = startRecording; }, [startRecording]);
 
@@ -203,7 +203,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [line]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [line, stopRecording, startRecording, autoPlay, trainingMode]);
 
   const handleSubmit = () => {
     const final = transcript.trim();
