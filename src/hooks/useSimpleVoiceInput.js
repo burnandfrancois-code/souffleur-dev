@@ -168,7 +168,7 @@ export function useSimpleVoiceInput() {
             }
           } catch (e) {}
         }
-      }, 25000); // Redémarrer après 25 secondes pour éviter le timeout de 30
+      }, 20000); // Redémarrer toutes les 20 secondes pour éviter fermeture prématurée
     } catch (e) {
       setError({ message: `Erreur: ${e.message}` });
     }
