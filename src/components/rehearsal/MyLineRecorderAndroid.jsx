@@ -211,14 +211,12 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
       </div>
 
       {/* Transcript */}
-      {transcript && (
-        <div className="bg-background border border-border rounded-lg px-3 py-2">
-          <p className="text-sm text-foreground">
-            {transcript}
-            {isRecording && <span className="inline-block w-0.5 h-4 bg-primary ml-1 animate-pulse" />}
-          </p>
-        </div>
-      )}
+      <div className="bg-background border border-border rounded-lg px-3 py-2 min-h-[2rem] flex items-center">
+        <p className="text-sm text-foreground">
+          {transcript || <span className="text-muted-foreground text-xs italic">En attente...</span>}
+          {isRecording && transcript && <span className="inline-block w-0.5 h-4 bg-primary ml-1 animate-pulse" />}
+        </p>
+      </div>
 
       {/* Buttons */}
       <div className="flex gap-2">
