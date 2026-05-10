@@ -100,8 +100,8 @@ export function useSimpleVoiceInput() {
     rec.onerror = (e) => {
       if (sessionIdRef.current !== mySession) return;
       if (e.error === 'not-allowed') {
-        setError({ message: 'Permission micro refusée' });
-        stop();
+        setError({ message: 'Permission micro refusée. Actualisez la page et autorisez l\'accès au micro.' });
+        // Ne pas arrêter immédiatement, laisser onend relancer
       } else if (e.error === 'network') {
         // Ignorer les erreurs réseau, elles sont généralement temporaires
       }
