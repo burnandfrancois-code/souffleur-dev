@@ -236,9 +236,17 @@ export default function DesktopRehearsal() {
                 </div>
               </div>
 
-              <Button size="lg" onClick={requestMicPermission} className="w-full">
-                Réessayer
-              </Button>
+              <div className="flex gap-3 items-center justify-between">
+                <Button size="lg" variant="outline" onClick={() => {
+                  setMicAllowed(true);
+                  setMicPermissionChecked(true);
+                }} className="flex-1">
+                  Continuer quand même
+                </Button>
+                <Button size="lg" onClick={requestMicPermission} className="flex-1">
+                  Réessayer
+                </Button>
+              </div>
             </div>
           </motion.div>
         )}
