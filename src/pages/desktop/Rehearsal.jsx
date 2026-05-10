@@ -554,6 +554,9 @@ export default function Rehearsal() {
                         isComparing={false}
                         autoPlay={autoPlay}
                         speechRate={speechRate}
+                        phase={phase}
+                        onContinue={handleContinue}
+                        onRetry={handleRetry}
                         />
                       </>
                       )}
