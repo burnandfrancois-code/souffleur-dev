@@ -72,13 +72,6 @@ export default function Rehearsal() {
 
   const stripDirections = (text) => text?.replace(/\([^)]*\)?/g, '').replace(/\[[^\]]*\]?/g, '').replace(/\s+/g, ' ').trim() || '';
 
-  // Set flag to force instant mic start when landing on user's line
-  useEffect(() => {
-    if (isMyLine && phase === 'line' && started) {
-      localStorage.setItem('souffleur_instant_mic', 'true');
-    }
-  }, [isMyLine, phase, started]);
-
   const lines = script?.lines || [];
   const myCharacter = script?.my_character;
   const characterGenders = script?.character_genders || {};
@@ -86,6 +79,13 @@ export default function Rehearsal() {
   const currentLineClean = currentLine ? { ...currentLine, text: stripDirections(currentLine.text) } : null;
   const normalize = (s) => s?.trim().toLowerCase();
   const isMyLine = normalize(currentLine?.character) === normalize(myCharacter);
+
+  // Set flag to force instant mic start when landing on user's line
+  useEffect(() => {
+    if (isMyLine && phase === 'line' && started) {
+      localStorage.setItem('souffleur_instant_mic', 'true');
+    }
+  }, [isMyLine, phase, started]);
   const myLineCount = lines.filter(l => normalize(l.character) === normalize(myCharacter)).length;
   const isFinished = lines.length > 0 && currentLineIndex >= lines.length;
 
