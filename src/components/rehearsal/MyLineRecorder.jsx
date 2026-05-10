@@ -324,6 +324,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
         )}
 
         {/* Recording banner */}
+        {!trainingMode && (
         <div className={`
           rounded-2xl border-2 p-5 mb-3 text-center transition-all duration-300
           ${isRecording
@@ -368,6 +369,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
             </p>
           )}
         </div>
+        )}
 
         {/* Modes */}
         <div className="flex items-center justify-between mb-2">
@@ -421,7 +423,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
           )}
         </AnimatePresence>
 
-        {/* Transcript display */}
+        {/* Transcript display - only in normal mode */}
         {!trainingMode && transcript && (
           <div className="bg-background border border-border rounded-xl px-4 py-3 mb-3">
             <p className="text-foreground leading-relaxed">
@@ -431,7 +433,8 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
           </div>
         )}
 
-        {/* Action buttons */}
+        {/* Action buttons - only in normal mode */}
+        {!trainingMode && (
         <div className="flex items-center justify-between gap-2">
           <Button variant="ghost" size="sm" onClick={onSkip} className="text-muted-foreground gap-1">
             Passer
@@ -452,6 +455,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
             )}
           </div>
         </div>
+        )}
       </div>
 
       <div className="shrink-0 mt-1">
