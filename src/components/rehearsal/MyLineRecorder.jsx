@@ -77,6 +77,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     recognitionRef.current = rec;
 
     rec.onstart = () => {
+      console.log('[STT] onstart - session valide?', sessionIdRef.current === mySession);
       if (sessionIdRef.current === mySession && !userStoppedRef.current) {
         setIsRecording(true);
       }
@@ -105,6 +106,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       const fullText = finalWordsRef.current.join(' ') +
         (interimRef.current ? (finalWordsRef.current.length > 0 ? ' ' : '') + interimRef.current : '');
       const displayText = fullText.trim();
+      console.log('[STT] onresult:', displayText);
       setTranscript(displayText);
 
       const words = displayText.split(/\s+/);
@@ -172,8 +174,10 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     };
 
     try {
+      console.log('[STT] rec.start() appelé - lang:', rec.lang, 'continuous:', rec.continuous);
       rec.start();
     } catch (e) {
+      console.error('[STT] rec.start() erreur:', e.message);
       setSttError({ message: `⚠️ Erreur micro: ${e.message}` });
       recognitionRef.current = null;
     }
