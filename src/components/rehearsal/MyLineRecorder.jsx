@@ -68,9 +68,13 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
 
     // Initialiser l'audio context
     try {
+      console.log('[STT] ▶ Appel unlockAudioForDesktop...');
       await unlockAudioForDesktop();
+      console.log('[STT] ✓ unlockAudioForDesktop réussi');
+      // Petit délai pour s'assurer que l'audio context est vraiment actif
+      await new Promise(r => setTimeout(r, 100));
     } catch (e) {
-      console.error('[STT] Erreur initialisation audio:', e);
+      console.error('[STT] ❌ Erreur initialisation audio:', e);
     }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -86,8 +90,9 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     recognitionRef.current = rec;
 
     rec.onstart = () => {
-      console.log('[STT] ✓ onstart déclenché - session valide?', sessionIdRef.current === mySession);
+      console.log('[STT] ✓ onstart déclenché - session valide?', sessionIdRef.current === mySession, 'userStopped?', userStoppedRef.current);
       if (sessionIdRef.current === mySession && !userStoppedRef.current) {
+        console.log('[STT] ✓ Micro actif, mise à jour isRecording');
         setIsRecording(true);
       }
     };
