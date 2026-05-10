@@ -8,8 +8,8 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
 
   const wordResults = (result.word_results || []).map(w => ({ ...w, got: w.got || '' }));
   const correctWords = wordResults.filter(w => w.status === 'correct' || w.status === 'phonetic');
-  const wrongWords   = wordResults.filter(w => w.status === 'wrong');
-  const missingWords = wordResults.filter(w => w.status === 'missing');
+  const wrongWords   = wordResults.map((w, i) => ({ ...w, _idx: i })).filter(w => w.status === 'wrong');
+  const missingWords = wordResults.map((w, i) => ({ ...w, _idx: i })).filter(w => w.status === 'missing');
 
   const wrongPhrase   = wrongWords.map(w => w.word).join(' ');
   const missingPhrase = missingWords.map(w => w.word).join(' ');
@@ -46,8 +46,8 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
             <p className="text-xs font-bold text-red-400 uppercase tracking-wider">✗ Faux — vous avez dit :</p>
             <div className="flex flex-wrap gap-1 items-center">
               {wrongWords.map((w, i) => {
-                const prevIndex = i > 0 ? wordResults.indexOf(wrongWords[i - 1]) : -1;
-                const curIndex = wordResults.indexOf(w);
+                const curIndex = w._idx;
+                const prevIndex = i > 0 ? wrongWords[i - 1]._idx : -1;
                 const isGap = i > 0 && curIndex - prevIndex > 1;
                 return (
                   <React.Fragment key={i}>
@@ -97,8 +97,8 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
             <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">— Manquants</p>
             <div className="flex flex-wrap gap-1 items-center">
               {missingWords.map((w, i) => {
-                const prevIndex = i > 0 ? wordResults.indexOf(missingWords[i - 1]) : -1;
-                const curIndex = wordResults.indexOf(w);
+                const curIndex = w._idx;
+                const prevIndex = i > 0 ? missingWords[i - 1]._idx : -1;
                 const isGap = i > 0 && curIndex - prevIndex > 1;
                 return (
                   <React.Fragment key={i}>
