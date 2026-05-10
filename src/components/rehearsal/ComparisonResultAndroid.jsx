@@ -44,12 +44,20 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
         {wrongWords.length > 0 && (
           <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-2.5 space-y-1.5">
             <p className="text-xs font-bold text-red-400 uppercase tracking-wider">✗ Faux — vous avez dit :</p>
-            <div className="flex flex-wrap gap-1">
-              {wrongWords.map((w, i) => (
-                <span key={i} className="px-1.5 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-300 border border-red-500/30">
-                  {w.got || '?'}
-                </span>
-              ))}
+            <div className="flex flex-wrap gap-1 items-center">
+              {wrongWords.map((w, i) => {
+                const prevIndex = i > 0 ? wordResults.indexOf(wrongWords[i - 1]) : -1;
+                const curIndex = wordResults.indexOf(w);
+                const isGap = i > 0 && curIndex - prevIndex > 1;
+                return (
+                  <React.Fragment key={i}>
+                    {isGap && <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#4ade80', flexShrink: 0 }} />}
+                    <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-300 border border-red-500/30">
+                      {w.got || '?'}
+                    </span>
+                  </React.Fragment>
+                );
+              })}
             </div>
             <p className="text-xs text-muted-foreground">
               Attendu : {wrongWords.map(w => w.word).join(', ')}
@@ -87,12 +95,20 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
         {missingWords.length > 0 && (
           <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-2.5 space-y-1.5">
             <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">— Manquants</p>
-            <div className="flex flex-wrap gap-1">
-              {missingWords.map((w, i) => (
-                <span key={i} className="px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 line-through">
-                  {w.word}
-                </span>
-              ))}
+            <div className="flex flex-wrap gap-1 items-center">
+              {missingWords.map((w, i) => {
+                const prevIndex = i > 0 ? wordResults.indexOf(missingWords[i - 1]) : -1;
+                const curIndex = wordResults.indexOf(w);
+                const isGap = i > 0 && curIndex - prevIndex > 1;
+                return (
+                  <React.Fragment key={i}>
+                    {isGap && <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#4ade80', flexShrink: 0 }} />}
+                    <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 line-through">
+                      {w.word}
+                    </span>
+                  </React.Fragment>
+                );
+              })}
             </div>
           </div>
         )}
