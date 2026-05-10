@@ -92,18 +92,18 @@ export async function compareTexts(expectedText, spokenText) {
 
     expectedWords.forEach((word, i) => {
       if (spokenWords[i] === word) {
-        wordResults.push({ word, status: 'correct' });
+        wordResults.push({ word, status: 'correct', got: '' });
         correctCount++;
       } else if (spokenWords[i]) {
-        wordResults.push({ word, spokenWord: spokenWords[i], status: 'incorrect' });
+        wordResults.push({ word, status: 'wrong', got: spokenWords[i] });
       } else {
-        wordResults.push({ word, status: 'missing' });
+        wordResults.push({ word, status: 'missing', got: '' });
         missingCount++;
       }
     });
 
     spokenWords.slice(expectedWords.length).forEach((word) => {
-      wordResults.push({ word, status: 'extra' });
+      wordResults.push({ word, status: 'extra', got: word });
       extraCount++;
     });
 
