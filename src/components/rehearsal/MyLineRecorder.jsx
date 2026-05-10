@@ -53,9 +53,10 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
   useEffect(() => { startRecordingRef.current = startRecording; }, [startRecording]);
 
   useImperativeHandle(ref, () => ({
+    startRecording,
     stopRecording: voiceRec.stop,
     reset: voiceRec.reset
-  }), [voiceRec.stop, voiceRec.reset]);
+  }), [startRecording, voiceRec.stop, voiceRec.reset]);
 
   // Comparaison + handling résultat
   const handleSubmitRecording = useCallback(async (spokenText) => {

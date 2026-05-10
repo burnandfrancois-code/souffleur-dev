@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { Mic, MicOff, Send, RotateCcw, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { speakText } from '@/lib/speechServices';
+import { useImperativeHandle } from 'react';
 
-export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay }) {
+const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay }, ref) {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [sttError, setSttError] = useState(null);
@@ -169,6 +170,11 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
 
   useEffect(() => { startRecordingRef.current = startRecording; }, [startRecording]);
 
+  useImperativeHandle(ref, () => ({
+    startRecording,
+    stopRecording
+  }), [startRecording, stopRecording]);
+
   useEffect(() => {
     return () => {
       if (recognitionRef.current) {
@@ -307,4 +313,6 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
       </div>
     </div>
   );
-}
+});
+
+export default MyLineRecorderAndroid;
