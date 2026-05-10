@@ -7,11 +7,11 @@ import { compareTexts } from '@/lib/scriptParser';
 import TrainingComparison from './TrainingComparison';
 import ComparisonResult from './ComparisonResult';
 import { forwardRef, useImperativeHandle } from 'react';
-import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
+import { useSimpleVoiceInput } from '@/hooks/useSimpleVoiceInput';
 
 const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myCharacter, onLineAdvance }, ref) {
   // Voice Recognition Hook
-  const voiceRec = useVoiceRecognition();
+  const voiceRec = useSimpleVoiceInput();
 
   // État principal
   const [showHint, setShowHint] = useState(false);
@@ -35,12 +35,10 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
   const normalize = (s) => s?.trim().toLowerCase();
   const currentLineClean = line ? { ...line, text: stripDirections(line.text) } : null;
 
-  // Arrêter tout (TTS + STT + timers)
+  // Arrêter tout (TTS + STT)
   const stopAll = useCallback(() => {
     voiceRec.stop();
     stopSpeaking();
-    voiceRec.pendingTimersRef.current.forEach(clearTimeout);
-    voiceRec.pendingTimersRef.current = [];
     speakSessionRef.current += 1;
     compareSessionRef.current += 1;
     setIsSpeakingPartner(false);
@@ -126,12 +124,8 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
       const timer = setTimeout(() => {
         startRecordingRef.current?.();
       }, delay);
-      voiceRec.pendingTimersRef.current.push(timer);
       
-      return () => {
-        clearTimeout(timer);
-        voiceRec.pendingTimersRef.current = voiceRec.pendingTimersRef.current.filter(t => t !== timer);
-      };
+      return () => clearTimeout(timer);
     }
   }, [line, trainingMode, voiceRec.reset]);
 
@@ -147,8 +141,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
   const handleReset = () => {
     voiceRec.reset();
     if (autoPlayRef.current && !trainingMode) {
-      const timer = setTimeout(() => startRecording(), 300);
-      voiceRec.pendingTimersRef.current.push(timer);
+      setTimeout(() => startRecording(), 300);
     }
   };
 
