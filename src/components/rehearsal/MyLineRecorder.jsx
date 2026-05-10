@@ -19,37 +19,33 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   const finalWordsRef = useRef([]);
   const interimRef = useRef('');
   const lastOkTimeRef = useRef(0);
-
-  const _restartIfNeeded = useCallback(() => {
-    if (userStoppedRef.current) return;
-    if (!recognitionRef.current) return;
-    try {
-      recognitionRef.current.start();
-    } catch (e) {
-      // Ignore errors on restart
-    }
-  }, []);
+  const sessionIdRef = useRef(0); // ID unique par instance de reconnaissance
 
   const stopRecording = useCallback(() => {
     userStoppedRef.current = true;
+    sessionIdRef.current += 1; // invalide toute instance précédente
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort();
       } catch (e) {
         // Ignore
       }
+      recognitionRef.current = null;
     }
-    recognitionRef.current = null;
     setIsRecording(false);
   }, []);
 
+  const onSubmitRef = useRef(onSubmit);
+  useEffect(() => { onSubmitRef.current = onSubmit; }, [onSubmit]);
+
   const startRecording = useCallback(() => {
+    // Arrêter proprement toute instance existante
+    sessionIdRef.current += 1;
+    const mySession = sessionIdRef.current;
+
     if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {
-        // Ignore
-      }
+      try { recognitionRef.current.abort(); } catch (e) {}
+      recognitionRef.current = null;
     }
 
     userStoppedRef.current = false;
@@ -61,9 +57,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      setSttError({
-        message: "Reconnaissance vocale non supportée. Utilisez Chrome ou Edge."
-      });
+      setSttError({ message: "Reconnaissance vocale non supportée. Utilisez Chrome ou Edge." });
       return;
     }
 
@@ -74,13 +68,13 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     recognitionRef.current = rec;
 
     rec.onstart = () => {
-      if (!userStoppedRef.current) {
+      if (sessionIdRef.current === mySession && !userStoppedRef.current) {
         setIsRecording(true);
       }
     };
 
     rec.onresult = (event) => {
-      if (userStoppedRef.current) return;
+      if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
 
       for (let i = 0; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
@@ -100,7 +94,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       }
 
       const fullText = finalWordsRef.current.join(' ') +
-                       (interimRef.current ? (finalWordsRef.current.length > 0 ? ' ' : '') + interimRef.current : '');
+        (interimRef.current ? (finalWordsRef.current.length > 0 ? ' ' : '') + interimRef.current : '');
       const displayText = fullText.trim();
       setTranscript(displayText);
 
@@ -110,7 +104,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
         return lower === 'ok' || lower === 'okay' || lower === 'o.k.' || lower === 'oke';
       });
 
-      if (hasOkCommand && !userStoppedRef.current) {
+      if (hasOkCommand) {
         const now = Date.now();
         if (now - lastOkTimeRef.current > 1000) {
           lastOkTimeRef.current = now;
@@ -121,11 +115,12 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
             })
             .join(' ')
             .trim();
-
           if (finalText) {
+            const capturedSession = mySession;
             setTimeout(() => {
+              if (sessionIdRef.current !== capturedSession) return;
               stopRecording();
-              onSubmit(finalText);
+              onSubmitRef.current(finalText);
             }, 200);
           }
         }
@@ -133,73 +128,64 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     };
 
     rec.onerror = (e) => {
+      if (sessionIdRef.current !== mySession) return;
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         stopRecording();
-        setSttError({
-          message: '⚠️ Permission micro refusée\n\nClique sur l\'icône 🔒 et autorise le micro.'
-        });
+        setSttError({ message: '⚠️ Permission micro refusée\n\nClique sur l\'icône 🔒 et autorise le micro.' });
       }
+      // Ignorer 'aborted' — c'est nous qui l'avons provoqué
     };
 
     rec.onend = () => {
-      if (!userStoppedRef.current) {
-        setTimeout(() => _restartIfNeeded(), 50);
+      // Ignorer si cette instance n'est plus la session active
+      if (sessionIdRef.current !== mySession) return;
+      if (userStoppedRef.current) return;
+      // Relancer la même instance (elle s'est arrêtée pour silence/timeout navigateur)
+      try {
+        rec.start();
+      } catch (e) {
+        // ignore
       }
     };
 
     try {
       rec.start();
     } catch (e) {
-      setSttError({
-        message: `⚠️ Erreur micro: ${e.message}`
-      });
+      setSttError({ message: `⚠️ Erreur micro: ${e.message}` });
       recognitionRef.current = null;
     }
-  }, [_restartIfNeeded, onSubmit]);
+  }, [stopRecording]);
 
   useImperativeHandle(ref, () => ({
     stopRecording
   }), [stopRecording]);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
+      sessionIdRef.current += 1;
       if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch (e) {
-          // Ignore
-        }
+        try { recognitionRef.current.abort(); } catch (e) {}
+        recognitionRef.current = null;
       }
     };
   }, []);
 
-  const startRecordingRef = useRef(startRecording);
-  useEffect(() => { startRecordingRef.current = startRecording; }, [startRecording]);
-
+  // Reset + auto-start when line changes
   useEffect(() => {
-    // Cleanup old recognition when line changes
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {}
-    }
-    recognitionRef.current = null;
-    setIsRecording(false);
+    stopRecording();
     finalWordsRef.current = [];
     interimRef.current = '';
     setTranscript('');
     setSttError(null);
-  }, [line]);
 
-  useEffect(() => {
     if (autoPlay && !trainingMode) {
-      userStoppedRef.current = false;
       const timer = setTimeout(() => {
-        startRecordingRef.current();
+        startRecording();
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [autoPlay, trainingMode, line]);
+  }, [line]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = () => {
     const final = transcript.trim();
