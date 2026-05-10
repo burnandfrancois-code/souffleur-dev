@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MicOff, Send, RotateCcw, Eye, EyeOff, Volume2, Loader2, Dumbbell, ChevronRight, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { speakText, stopSpeaking } from '@/lib/speechServices';
+import { speakText, stopSpeaking, unlockAudioForDesktop } from '@/lib/speechServices';
 import TrainingComparison from './TrainingComparison';
 import { forwardRef, useImperativeHandle } from 'react';
 
@@ -47,7 +47,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
 
   const startRecordingRef = useRef(null);
 
-  const startRecording = useCallback(() => {
+  const startRecording = useCallback(async () => {
     userStoppedRef.current = false;
     sessionIdRef.current += 1;
     const mySession = sessionIdRef.current;
@@ -63,6 +63,13 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     setTranscript('');
     setSttError(null);
     restartCountRef.current = 0;
+
+    // Initialiser l'audio context
+    try {
+      await unlockAudioForDesktop();
+    } catch (e) {
+      console.error('[STT] Erreur initialisation audio:', e);
+    }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
