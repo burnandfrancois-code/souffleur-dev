@@ -66,7 +66,7 @@ export default function ComparisonResult({ result, onRetry, onContinue }) {
               ))}
             </div>
             <p className="text-xs text-muted-foreground">
-              Attendu : {wrongWords.map(w => <span key={w.word} className="text-white/70 italic">{w.word}</span>).reduce((a, b) => [a, ' ', b])}
+              Attendu : <span className="text-white/70 italic">{wrongWords.map(w => w.word).join(', ')}</span>
             </p>
           </div>
         )}
