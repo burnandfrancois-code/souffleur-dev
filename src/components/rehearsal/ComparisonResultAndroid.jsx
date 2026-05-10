@@ -136,7 +136,7 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
                       {isGap && i > 0 && <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', backgroundColor: '#4ade80', flexShrink: 0 }} />}
                       <span className={`px-1.5 py-0.5 rounded text-xs font-medium border ${
                         w.status === 'wrong'
-                          ? 'bg-red-500/10 text-yellow-300 border-yellow-500/30 line-through'
+                          ? 'bg-red-500/10 text-yellow-300 border-yellow-500/30'
                           : 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30'
                       }`}>
                         {w.word}

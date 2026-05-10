@@ -144,7 +144,7 @@ export default function ComparisonResult({ result, transcription, onRetry, onCon
                       {isGap && i > 0 && <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#4ade80', flexShrink: 0 }} />}
                       <span className={`px-2 py-0.5 rounded-md text-sm font-medium border ${
                         w.status === 'wrong'
-                          ? 'bg-red-500/10 text-yellow-200 border-yellow-400/30 line-through'
+                          ? 'bg-red-500/10 text-yellow-200 border-yellow-400/30'
                           : 'bg-yellow-500/20 text-yellow-200 border-yellow-400/50'
                       }`}>
                         {w.word}
