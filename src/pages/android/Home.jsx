@@ -121,6 +121,7 @@ export default function AndroidHome() {
       
       await verifyScriptIntegrity(result.rawText || '', parsed);
       setParsedScript(parsed);
+      setIsProcessing(false);
       setStep('summary');
       navigate('/android/?step=summary', { replace: true });
     } catch (err) {
