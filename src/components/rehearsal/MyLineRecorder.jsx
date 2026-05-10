@@ -167,12 +167,12 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       console.log('[STT] onend - session valide?', sessionIdRef.current === mySession, 'user stopped?', userStoppedRef.current);
       if (sessionIdRef.current !== mySession) return;
       if (userStoppedRef.current) return;
-      // Redémarrer après un court délai si le micro s'arrête
+      // Redémarrer après un délai si le micro s'arrête
       setTimeout(() => {
         if (sessionIdRef.current === mySession && !userStoppedRef.current && recognitionRef.current) {
           try { recognitionRef.current.start(); } catch (e) {}
         }
-      }, 100);
+      }, 300);
     };
 
     try {
