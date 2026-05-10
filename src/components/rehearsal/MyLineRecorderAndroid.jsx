@@ -12,34 +12,35 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
 
   const recognitionRef = useRef(null);
   const userStoppedRef = useRef(false);
+  const sessionIdRef = useRef(0);
   const finalWordsRef = useRef([]);
+  const interimRef = useRef('');
   const lastOkTimeRef = useRef(0);
+  const startRecordingRef = useRef(null);
 
   const stopRecording = useCallback(() => {
     userStoppedRef.current = true;
+    sessionIdRef.current += 1;
     if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {
-        // ignore
-      }
+      try { recognitionRef.current.abort(); } catch (e) {}
+      recognitionRef.current = null;
     }
-    recognitionRef.current = null;
     setIsRecording(false);
   }, []);
 
   const startRecording = useCallback(() => {
+    sessionIdRef.current += 1;
+    const mySession = sessionIdRef.current;
+
     if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {
-        // ignore
-      }
+      try { recognitionRef.current.abort(); } catch (e) {}
+      recognitionRef.current = null;
     }
 
     userStoppedRef.current = false;
     lastOkTimeRef.current = 0;
     finalWordsRef.current = [];
+    interimRef.current = '';
     setTranscript('');
     setSttError(null);
 
@@ -56,12 +57,13 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
     recognitionRef.current = rec;
 
     rec.onstart = () => {
-      if (!userStoppedRef.current) setIsRecording(true);
+      if (sessionIdRef.current === mySession && !userStoppedRef.current) setIsRecording(true);
     };
 
     rec.onresult = (event) => {
-      if (userStoppedRef.current) return;
+      if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
 
+      // Collecter tous les résultats finaux
       for (let i = 0; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
           const word = event.results[i][0].transcript.trim();
@@ -71,29 +73,44 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
         }
       }
 
-      const fullText = finalWordsRef.current.join(' ');
-      setTranscript(fullText.trim());
+      // Récupérer le dernier résultat intermédiaire
+      interimRef.current = '';
+      for (let i = event.results.length - 1; i >= 0; i--) {
+        if (!event.results[i].isFinal) {
+          interimRef.current = event.results[i][0].transcript.trim();
+          break;
+        }
+      }
 
-      const words = fullText.split(/\s+/);
+      // Afficher final + interim en temps réel
+      const fullText = finalWordsRef.current.join(' ') +
+        (interimRef.current ? (finalWordsRef.current.length > 0 ? ' ' : '') + interimRef.current : '');
+      const displayText = fullText.trim();
+      setTranscript(displayText);
+
+      // Détecter commande "OK"
+      const words = displayText.split(/\s+/);
       const hasOkCommand = words.some(w => {
         const lower = w.toLowerCase();
-        return lower === 'ok' || lower === 'okay' || lower === 'o.k.';
+        return lower === 'ok' || lower === 'okay' || lower === 'o.k.' || lower === 'oke';
       });
 
-      if (hasOkCommand && !userStoppedRef.current) {
+      if (hasOkCommand) {
         const now = Date.now();
         if (now - lastOkTimeRef.current > 1000) {
           lastOkTimeRef.current = now;
           const finalText = words
             .filter(w => {
               const lower = w.toLowerCase();
-              return lower !== 'ok' && lower !== 'okay' && lower !== 'o.k.';
+              return lower !== 'ok' && lower !== 'okay' && lower !== 'o.k.' && lower !== 'oke';
             })
             .join(' ')
             .trim();
 
           if (finalText) {
+            const capturedSession = mySession;
             setTimeout(() => {
+              if (sessionIdRef.current !== capturedSession) return;
               stopRecording();
               onSubmit(finalText);
             }, 200);
@@ -103,6 +120,7 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
     };
 
     rec.onerror = (e) => {
+      if (sessionIdRef.current !== mySession) return;
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         stopRecording();
         setSttError({ message: 'Permission micro refusée' });
@@ -110,15 +128,13 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
     };
 
     rec.onend = () => {
-      if (!userStoppedRef.current) {
-        setTimeout(() => {
-          try {
-            rec.start();
-          } catch (e) {
-            // ignore
-          }
-        }, 50);
-      }
+      if (sessionIdRef.current !== mySession) return;
+      if (userStoppedRef.current) return;
+      // Créer une nouvelle instance (Chrome interdit de relancer la même)
+      setTimeout(() => {
+        if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
+        startRecordingRef.current();
+      }, 150);
     };
 
     try {
@@ -128,6 +144,8 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
       recognitionRef.current = null;
     }
   }, [stopRecording, onSubmit]);
+
+  useEffect(() => { startRecordingRef.current = startRecording; }, [startRecording]);
 
   useEffect(() => {
     return () => {
