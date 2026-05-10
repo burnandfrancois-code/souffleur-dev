@@ -19,6 +19,15 @@ export default function Rehearsal() {
   const urlParams = new URLSearchParams(window.location.search);
   const scriptId = urlParams.get('scriptId');
 
+  // Rediriger Android vers /android/rehearsal
+  const isAndroidDevice = /Android/i.test(navigator.userAgent);
+  
+  useEffect(() => {
+    if (isAndroidDevice) {
+      navigate(`/android/rehearsal?scriptId=${scriptId}`);
+    }
+  }, [isAndroidDevice, scriptId, navigate]);
+
   const [currentLineIndex, setCurrentLineIndex] = useState(0);
   const [phase, setPhase] = useState('line');
   const [comparisonResult, setComparisonResult] = useState(null);
