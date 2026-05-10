@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Theater, Mic, MicOff, Loader2 } from 'lucide-react';
+import { ArrowLeft, Theater, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { speakText, stopSpeaking } from '@/lib/speechServices';
 import { compareTexts } from '@/lib/scriptParser';
@@ -15,29 +15,25 @@ export default function DesktopRehearsal() {
   const urlParams = new URLSearchParams(window.location.search);
   const scriptId = urlParams.get('scriptId');
 
-  // Redirect Android
   useEffect(() => {
     if (/Android/i.test(navigator.userAgent)) {
       navigate(`/android/rehearsal?scriptId=${scriptId}`);
     }
   }, [scriptId, navigate]);
 
-  // State
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [phase, setPhase] = useState('line'); // 'line' | 'comparing' | 'result'
+  const [phase, setPhase] = useState('line');
   const [result, setResult] = useState(null);
   const [transcript, setTranscript] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  const [isSpeakingPartner, setIsSpeakingPartner] = useState(false);
   const [completed, setCompleted] = useState(new Set());
   const [scores, setScores] = useState([]);
   const [started, setStarted] = useState(false);
 
-  // Refs
   const recognitionRef = useRef(null);
   const sessionRef = useRef(0);
+  const recordingStartedRef = useRef(false);
 
-  // Fetch script
   const { data: script, isLoading } = useQuery({
     queryKey: ['script', scriptId],
     queryFn: () => base44.entities.Script.filter({ id: scriptId }),
@@ -58,18 +54,16 @@ export default function DesktopRehearsal() {
   const stripDirections = (text) => 
     text?.replace(/\([^)]*\)?/g, '').replace(/\[[^\]]*\]?/g, '').replace(/\s+/g, ' ').trim() || '';
 
-  // Start recording
+  // Start recording with auto-restart loop
   const startRecording = useCallback(() => {
     sessionRef.current += 1;
     const session = sessionRef.current;
+    recordingStartedRef.current = true;
     setTranscript('');
     setIsRecording(true);
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('Reconnaissance vocale non supportée');
-      return;
-    }
+    if (!SpeechRecognition) return;
 
     const rec = new SpeechRecognition();
     rec.continuous = true;
@@ -82,7 +76,6 @@ export default function DesktopRehearsal() {
     rec.onresult = (e) => {
       if (session !== sessionRef.current) return;
 
-      // Collect final results
       for (let i = 0; i < e.results.length; i++) {
         if (e.results[i].isFinal) {
           const word = e.results[i][0].transcript.trim();
@@ -90,7 +83,6 @@ export default function DesktopRehearsal() {
         }
       }
 
-      // Get interim
       let interim = '';
       for (let i = e.results.length - 1; i >= 0; i--) {
         if (!e.results[i].isFinal) {
@@ -102,27 +94,24 @@ export default function DesktopRehearsal() {
       const display = (finalWords.join(' ') + (interim ? ' ' + interim : '')).trim();
       setTranscript(display);
 
-      // Detect "OK"
       const hasOk = display.split(/\s+/).some(w => /^ok$/i.test(w) || /^okay$/i.test(w));
       if (hasOk) {
         const text = display.split(/\s+/)
           .filter(w => !/^ok$/i.test(w) && !/^okay$/i.test(w))
           .join(' ')
           .trim();
-        if (text) {
-          stopRecording();
-          submitRecording(text, session);
+        recordingStartedRef.current = false;
+        if (recognitionRef.current) {
+          try { recognitionRef.current.abort(); } catch (e) {}
         }
+        setIsRecording(false);
+        submitRecording(text, session);
       }
     };
 
-    rec.onerror = () => {};
     rec.onend = () => {
-      if (session === sessionRef.current && !recognitionRef.current?.stopped) {
-        try {
-          rec.start();
-        } catch (e) {}
-      }
+      if (session !== sessionRef.current || !recordingStartedRef.current) return;
+      try { rec.start(); } catch (e) {}
     };
 
     try {
@@ -132,18 +121,7 @@ export default function DesktopRehearsal() {
     }
   }, []);
 
-  const stopRecording = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stopped = true;
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {}
-    }
-    setIsRecording(false);
-  }, []);
-
   const submitRecording = useCallback(async (text, session) => {
-    stopRecording();
     setPhase('comparing');
     const compResult = await compareTexts(stripDirections(currentLine.text), text);
     if (session !== sessionRef.current) return;
@@ -153,9 +131,17 @@ export default function DesktopRehearsal() {
       setCompleted(prev => new Set([...prev, currentIndex]));
     }
     setPhase('result');
-  }, [currentLine, currentIndex, stopRecording]);
+  }, [currentLine, currentIndex]);
 
-  // Auto-advance
+  // Auto-start recording when arriving at my line
+  useEffect(() => {
+    if (phase === 'line' && isMyLine && started && !isRecording && !recordingStartedRef.current) {
+      const timer = setTimeout(() => startRecording(), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, isMyLine, started, isRecording, startRecording]);
+
+  // Auto-advance on perfect
   useEffect(() => {
     if (phase !== 'result' || !result) return;
     const hasMissing = (result.word_results || []).some(w => w.status === 'missing');
@@ -170,6 +156,7 @@ export default function DesktopRehearsal() {
     setResult(null);
     setPhase('line');
     setTranscript('');
+    recordingStartedRef.current = false;
     setCurrentIndex(prev => prev + 1);
   }, []);
 
@@ -177,10 +164,15 @@ export default function DesktopRehearsal() {
     setResult(null);
     setPhase('line');
     setTranscript('');
+    recordingStartedRef.current = false;
   };
 
   const handleNext = () => {
-    stopRecording();
+    recordingStartedRef.current = false;
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch (e) {}
+    }
+    setIsRecording(false);
     setResult(null);
     setPhase('line');
     setTranscript('');
@@ -188,12 +180,18 @@ export default function DesktopRehearsal() {
   };
 
   const speakPartner = useCallback(async () => {
-    stopRecording();
-    setIsSpeakingPartner(true);
+    recordingStartedRef.current = false;
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch (e) {}
+    }
+    setIsRecording(false);
     const gender = genders[currentLine.character] || 'male';
     await speakText(stripDirections(currentLine.text), 'fr-FR', gender, 1);
-    setIsSpeakingPartner(false);
-  }, [currentLine, genders, stopRecording]);
+    // Auto-restart recording if it was my turn
+    if (isMyLine) {
+      setTimeout(() => startRecording(), 300);
+    }
+  }, [currentLine, genders, isMyLine, startRecording]);
 
   if (isLoading) {
     return (
@@ -218,10 +216,7 @@ export default function DesktopRehearsal() {
         <h1 className="text-2xl font-bold">{script.title}</h1>
         <p className="text-muted-foreground">Rôle: <span className="text-primary font-semibold">{myCharacter}</span></p>
         <p className="text-sm text-muted-foreground">{lines.length} répliques • {myLineCount} à jouer</p>
-        <Button size="lg" onClick={() => setStarted(true)} className="gap-2">
-          <Mic className="w-5 h-5" />
-          Commencer
-        </Button>
+        <Button size="lg" onClick={() => setStarted(true)}>Commencer</Button>
       </div>
     );
   }
@@ -263,6 +258,7 @@ export default function DesktopRehearsal() {
                   setCompleted(new Set());
                   setScores([]);
                   setPhase('line');
+                  recordingStartedRef.current = false;
                 }}
               />
             ) : currentLine && (
@@ -275,25 +271,16 @@ export default function DesktopRehearsal() {
                   <>
                     {phase === 'line' && (
                       <div className="space-y-4">
-                        <div className="rounded-2xl border-2 border-primary bg-primary/10 p-6 text-center">
-                          <p className="text-sm text-primary mb-4">Votre réplique:</p>
-                          <p className="text-lg leading-relaxed text-foreground mb-4">{currentLine.text}</p>
-                          <button
-                            onClick={isRecording ? stopRecording : startRecording}
-                            className={`w-24 h-24 rounded-full mx-auto flex items-center justify-center transition-all ${
-                              isRecording
-                                ? 'bg-destructive shadow-lg shadow-destructive/50'
-                                : 'bg-primary shadow-lg shadow-primary/30 hover:scale-105'
-                            }`}
-                          >
-                            {isRecording ? (
-                              <MicOff className="w-10 h-10 text-white" />
-                            ) : (
-                              <Mic className="w-10 h-10 text-primary-foreground" />
-                            )}
-                          </button>
-                          <p className="text-sm text-muted-foreground mt-4">
-                            {isRecording ? 'En cours...' : 'Appuyez pour enregistrer'}
+                        <div className="rounded-2xl border-2 border-primary bg-primary/10 p-8 text-center">
+                          <p className="text-sm text-muted-foreground mb-3">Votre réplique:</p>
+                          <p className="text-lg leading-relaxed text-foreground mb-6">{currentLine.text}</p>
+                          <div className={`rounded-full w-20 h-20 mx-auto flex items-center justify-center transition-all ${
+                            isRecording ? 'bg-destructive animate-pulse' : 'bg-primary'
+                          }`}>
+                            <div className="text-white text-2xl">🎤</div>
+                          </div>
+                          <p className="text-sm text-primary font-semibold mt-4">
+                            {isRecording ? '🔴 ENREGISTREMENT' : 'Microphone prêt'}
                           </p>
                         </div>
 
@@ -303,16 +290,9 @@ export default function DesktopRehearsal() {
                           </div>
                         )}
 
-                        <div className="flex gap-2">
-                          <Button variant="outline" onClick={handleNext} className="flex-1">
-                            Passer
-                          </Button>
-                          {transcript && !isRecording && (
-                            <Button onClick={() => submitRecording(transcript, sessionRef.current)} className="flex-1">
-                              Valider
-                            </Button>
-                          )}
-                        </div>
+                        <Button onClick={handleNext} variant="outline" className="w-full">
+                          Passer cette réplique
+                        </Button>
                       </div>
                     )}
 
@@ -336,13 +316,8 @@ export default function DesktopRehearsal() {
                     <div className="rounded-2xl bg-secondary/50 border border-border p-4">
                       <p className="text-xs text-muted-foreground mb-2 uppercase">{currentLine.character}</p>
                       <p className="text-lg leading-relaxed text-foreground mb-4">{currentLine.text}</p>
-                      <Button
-                        onClick={speakPartner}
-                        disabled={isSpeakingPartner}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        {isSpeakingPartner ? 'Lecture...' : 'Écouter'}
+                      <Button onClick={speakPartner} variant="outline" className="w-full">
+                        Écouter
                       </Button>
                     </div>
                     <Button onClick={handleNext} className="w-full">
