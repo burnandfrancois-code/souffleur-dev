@@ -80,10 +80,13 @@ export default function Rehearsal() {
   const normalize = (s) => s?.trim().toLowerCase();
   const isMyLine = normalize(currentLine?.character) === normalize(myCharacter);
 
-  // Set flag to force instant mic start when landing on user's line
+  // Auto-start recording when landing on user's line
   useEffect(() => {
-    if (isMyLine && phase === 'line' && started) {
-      localStorage.setItem('souffleur_instant_mic', 'true');
+    if (isMyLine && phase === 'line' && started && autoPlayRef.current) {
+      const timer = setTimeout(() => {
+        myLineRecorderRef.current?.startRecording?.();
+      }, 200);
+      return () => clearTimeout(timer);
     }
   }, [isMyLine, phase, started]);
   const myLineCount = lines.filter(l => normalize(l.character) === normalize(myCharacter)).length;
