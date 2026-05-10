@@ -57,6 +57,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     interimRef.current = '';
     setTranscript('');
     setSttError(null);
+    restartCountRef.current = 0;
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -158,13 +159,6 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     rec.onend = () => {
       if (sessionIdRef.current !== mySession) return;
       if (userStoppedRef.current) return;
-      
-      restartCountRef.current += 1;
-      if (restartCountRef.current > 3) {
-        setSttError({ message: '⚠️ Micro inactif après 3 tentatives\n\nVérifiez que le micro fonctionne et que la permission est accordée.' });
-        return;
-      }
-      
       startRecordingRef.current();
     };
 
