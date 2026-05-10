@@ -207,6 +207,32 @@ export default function Rehearsal() {
     }
   }, [phase, comparisonResult]);
 
+  const handleRetry = () => {
+    setComparisonResult(null);
+    setPhase('line');
+  };
+
+  const handleContinue = () => {
+    const idx = currentLineIndexRef.current;
+    if (comparisonResult?.perfect) {
+      setCompletedMyLines(prev => new Set([...prev, idx]));
+    }
+
+    const nextIndex = idx + 1;
+    const nextLine = lines[nextIndex];
+
+    setComparisonResult(null);
+    setPhase('line');
+    setCurrentLineIndex(nextIndex);
+
+    if (!nextLine) return;
+
+    const nextIsPartner = normalize(nextLine.character) !== normalize(myCharacter);
+    if (nextIsPartner && autoPlayRef.current) {
+      launchSpeakChain(nextIndex, lines, myCharacter, characterGenders);
+    }
+  };
+
   // Écoute vocale passive pendant la phase 'result' pour détecter "passer"
   useEffect(() => {
     if (phase !== 'result') return;
@@ -239,7 +265,6 @@ export default function Rehearsal() {
       try { rec.start(); } catch (e) {}
     };
 
-    // Petit délai pour laisser MyLineRecorder s'arrêter proprement
     const timer = setTimeout(start, 400);
 
     return () => {
@@ -247,33 +272,7 @@ export default function Rehearsal() {
       clearTimeout(timer);
       if (rec) { try { rec.abort(); } catch (e) {} }
     };
-  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleRetry = () => {
-    setComparisonResult(null);
-    setPhase('line');
-  };
-
-  const handleContinue = () => {
-    const idx = currentLineIndexRef.current;
-    if (comparisonResult?.perfect) {
-      setCompletedMyLines(prev => new Set([...prev, idx]));
-    }
-
-    const nextIndex = idx + 1;
-    const nextLine = lines[nextIndex];
-
-    setComparisonResult(null);
-    setPhase('line');
-    setCurrentLineIndex(nextIndex);
-
-    if (!nextLine) return;
-
-    const nextIsPartner = normalize(nextLine.character) !== normalize(myCharacter);
-    if (nextIsPartner && autoPlayRef.current) {
-      launchSpeakChain(nextIndex, lines, myCharacter, characterGenders);
-    }
-  };
+  }, [phase, handleContinue, handleRetry]);
 
   const handleJumpTo = (idx) => {
     stopSpeakingOnly();

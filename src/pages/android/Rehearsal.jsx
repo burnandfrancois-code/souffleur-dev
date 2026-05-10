@@ -95,6 +95,22 @@ export default function AndroidRehearsal() {
     }
   }, [phase, comparisonResult]);
 
+  const handleRetry = () => { setComparisonResult(null); setPhase('line'); };
+
+  const handleContinue = () => {
+    const idx = currentLineIndexRef.current;
+    if (comparisonResult?.perfect) setCompletedMyLines(prev => new Set([...prev, idx]));
+    const nextIndex = idx + 1;
+    const nextLine = lines[nextIndex];
+    setComparisonResult(null);
+    setPhase('line');
+    setCurrentLineIndex(nextIndex);
+    if (!nextLine) return;
+    if (normalize(nextLine.character) !== normalize(myCharacter)) {
+      speakPartnerLines(nextIndex, lines, myCharacter, characterGenders, stripDirections);
+    }
+  };
+
   // Écoute vocale passive pendant la phase 'result' pour détecter "passer"
   useEffect(() => {
     if (phase !== 'result') return;
@@ -134,23 +150,7 @@ export default function AndroidRehearsal() {
       clearTimeout(timer);
       if (rec) { try { rec.abort(); } catch (e) {} }
     };
-  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handleRetry = () => { setComparisonResult(null); setPhase('line'); };
-
-  const handleContinue = () => {
-    const idx = currentLineIndexRef.current;
-    if (comparisonResult?.perfect) setCompletedMyLines(prev => new Set([...prev, idx]));
-    const nextIndex = idx + 1;
-    const nextLine = lines[nextIndex];
-    setComparisonResult(null);
-    setPhase('line');
-    setCurrentLineIndex(nextIndex);
-    if (!nextLine) return;
-    if (normalize(nextLine.character) !== normalize(myCharacter)) {
-      speakPartnerLines(nextIndex, lines, myCharacter, characterGenders, stripDirections);
-    }
-  };
+  }, [phase, handleContinue, handleRetry]);
 
   const handleNextLine = () => {
     const nextIndex = currentLineIndex + 1;
