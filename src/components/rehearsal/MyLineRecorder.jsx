@@ -435,11 +435,11 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
         </AnimatePresence>
 
         {/* Transcript display - only in normal mode */}
-        {!trainingMode && transcript && (
-          <div className="bg-background border border-border rounded-xl px-4 py-3 mb-3">
+        {!trainingMode && (
+          <div className="bg-background border border-border rounded-xl px-4 py-3 mb-3 min-h-[2.5rem]">
             <p className="text-foreground leading-relaxed">
-              {transcript}
-              {isRecording && <span className="inline-block w-0.5 h-5 bg-primary ml-1 animate-pulse" />}
+              {transcript || <span className="text-muted-foreground text-sm italic">En attente...</span>}
+              {isRecording && transcript && <span className="inline-block w-0.5 h-5 bg-primary ml-1 animate-pulse" />}
             </p>
           </div>
         )}
