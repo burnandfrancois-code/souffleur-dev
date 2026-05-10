@@ -36,6 +36,7 @@ export function useSimpleVoiceInput() {
     finalWordsRef.current = [];
     interimRef.current = '';
     lastOkTimeRef.current = 0;
+    let okDetected = false;
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -85,7 +86,8 @@ export function useSimpleVoiceInput() {
       const words = displayText.split(/\s+/);
       const hasOk = words.some(w => /^ok$/i.test(w.toLowerCase()) || /^okay$/i.test(w.toLowerCase()) || /^o\.k\.$/i.test(w.toLowerCase()));
 
-      if (hasOk) {
+      if (hasOk && !okDetected) {
+        okDetected = true;
         const now = Date.now();
         if (now - lastOkTimeRef.current > 1000) {
           lastOkTimeRef.current = now;
@@ -115,18 +117,14 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onend = () => {
-      if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
-      setIsRecording(false);
+      if (sessionIdRef.current !== mySession || userStoppedRef.current || okDetected) return;
       
-      // Redémarrer après un délai si pas fermée intentionnellement
-      const timer = setTimeout(() => {
-        if (sessionIdRef.current === mySession && recognitionRef.current && !userStoppedRef.current) {
-          try {
-            recognitionRef.current.start();
-          } catch (e) {}
-        }
-      }, 500);
-      pendingTimersRef.current.push(timer);
+      // Redémarrer immédiatement si pas fermée et OK pas détecté
+      if (recognitionRef.current && !userStoppedRef.current && !okDetected) {
+        try {
+          recognitionRef.current.start();
+        } catch (e) {}
+      }
     };
 
     try {
