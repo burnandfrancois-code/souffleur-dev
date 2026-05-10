@@ -63,28 +63,11 @@ export function useSimpleVoiceInput() {
     rec.onresult = (event) => {
       if (sessionIdRef.current !== mySession) return;
 
-      // Collecter résultats finaux
+      // Reconstruire la phrase complète à partir de ALL event.results
+      let fullText = '';
       for (let i = 0; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          const word = event.results[i][0].transcript.trim();
-          if (word && !finalWordsRef.current.includes(word)) {
-            finalWordsRef.current.push(word);
-          }
-        }
+        fullText += event.results[i][0].transcript;
       }
-
-      // Dernier résultat intermédiaire
-      interimRef.current = '';
-      for (let i = event.results.length - 1; i >= 0; i--) {
-        if (!event.results[i].isFinal) {
-          interimRef.current = event.results[i][0].transcript.trim();
-          break;
-        }
-      }
-
-      // Affichage temps réel
-      const fullText = finalWordsRef.current.join(' ') +
-        (interimRef.current ? (finalWordsRef.current.length > 0 ? ' ' : '') + interimRef.current : '');
       const displayText = fullText.trim();
       setTranscript(displayText);
 
