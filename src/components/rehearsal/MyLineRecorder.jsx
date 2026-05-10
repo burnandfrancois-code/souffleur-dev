@@ -238,12 +238,14 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     setSttError(null);
 
     if (autoPlay && !trainingMode) {
+      // Délai plus long à vitesses élevées pour laisser le temps de terminer sa phrase
+      const delay = speechRate >= 2 ? 1500 : 1200;
       const timer = setTimeout(() => {
         startRecordingRef.current();
-      }, 1200);
+      }, delay);
       return () => clearTimeout(timer);
     }
-  }, [line, autoPlay, trainingMode]);
+  }, [line, autoPlay, trainingMode, speechRate]);
 
   const handleSubmit = () => {
     const final = transcript.trim();
