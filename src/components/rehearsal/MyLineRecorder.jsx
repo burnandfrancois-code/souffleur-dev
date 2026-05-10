@@ -179,7 +179,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
 
   // Passive voice command listening during result phase
   useEffect(() => {
-    if (phase !== 'result') return;
+    if (phase !== 'result' || isRecording) return;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
@@ -218,7 +218,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       clearTimeout(timer);
       if (rec) { try { rec.abort(); } catch (e) {} }
     };
-  }, [phase, onContinue, onRetry, speechRate]);
+  }, [phase, isRecording, onContinue, onRetry, speechRate]);
 
   // Cleanup on unmount
   useEffect(() => {
