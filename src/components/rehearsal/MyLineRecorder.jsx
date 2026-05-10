@@ -199,7 +199,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     if (autoPlay && !trainingMode) {
       const timer = setTimeout(() => {
         startRecordingRef.current();
-      }, 800);
+      }, 1200);
       return () => clearTimeout(timer);
     }
   }, [line, autoPlay, trainingMode]);
