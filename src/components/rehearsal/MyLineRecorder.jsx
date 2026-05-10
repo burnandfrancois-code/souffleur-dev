@@ -14,26 +14,31 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   const [isSpeakingMyLine, setIsSpeakingMyLine] = useState(false);
   const [sttError, setSttError] = useState(null);
 
+  // Session management
   const recognitionRef = useRef(null);
-  const userStoppedRef = useRef(false);
+  const activeSessionIdRef = useRef(null); // Session ID actuelle ou null
   const finalWordsRef = useRef([]);
   const interimRef = useRef('');
   const lastOkTimeRef = useRef(0);
-  const sessionIdRef = useRef(0); // ID unique par instance de reconnaissance
   const restartCountRef = useRef(0);
   const restartTimerRef = useRef(null);
 
-  const lastStartTimeRef = useRef(0);
+  const onSubmitRef = useRef(onSubmit);
+  useEffect(() => { onSubmitRef.current = onSubmit; }, [onSubmit]);
 
+  const startRecordingRef = useRef(null);
+
+  // Arrêter la session actuellement active
   const stopRecording = useCallback(() => {
-    console.log('[STT] stopRecording appelé');
-    userStoppedRef.current = true;
+    console.log('[STT] stopRecording appelé, activeSession:', activeSessionIdRef.current);
+    activeSessionIdRef.current = null; // Invalide toute session active
     restartCountRef.current = 0;
-    sessionIdRef.current += 1; // invalide toute instance précédente
+
     if (restartTimerRef.current) {
       clearTimeout(restartTimerRef.current);
       restartTimerRef.current = null;
     }
+
     if (recognitionRef.current) {
       try {
         console.log('[STT] abort appelé');
@@ -46,16 +51,13 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     setIsRecording(false);
   }, []);
 
-  const onSubmitRef = useRef(onSubmit);
-  useEffect(() => { onSubmitRef.current = onSubmit; }, [onSubmit]);
-
-  const startRecordingRef = useRef(null);
-
   const startRecording = useCallback(async () => {
-    userStoppedRef.current = false;
-    sessionIdRef.current += 1;
-    const mySession = sessionIdRef.current;
+    // Créer une nouvelle session unique
+    const newSessionId = Math.random();
+    activeSessionIdRef.current = newSessionId;
+    console.log('[STT] ▶ Nouvelle session:', newSessionId);
 
+    // Arrêter l'ancienne reconnaissance si elle existe
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch (e) {}
       recognitionRef.current = null;
@@ -70,13 +72,18 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
 
     // Initialiser l'audio context
     try {
-      console.log('[STT] ▶ Appel unlockAudioForDesktop...');
+      console.log('[STT] Appel unlockAudioForDesktop...');
       await unlockAudioForDesktop();
       console.log('[STT] ✓ unlockAudioForDesktop réussi');
-      // Petit délai pour s'assurer que l'audio context est vraiment actif
       await new Promise(r => setTimeout(r, 100));
     } catch (e) {
       console.error('[STT] ❌ Erreur initialisation audio:', e);
+    }
+
+    // Vérifier si la session est toujours active
+    if (activeSessionIdRef.current !== newSessionId) {
+      console.log('[STT] ⚠ Session invalide après audio init');
+      return;
     }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -92,20 +99,18 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     recognitionRef.current = rec;
 
     rec.onstart = () => {
-      const isValid = sessionIdRef.current === mySession && !userStoppedRef.current;
-      console.log('[STT] ✓ onstart déclenché - session valide?', sessionIdRef.current === mySession, 'userStopped?', userStoppedRef.current, '→', isValid ? '🎤 MICRO ACTIF' : '⚠ Ignorer');
-      if (isValid) {
-        setIsRecording(true);
-      }
+      const isValid = activeSessionIdRef.current === newSessionId;
+      console.log('[STT] ✓ onstart - session valide?', isValid, '→', isValid ? '🎤 MICRO ACTIF' : '⚠ Ignorer');
+      if (isValid) setIsRecording(true);
     };
 
     rec.onresult = (event) => {
-      console.log('[STT] 🎤 onresult déclenché - results.length:', event.results.length);
-      if (sessionIdRef.current !== mySession || userStoppedRef.current) {
-        console.log('[STT] ⚠ Ignorer onresult: session invalide ou userStopped');
+      if (activeSessionIdRef.current !== newSessionId) {
+        console.log('[STT] ⚠ Ignorer onresult: session invalide');
         return;
       }
 
+      // Collecter les résultats finaux
       for (let i = 0; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
           const word = event.results[i][0].transcript.trim();
@@ -116,6 +121,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
         }
       }
 
+      // Récupérer le dernier résultat intermédiaire
       interimRef.current = '';
       for (let i = event.results.length - 1; i >= 0; i--) {
         if (!event.results[i].isFinal) {
@@ -133,7 +139,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
 
       const words = displayText.split(/\s+/);
 
-      // Détecter commandes vocales de navigation (quand on écoute pour ça)
+      // Détecter commandes vocales de navigation
       if (listenForCommands && onVoiceCommand) {
         const lower = displayText.toLowerCase();
         if (lower.includes('passer') || lower.includes('suivant') || lower.includes('continuer')) {
@@ -148,6 +154,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
         }
       }
 
+      // Détecteur de commande "OK"
       const hasOkCommand = words.some(w => {
         const lower = w.toLowerCase();
         return lower === 'ok' || lower === 'okay' || lower === 'o.k.' || lower === 'oke';
@@ -165,9 +172,9 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
             .join(' ')
             .trim();
           if (finalText) {
-            const capturedSession = mySession;
+            const capturedSession = newSessionId;
             setTimeout(() => {
-              if (sessionIdRef.current !== capturedSession) return;
+              if (activeSessionIdRef.current !== capturedSession) return;
               stopRecording();
               onSubmitRef.current(finalText);
             }, 600);
@@ -178,27 +185,25 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
 
     rec.onerror = (e) => {
       console.error('[STT] ❌ onerror:', e.error);
-      if (sessionIdRef.current !== mySession) return;
+      if (activeSessionIdRef.current !== newSessionId) return;
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         stopRecording();
         setSttError({ message: '⚠️ Permission micro refusée\n\nClique sur l\'icône 🔒 et autorise le micro.' });
       }
-      // Ignorer 'aborted' — c'est nous qui l'avons provoqué
     };
 
     rec.onend = () => {
-      // Avec continuous: true, le micro ne devrait pas s'arrêter
-      // Ignore les événements onend
+      // Avec continuous: true, ne devrait pas se déclencher
     };
 
     try {
-      console.log('[STT] 🎤 rec.start() appelé - lang:', rec.lang, 'continuous:', rec.continuous, 'interimResults:', rec.interimResults);
-      lastStartTimeRef.current = Date.now();
+      console.log('[STT] 🎤 rec.start() appelé');
       rec.start();
       console.log('[STT] ✓ rec.start() exécuté avec succès');
     } catch (e) {
       console.error('[STT] ❌ rec.start() erreur:', e.message);
       setSttError({ message: `⚠️ Erreur micro: ${e.message}` });
+      activeSessionIdRef.current = null;
       recognitionRef.current = null;
     }
   }, [stopRecording, listenForCommands, onVoiceCommand]);
@@ -208,8 +213,6 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   useImperativeHandle(ref, () => ({
     stopRecording
   }), [stopRecording]);
-
-
 
   // Voice commands during result phase
   useEffect(() => {
@@ -255,10 +258,8 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      sessionIdRef.current += 1;
-      if (restartTimerRef.current) {
-        clearTimeout(restartTimerRef.current);
-      }
+      activeSessionIdRef.current = null;
+      if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch (e) {}
         recognitionRef.current = null;
@@ -268,17 +269,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
 
   // Reset + auto-start when line changes
   useEffect(() => {
-    const now = Date.now();
-    const timeSinceStart = now - lastStartTimeRef.current;
-    console.log('[STT] useEffect: line changed - timeSinceStart:', timeSinceStart, 'ms');
-    
-    // Ne pas arrêter si on vient juste de démarrer (éviter les races)
-    if (timeSinceStart < 1000) {
-      console.log('[STT] ⚠ Ignorer stopRecording, démarrage trop récent (< 1s)');
-      return;
-    }
-    
-    console.log('[STT] Proceeding with stopRecording');
+    console.log('[STT] useEffect: line changed');
     stopRecording();
     finalWordsRef.current = [];
     interimRef.current = '';
@@ -286,15 +277,14 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     setSttError(null);
 
     if (autoPlay && !trainingMode) {
-      // Délai plus long à vitesses élevées pour laisser le temps de terminer sa phrase
       const delay = speechRate >= 2 ? 1500 : 1200;
       const timer = setTimeout(() => {
-        console.log('[STT] useEffect: auto-start after delay');
+        console.log('[STT] auto-start après délai');
         startRecordingRef.current();
       }, delay);
       return () => clearTimeout(timer);
     }
-  }, [line, autoPlay, trainingMode, speechRate]);
+  }, [line, autoPlay, trainingMode, speechRate, stopRecording]);
 
   const handleSubmit = () => {
     const final = transcript.trim();
