@@ -85,7 +85,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
       }, 1200);
       return () => clearTimeout(timer);
     }
-  }, [phase, comparisonResult]);
+  }, [phase, comparisonResult, handleContinue]);
 
   // Continuation vers prochaine réplique
   const handleContinue = useCallback(() => {
