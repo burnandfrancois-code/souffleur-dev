@@ -210,15 +210,26 @@ export default function AndroidRehearsal() {
     if (cur < indices.length - 1) goToMyLine(indices[cur + 1]);
   };
 
-  // DEBUG - Show immediately, always
-  if (!script && (isLoading || !started)) {
+  // Missing scriptId — show error immediately
+  if (!scriptId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="space-y-4 max-w-md w-full">
+          <p className="text-destructive font-bold text-center text-lg">Erreur: pas de script</p>
+          <p className="text-xs text-muted-foreground text-center">L'URL doit contenir ?scriptId=...</p>
+          <Button onClick={() => navigate('/android/')} variant="outline" className="w-full">Retour</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // DEBUG - Show loading state
+  if (!script && isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-4 px-4">
-          <p className="text-primary font-bold text-base">AndroidRehearsal v3</p>
-          <p className="text-muted-foreground text-xs">scriptId: {scriptId || 'NONE'}</p>
-          <p className="text-muted-foreground text-xs">isLoading: {isLoading ? 'OUI' : 'NON'}</p>
-          <p className="text-muted-foreground text-xs">started: {started ? 'OUI' : 'NON'}</p>
+          <p className="text-primary font-bold text-base">Chargement...</p>
+          <p className="text-muted-foreground text-xs">scriptId: {scriptId}</p>
           {error && <p className="text-destructive text-xs break-all">{String(error?.message || error)}</p>}
           <Loader2 className="w-6 h-6 text-primary animate-spin mx-auto mt-4" />
         </div>
