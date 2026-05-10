@@ -31,11 +31,12 @@ Deno.serve(async (req) => {
     formData.append('language', 'fr');
 
     // Appeler OpenAI Whisper API
+    const headers = new Headers();
+    headers.append('Authorization', `Bearer ${Deno.env.get('OPENAI_API_KEY')}`);
+    
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
-      },
+      headers: headers,
       body: formData,
     });
 
