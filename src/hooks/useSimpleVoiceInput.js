@@ -13,8 +13,10 @@ export function useSimpleVoiceInput() {
   const userStoppedRef = useRef(false);
   const pendingTimersRef = useRef([]);
   const okDetectedRef = useRef(false);
+  const intentionallyStopping = useRef(false);
 
   const stop = useCallback(() => {
+    intentionallyStopping.current = true;
     userStoppedRef.current = true;
     sessionIdRef.current += 1;
     if (recognitionRef.current) {
@@ -118,10 +120,10 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onend = () => {
-      if (sessionIdRef.current !== mySession || userStoppedRef.current || okDetectedRef.current) return;
+      if (sessionIdRef.current !== mySession || intentionallyStopping.current || okDetectedRef.current) return;
       
-      // Redémarrer immédiatement si pas fermée et OK pas détecté
-      if (recognitionRef.current && !userStoppedRef.current && !okDetectedRef.current) {
+      // Redémarrer seulement si fermeture accidentelle
+      if (recognitionRef.current && !intentionallyStopping.current) {
         try {
           recognitionRef.current.start();
         } catch (e) {}
