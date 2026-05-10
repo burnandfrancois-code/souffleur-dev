@@ -40,20 +40,6 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
           <p className="text-muted-foreground text-center text-xs">{result.feedback}</p>
         )}
 
-        {/* Mots corrects */}
-        {correctWords.length > 0 && (
-          <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-2.5 space-y-1.5">
-            <p className="text-xs font-bold text-green-400 uppercase tracking-wider">✓ Corrects</p>
-            <div className="flex flex-wrap gap-1">
-              {correctWords.map((w, i) => (
-                <span key={i} className="px-1.5 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-300 border border-green-500/30">
-                  {w.word}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Mots faux */}
         {wrongWords.length > 0 && (
           <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-2.5 space-y-1.5">
@@ -68,6 +54,20 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
             <p className="text-xs text-muted-foreground">
               Attendu : {wrongWords.map(w => w.word).join(', ')}
             </p>
+          </div>
+        )}
+
+        {/* Mots corrects */}
+        {correctWords.length > 0 && (
+          <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-2.5 space-y-1.5">
+            <p className="text-xs font-bold text-green-400 uppercase tracking-wider">✓ Corrects</p>
+            <div className="flex flex-wrap gap-1">
+              {correctWords.map((w, i) => (
+                <span key={i} className="px-1.5 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-300 border border-green-500/30">
+                  {w.word}
+                </span>
+              ))}
+            </div>
           </div>
         )}
 
