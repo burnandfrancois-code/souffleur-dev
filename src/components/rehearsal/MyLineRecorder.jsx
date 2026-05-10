@@ -6,7 +6,7 @@ import { speakText, stopSpeaking } from '@/lib/speechServices';
 import TrainingComparison from './TrainingComparison';
 import { forwardRef, useImperativeHandle } from 'react';
 
-const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSkip, isComparing, autoPlay, speechRate = 1 }, ref) {
+const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSkip, isComparing, autoPlay, speechRate = 1, listenForCommands, onVoiceCommand }, ref) {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [showHint, setShowHint] = useState(false);
@@ -101,6 +101,22 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       setTranscript(displayText);
 
       const words = displayText.split(/\s+/);
+
+      // Détecter commandes vocales de navigation (quand on écoute pour ça)
+      if (listenForCommands && onVoiceCommand) {
+        const lower = displayText.toLowerCase();
+        if (lower.includes('passer') || lower.includes('suivant') || lower.includes('continuer')) {
+          stopRecording();
+          onVoiceCommand('continue');
+          return;
+        }
+        if (lower.includes('réessayer') || lower.includes('recommencer')) {
+          stopRecording();
+          onVoiceCommand('retry');
+          return;
+        }
+      }
+
       const hasOkCommand = words.some(w => {
         const lower = w.toLowerCase();
         return lower === 'ok' || lower === 'okay' || lower === 'o.k.' || lower === 'oke';

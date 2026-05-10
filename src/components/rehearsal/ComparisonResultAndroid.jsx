@@ -143,6 +143,11 @@ export default function ComparisonResultAndroid({ result, onRetry, onContinue })
           </div>
         )}
 
+        {/* Hint vocal */}
+        <p className="text-center text-xs text-muted-foreground italic">
+          Dites <span className="text-primary font-semibold not-italic">"passer"</span> pour continuer
+        </p>
+
         {/* Boutons */}
         <div className="flex gap-2 pt-1">
           <Button variant="outline" size="sm" onClick={onRetry} className="flex-1 gap-1 text-xs text-yellow-400 border-yellow-400/50 hover:text-yellow-300">
