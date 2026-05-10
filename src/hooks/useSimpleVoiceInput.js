@@ -29,6 +29,7 @@ export function useSimpleVoiceInput() {
     sessionIdRef.current += 1;
     const mySession = sessionIdRef.current;
     userStoppedRef.current = false;
+    intentionallyStopping.current = false;
 
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch (e) {}
