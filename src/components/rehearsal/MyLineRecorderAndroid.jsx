@@ -65,7 +65,7 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
     recognitionRef.current = rec;
 
     rec.onstart = () => {
-      addLog('🎤 onstart - recording started');
+      addLog(`🎤 onstart - lang: ${rec.lang}, continuous: ${rec.continuous}, interim: ${rec.interimResults}`);
       if (sessionIdRef.current === mySession && !userStoppedRef.current) setIsRecording(true);
     };
 
@@ -140,9 +140,11 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
     };
 
     rec.onend = () => {
+      addLog('🎤 onend - recording ended');
       if (sessionIdRef.current !== mySession) return;
       if (userStoppedRef.current) return;
       // Attendre 2s avant de relancer (évite boucles rapides)
+      addLog('⏱ relance après 2s...');
       setTimeout(() => {
         if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
         startRecordingRef.current();
