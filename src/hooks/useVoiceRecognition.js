@@ -1,42 +1,42 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
 import { unlockAudioForDesktop } from '@/lib/speechServices';
 
 /**
- * Hook pour la reconnaissance vocale (STT) avec gestion de session robuste
- * Gère : Web Speech API, session IDs, OK command detection, cleanup
+ * Hook pour la reconnaissance vocale (STT)
+ * Enregistre l'audio en WebM, envoie à backend Whisper pour transcription
+ * Gère : session IDs, OK command detection, cleanup
  */
 export function useVoiceRecognition() {
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
 
-  const recognitionRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const streamRef = useRef(null);
+  const audioChunksRef = useRef([]);
   const activeSessionIdRef = useRef(null);
-  const abortControllerRef = useRef(null);
   const pendingTimersRef = useRef([]);
-  const finalWordsRef = useRef([]);
-  const interimRef = useRef('');
   const lastOkTimeRef = useRef(0);
-  const restartCountRef = useRef(0);
+  const finalWordsRef = useRef([]);
 
   const stopAll = useCallback(() => {
     activeSessionIdRef.current = null;
-    restartCountRef.current = 0;
 
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (e) {}
     }
 
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {}
-      recognitionRef.current = null;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
     }
 
     pendingTimersRef.current.forEach(clearTimeout);
     pendingTimersRef.current = [];
+    audioChunksRef.current = [];
     setIsRecording(false);
   }, []);
 
@@ -49,129 +49,139 @@ export function useVoiceRecognition() {
 
     lastOkTimeRef.current = 0;
     finalWordsRef.current = [];
-    interimRef.current = '';
     setTranscript('');
     setError(null);
-    restartCountRef.current = 0;
+    audioChunksRef.current = [];
 
     try {
       await unlockAudioForDesktop();
-      await new Promise(r => setTimeout(r, 100));
     } catch (e) {
-      console.error('[VoiceRecognition] Erreur audio:', e);
+      console.error('[VoiceRecognition] Audio unlock error:', e);
     }
 
     if (activeSessionIdRef.current !== newSessionId) return;
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setError({ message: 'Reconnaissance vocale non supportée. Utilisez Chrome ou Edge.' });
-      return;
-    }
-
-    const rec = new SpeechRecognition();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = 'fr-FR';
-    recognitionRef.current = rec;
-
-    rec.onstart = () => {
-      if (activeSessionIdRef.current === newSessionId) {
-        setIsRecording(true);
-      }
-    };
-
-    rec.onresult = (event) => {
-      if (activeSessionIdRef.current !== newSessionId) return;
-
-      // Collecter les résultats finaux
-      for (let i = 0; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          const word = event.results[i][0].transcript.trim();
-          if (word && !finalWordsRef.current.includes(word)) {
-            finalWordsRef.current.push(word);
-          }
-        }
-      }
-
-      // Récupérer le dernier résultat intermédiaire
-      interimRef.current = '';
-      for (let i = event.results.length - 1; i >= 0; i--) {
-        if (!event.results[i].isFinal) {
-          interimRef.current = event.results[i][0].transcript.trim();
-          break;
-        }
-      }
-
-      const fullText = finalWordsRef.current.join(' ') +
-        (interimRef.current ? (finalWordsRef.current.length > 0 ? ' ' : '') + interimRef.current : '');
-      const displayText = fullText.trim();
-      setTranscript(displayText);
-
-      // Détecte la commande "OK"
-      const words = displayText.split(/\s+/);
-      const hasOkCommand = words.some(w => {
-        const lower = w.toLowerCase();
-        return lower === 'ok' || lower === 'okay' || lower === 'o.k.' || lower === 'oke';
-      });
-
-      if (hasOkCommand && onFinalTranscript) {
-        const now = Date.now();
-        if (now - lastOkTimeRef.current > 1000) {
-          lastOkTimeRef.current = now;
-          const finalText = words
-            .filter(w => {
-              const lower = w.toLowerCase();
-              return lower !== 'ok' && lower !== 'okay' && lower !== 'o.k.' && lower !== 'oke';
-            })
-            .join(' ')
-            .trim();
-
-          if (finalText) {
-            const capturedSession = newSessionId;
-            setTimeout(() => {
-              if (activeSessionIdRef.current !== capturedSession) return;
-              stop();
-              onFinalTranscript(finalText);
-            }, 600);
-          }
-        }
-      }
-    };
-
-    rec.onerror = (e) => {
-      console.error('[VoiceRecognition] onerror:', e.error);
-      if (activeSessionIdRef.current !== newSessionId) return;
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-        stop();
-        setError({ message: '⚠️ Permission micro refusée' });
-      } else if (e.error === 'network') {
-        console.log('[VoiceRecognition] network error, relance...');
-      }
-    };
-
-    rec.onend = () => {
-      console.log('[VoiceRecognition] onend');
-      if (activeSessionIdRef.current !== newSessionId) return;
-      setIsRecording(false);
-    };
-
     try {
-      const controller = new AbortController();
-      abortControllerRef.current = controller;
-      rec.start();
-      console.log('[VoiceRecognition] rec.start() lancé');
-    } catch (e) {
-      console.error('[VoiceRecognition] rec.start() erreur:', e.message);
-      setError({ message: `⚠️ Erreur micro: ${e.message}` });
-      activeSessionIdRef.current = null;
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      if (activeSessionIdRef.current !== newSessionId) {
+        stream.getTracks().forEach(t => t.stop());
+        return;
       }
-      recognitionRef.current = null;
+
+      streamRef.current = stream;
+      audioChunksRef.current = [];
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0 && activeSessionIdRef.current === newSessionId) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        if (activeSessionIdRef.current !== newSessionId) return;
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        if (audioBlob.size === 0) {
+          setTranscript('');
+          return;
+        }
+
+        try {
+          // Convertir Blob en base64
+          const reader = new FileReader();
+          reader.onload = async () => {
+            try {
+              const base64Audio = reader.result;
+
+              // Envoyer à backend pour transcription Whisper
+              const response = await base44.functions.invoke('transcribeAudio', { audio: base64Audio });
+              
+              if (!response?.data?.text) {
+                if (activeSessionIdRef.current === newSessionId) {
+                  setTranscript('');
+                }
+                return;
+              }
+
+              if (activeSessionIdRef.current !== newSessionId) return;
+
+              const text = response.data.text.trim();
+              if (!text) {
+                setTranscript('');
+                return;
+              }
+
+              finalWordsRef.current = [text];
+              setTranscript(text);
+
+              // Détecte la commande "OK"
+              const words = text.split(/\s+/);
+              const hasOkCommand = words.some(w => {
+                const lower = w.toLowerCase();
+                return lower === 'ok' || lower === 'okay' || lower === 'o.k.' || lower === 'oke';
+              });
+
+              if (hasOkCommand && onFinalTranscript) {
+                const now = Date.now();
+                if (now - lastOkTimeRef.current > 1000) {
+                  lastOkTimeRef.current = now;
+                  const finalText = words
+                    .filter(w => {
+                      const lower = w.toLowerCase();
+                      return lower !== 'ok' && lower !== 'okay' && lower !== 'o.k.' && lower !== 'oke';
+                    })
+                    .join(' ')
+                    .trim();
+
+                  if (finalText) {
+                    const capturedSession = newSessionId;
+                    setTimeout(() => {
+                      if (activeSessionIdRef.current !== capturedSession) return;
+                      stop();
+                      onFinalTranscript(finalText);
+                    }, 600);
+                  }
+                }
+              }
+            } catch (e) {
+              console.error('[VoiceRecognition] Transcription error:', e);
+              if (activeSessionIdRef.current === newSessionId) {
+                setError({ message: '⚠️ Erreur transcription' });
+              }
+            }
+          };
+          reader.readAsDataURL(audioBlob);
+        } catch (e) {
+          console.error('[VoiceRecognition] Blob read error:', e);
+          if (activeSessionIdRef.current === newSessionId) {
+            setError({ message: '⚠️ Erreur lecture audio' });
+          }
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+
+      // Auto-stop après 30 secondes
+      const timer = setTimeout(() => {
+        if (activeSessionIdRef.current === newSessionId && mediaRecorderRef.current?.state === 'recording') {
+          mediaRecorderRef.current.stop();
+        }
+      }, 30000);
+      pendingTimersRef.current.push(timer);
+    } catch (e) {
+      console.error('[VoiceRecognition] Start error:', e);
+      if (e.name === 'NotAllowedError') {
+        setError({ message: '⚠️ Permission micro refusée' });
+      } else {
+        setError({ message: `⚠️ Erreur micro: ${e.message}` });
+      }
+      activeSessionIdRef.current = null;
     }
-  }, []);
+  }, [stopAll]);
 
   const stop = useCallback(() => {
     console.log('[VoiceRecognition] stop');
@@ -181,7 +191,6 @@ export function useVoiceRecognition() {
   const reset = useCallback(() => {
     stop();
     finalWordsRef.current = [];
-    interimRef.current = '';
     setTranscript('');
     setError(null);
   }, [stop]);
@@ -189,18 +198,13 @@ export function useVoiceRecognition() {
   useEffect(() => {
     return () => {
       activeSessionIdRef.current = null;
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
+      if (mediaRecorderRef.current?.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
       }
       pendingTimersRef.current.forEach(clearTimeout);
-      pendingTimersRef.current = [];
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch (e) {}
-        recognitionRef.current = null;
-      }
     };
   }, []);
 

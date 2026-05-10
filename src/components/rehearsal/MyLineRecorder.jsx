@@ -55,8 +55,8 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
   useEffect(() => { startRecordingRef.current = startRecording; }, [startRecording]);
 
   useImperativeHandle(ref, () => ({
-    stopRecording: voiceRec.stop
-  }), [voiceRec.stop]);
+    stopRecording
+  }), [stopRecording]);
 
   // Comparaison + handling résultat
   const handleSubmitRecording = async (spokenText) => {
@@ -92,8 +92,6 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
   const handleContinue = useCallback(() => {
     setComparisonResult(null);
     setPhase('line');
-    setTranscript('');
-    setSttError(null);
     onLineAdvance?.();
   }, [onLineAdvance]);
 
@@ -106,7 +104,6 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
   const handleSpeakPartnerLine = useCallback(async () => {
     setIsSpeakingPartner(true);
     const controller = new AbortController();
-    abortControllerRef.current = controller;
     
     const genders = script?.character_genders || {};
     const gender = genders[line.character] || 'male';
@@ -154,7 +151,6 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
 
   const handleSkip = () => {
     stopAll();
-    voiceRec.reset();
     onLineAdvance?.();
   };
 
@@ -175,7 +171,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
             onClick={async () => {
               const wasRecording = isRecording;
               if (isRecording) {
-                voiceRec.stop();
+                stopRecording();
                 await new Promise(r => setTimeout(r, 350));
               }
               setIsSpeakingMyLine(true);
@@ -266,7 +262,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
         {phase === 'result' && comparisonResult && (
           <ComparisonResult
             result={comparisonResult}
-            transcription={transcript}
+            transcription={voiceRec.transcript}
             onRetry={handleRetry}
             onContinue={handleContinue}
           />
