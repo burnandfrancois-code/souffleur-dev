@@ -3,81 +3,92 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, MicOff, Send, RotateCcw, Eye, EyeOff, Volume2, Loader2, Dumbbell, ChevronRight, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { speakText, stopSpeaking, unlockAudioForDesktop } from '@/lib/speechServices';
+import { compareTexts } from '@/lib/scriptParser';
 import TrainingComparison from './TrainingComparison';
+import ComparisonResult from './ComparisonResult';
 import { forwardRef, useImperativeHandle } from 'react';
 
-const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSkip, isComparing, autoPlay, speechRate = 1, listenForCommands, onVoiceCommand, phase, onContinue, onRetry }, ref) {
-  const [isRecording, setIsRecording] = useState(false);
+const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myCharacter, onLineAdvance }, ref) {
+  // État principal
   const [transcript, setTranscript] = useState('');
   const [showHint, setShowHint] = useState(false);
   const [trainingMode, setTrainingMode] = useState(false);
   const [isSpeakingMyLine, setIsSpeakingMyLine] = useState(false);
   const [sttError, setSttError] = useState(null);
+  const [phase, setPhase] = useState('line'); // 'line' | 'comparing' | 'result'
+  const [comparisonResult, setComparisonResult] = useState(null);
+  const [isSpeakingPartner, setIsSpeakingPartner] = useState(false);
 
-  // Session management — Inspired by desktop/Rehearsal pattern
+  // Refs de session — inspiré de desktop/Rehearsal
   const recognitionRef = useRef(null);
-  const activeSessionIdRef = useRef(null); // Identifiant unique session actuelle
-  const abortControllerRef = useRef(null); // Pour abort propre du STT
-  const pendingTimersRef = useRef([]); // Track tous les timers actifs
-  
-  // Buffers pour accumulation de paroles
+  const activeSessionIdRef = useRef(null);
+  const abortControllerRef = useRef(null);
+  const pendingTimersRef = useRef([]);
   const finalWordsRef = useRef([]);
   const interimRef = useRef('');
   const lastOkTimeRef = useRef(0);
   const restartCountRef = useRef(0);
-
-  const onSubmitRef = useRef(onSubmit);
-  useEffect(() => { onSubmitRef.current = onSubmit; }, [onSubmit]);
+  
+  const onSubmitRef = useRef(() => {});
+  const speakSessionRef = useRef(0);
+  const compareSessionRef = useRef(0);
+  const speechRateRef = useRef(1);
+  const autoPlayRef = useRef(localStorage.getItem('souffleur_autoplay') !== 'false');
 
   const startRecordingRef = useRef(null);
 
-  // Arrêter la session actuellement active
-  const stopRecording = useCallback(() => {
-    console.log('[STT] stopRecording — session:', activeSessionIdRef.current);
-    activeSessionIdRef.current = null; // Invalide toute session active
-    restartCountRef.current = 0;
+  // Utils
+  const stripDirections = (text) => 
+    text?.replace(/\([^)]*\)?/g, '').replace(/\[[^\]]*\]?/g, '').replace(/\s+/g, ' ').trim() || '';
 
-    // Abort et ferme contrôleur
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
+  const normalize = (s) => s?.trim().toLowerCase();
+  const currentLineClean = line ? { ...line, text: stripDirections(line.text) } : null;
 
-    // Nettoie tous les timers en attente
-    pendingTimersRef.current.forEach(clearTimeout);
-    pendingTimersRef.current = [];
-
-    // Arrête la reconnaissance vocale
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {
-        // Ignore
-      }
-      recognitionRef.current = null;
-    }
-    setIsRecording(false);
-  }, []);
-
-  const startRecording = useCallback(async () => {
-    // 1️⃣ Nettoyer tout ce qui tourne
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
-    pendingTimersRef.current.forEach(clearTimeout);
-    pendingTimersRef.current = [];
+  // Arrêter tout (TTS + STT + timers)
+  const stopAll = useCallback(() => {
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch (e) {}
       recognitionRef.current = null;
     }
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    stopSpeaking();
+    pendingTimersRef.current.forEach(clearTimeout);
+    pendingTimersRef.current = [];
+    speakSessionRef.current += 1;
+    compareSessionRef.current += 1;
+    setIsSpeakingPartner(false);
+  }, []);
 
-    // 2️⃣ Créer nouvelle session unique
+  // STT stopRecording
+  const stopRecording = useCallback(() => {
+    console.log('[STT] stopRecording');
+    activeSessionIdRef.current = null;
+    restartCountRef.current = 0;
+    
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    pendingTimersRef.current.forEach(clearTimeout);
+    pendingTimersRef.current = [];
+    
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch (e) {}
+      recognitionRef.current = null;
+    }
+  }, []);
+
+  // STT startRecording
+  const startRecording = useCallback(async () => {
+    stopAll();
+    
     const newSessionId = Math.random();
     activeSessionIdRef.current = newSessionId;
-    console.log('[STT] ▶ Nouvelle session:', newSessionId);
+    console.log('[STT] Nouvelle session:', newSessionId);
 
-    // 3️⃣ Réinitialiser buffers
     lastOkTimeRef.current = 0;
     finalWordsRef.current = [];
     interimRef.current = '';
@@ -85,19 +96,14 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     setSttError(null);
     restartCountRef.current = 0;
 
-    // 4️⃣ Initialiser audio context
     try {
       await unlockAudioForDesktop();
       await new Promise(r => setTimeout(r, 100));
     } catch (e) {
-      console.error('[STT] ❌ Erreur audio:', e);
+      console.error('[STT] Erreur audio:', e);
     }
 
-    // 5️⃣ Vérifier si session est toujours active
-    if (activeSessionIdRef.current !== newSessionId) {
-      console.log('[STT] ⚠ Session invalide après audio init');
-      return;
-    }
+    if (activeSessionIdRef.current !== newSessionId) return;
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -113,33 +119,26 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
 
     rec.onstart = () => {
       const isValid = activeSessionIdRef.current === newSessionId;
-      console.log('[STT] ✓ onstart - session valide?', isValid, '→', isValid ? '🎤 MICRO ACTIF' : '⚠ Ignorer');
-      if (isValid) setIsRecording(true);
+      console.log('[STT] onstart - valide?', isValid);
+      if (isValid) setTranscript('🎤');
     };
 
     rec.onresult = (event) => {
-      if (activeSessionIdRef.current !== newSessionId) {
-        console.log('[STT] ⚠ Ignorer onresult: session invalide');
-        return;
-      }
+      if (activeSessionIdRef.current !== newSessionId) return;
 
-      // Collecter les résultats finaux
       for (let i = 0; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
           const word = event.results[i][0].transcript.trim();
-          console.log('[STT] ✓ Final word:', word);
           if (word && !finalWordsRef.current.includes(word)) {
             finalWordsRef.current.push(word);
           }
         }
       }
 
-      // Récupérer le dernier résultat intermédiaire
       interimRef.current = '';
       for (let i = event.results.length - 1; i >= 0; i--) {
         if (!event.results[i].isFinal) {
           interimRef.current = event.results[i][0].transcript.trim();
-          if (interimRef.current) console.log('[STT] ⟳ Interim:', interimRef.current);
           break;
         }
       }
@@ -147,27 +146,9 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       const fullText = finalWordsRef.current.join(' ') +
         (interimRef.current ? (finalWordsRef.current.length > 0 ? ' ' : '') + interimRef.current : '');
       const displayText = fullText.trim();
-      if (displayText) console.log('[STT] 📝 Display:', displayText);
       setTranscript(displayText);
 
       const words = displayText.split(/\s+/);
-
-      // Détecter commandes vocales de navigation
-      if (listenForCommands && onVoiceCommand) {
-        const lower = displayText.toLowerCase();
-        if (lower.includes('passer') || lower.includes('suivant') || lower.includes('continuer')) {
-          stopRecording();
-          onVoiceCommand('continue');
-          return;
-        }
-        if (lower.includes('réessayer') || lower.includes('recommencer')) {
-          stopRecording();
-          onVoiceCommand('retry');
-          return;
-        }
-      }
-
-      // Détecteur de commande "OK"
       const hasOkCommand = words.some(w => {
         const lower = w.toLowerCase();
         return lower === 'ok' || lower === 'okay' || lower === 'o.k.' || lower === 'oke';
@@ -197,27 +178,21 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     };
 
     rec.onerror = (e) => {
-      console.error('[STT] ❌ onerror:', e.error);
+      console.error('[STT] onerror:', e.error);
       if (activeSessionIdRef.current !== newSessionId) return;
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         stopRecording();
-        setSttError({ message: '⚠️ Permission micro refusée\n\nClique sur l\'icône 🔒 et autorise le micro.' });
+        setSttError({ message: '⚠️ Permission micro refusée' });
       }
     };
 
-    rec.onend = () => {
-      // Avec continuous: true, ne devrait pas se déclencher
-    };
-
     try {
-      // Créer contrôleur d'abort pour cette session
       const controller = new AbortController();
       abortControllerRef.current = controller;
-      
       rec.start();
-      console.log('[STT] ✓ rec.start() lancé');
+      console.log('[STT] rec.start() lancé');
     } catch (e) {
-      console.error('[STT] ❌ rec.start() erreur:', e.message);
+      console.error('[STT] rec.start() erreur:', e.message);
       setSttError({ message: `⚠️ Erreur micro: ${e.message}` });
       activeSessionIdRef.current = null;
       if (abortControllerRef.current) {
@@ -226,54 +201,95 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       }
       recognitionRef.current = null;
     }
-  }, [stopRecording, listenForCommands, onVoiceCommand]);
+  }, [stopAll]);
 
   useEffect(() => { startRecordingRef.current = startRecording; }, [startRecording]);
+  useEffect(() => { onSubmitRef.current = (text) => handleSubmitRecording(text); }, []);
 
   useImperativeHandle(ref, () => ({
     stopRecording
   }), [stopRecording]);
 
-  // Voice commands during result phase
+  // Comparaison + handling résultat
+  const handleSubmitRecording = async (spokenText) => {
+    compareSessionRef.current += 1;
+    const session = compareSessionRef.current;
+    
+    setPhase('comparing');
+    const result = await compareTexts(currentLineClean.text, spokenText);
+    
+    if (compareSessionRef.current !== session) return;
+    
+    setComparisonResult(result);
+    setPhase('result');
+  };
+
+  // Auto-advance après résultat
   useEffect(() => {
-    if (phase !== 'result' || isRecording) return;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    if (phase !== 'result' || !comparisonResult) return;
+    
+    const accuracy = comparisonResult?.accuracy ?? 0;
+    const hasMissingWords = (comparisonResult?.word_results || []).some(w => w.status === 'missing');
+    const shouldAdvance = (comparisonResult?.perfect || accuracy >= 80) && !hasMissingWords;
 
-    let active = true;
-    let rec = null;
+    if (shouldAdvance && autoPlayRef.current) {
+      const timer = setTimeout(() => {
+        if (autoPlayRef.current) handleContinue();
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, comparisonResult]);
 
-    const start = () => {
-      if (!active) return;
-      rec = new SpeechRecognition();
-      rec.lang = 'fr-FR';
-      rec.continuous = false;
-      rec.interimResults = false;
+  // Continuation vers prochaine réplique
+  const handleContinue = useCallback(() => {
+    setComparisonResult(null);
+    setPhase('line');
+    setTranscript('');
+    setSttError(null);
+    onLineAdvance?.();
+  }, [onLineAdvance]);
 
-      rec.onresult = (event) => {
-        if (!active) return;
-        const text = event.results[0]?.[0]?.transcript?.toLowerCase().trim() || '';
-        if (text.includes('passer') || text.includes('suivant') || text.includes('continuer')) {
-          onContinue?.();
-        } else if (text.includes('réessayer') || text.includes('recommencer')) {
-          onRetry?.();
-        }
+  const handleRetry = useCallback(() => {
+    setComparisonResult(null);
+    setPhase('line');
+  }, []);
+
+  // TTS partenaire seul
+  const handleSpeakPartnerLine = useCallback(async () => {
+    setIsSpeakingPartner(true);
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    
+    const genders = script?.character_genders || {};
+    const gender = genders[line.character] || 'male';
+    
+    await speakText(stripDirections(line.text), 'fr-FR', gender, speechRateRef.current, controller.signal);
+    setIsSpeakingPartner(false);
+  }, [line, script]);
+
+  // Reset + auto-start when line changes
+  useEffect(() => {
+    stopRecording();
+    finalWordsRef.current = [];
+    interimRef.current = '';
+    setTranscript('');
+    setSttError(null);
+    setPhase('line');
+    setComparisonResult(null);
+
+    if (autoPlayRef.current && !trainingMode) {
+      const delay = speechRateRef.current >= 2 ? 1500 : 1200;
+      const timer = setTimeout(() => {
+        startRecordingRef.current?.();
+      }, delay);
+      pendingTimersRef.current.push(timer);
+      
+      return () => {
+        clearTimeout(timer);
+        pendingTimersRef.current = pendingTimersRef.current.filter(t => t !== timer);
       };
-
-      rec.onend = () => { if (active) setTimeout(start, 100); };
-      rec.onerror = (e) => { if (e.error !== 'aborted' && active) setTimeout(start, 300); };
-
-      try { rec.start(); } catch (e) {}
-    };
-
-    const timer = setTimeout(start, 200);
-
-    return () => {
-      active = false;
-      clearTimeout(timer);
-      if (rec) { try { rec.abort(); } catch (e) {} }
-    };
-  }, [phase, isRecording, onContinue, onRetry]);
+    }
+  }, [line, trainingMode, stopRecording]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -292,33 +308,13 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     };
   }, []);
 
-  // Reset + auto-start when line changes
-  useEffect(() => {
-    console.log('[STT] useEffect: line changed');
-    stopRecording();
-    finalWordsRef.current = [];
-    interimRef.current = '';
-    setTranscript('');
-    setSttError(null);
-
-    if (autoPlay && !trainingMode) {
-      const delay = speechRate >= 2 ? 1500 : 1200;
-      const timer = setTimeout(() => {
-        console.log('[STT] auto-start après délai');
-        startRecordingRef.current();
-      }, delay);
-      pendingTimersRef.current.push(timer);
-      
-      return () => {
-        clearTimeout(timer);
-        pendingTimersRef.current = pendingTimersRef.current.filter(t => t !== timer);
-      };
+  const isRecording = transcript === '🎤' || (transcript && !comparisonResult && phase === 'line');
+  const handleMicToggle = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
     }
-  }, [line, autoPlay, trainingMode, speechRate, stopRecording]);
-
-  const handleSubmit = () => {
-    const final = transcript.trim();
-    if (final) onSubmit(final);
   };
 
   const handleReset = () => {
@@ -326,18 +322,15 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     finalWordsRef.current = [];
     interimRef.current = '';
     setTranscript('');
-    if (autoPlay && !trainingMode) {
+    if (autoPlayRef.current && !trainingMode) {
       const timer = setTimeout(() => startRecording(), 300);
       pendingTimersRef.current.push(timer);
     }
   };
 
-  const handleMicToggle = () => {
-    if (isRecording) {
-      stopRecording();
-    } else {
-      startRecording();
-    }
+  const handleSkip = () => {
+    stopAll();
+    onLineAdvance?.();
   };
 
   return (
@@ -361,9 +354,9 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
                 await new Promise(r => setTimeout(r, 350));
               }
               setIsSpeakingMyLine(true);
-              await speakText(line.text, 'fr-FR', 'male', speechRate);
+              await speakText(line.text, 'fr-FR', 'male', speechRateRef.current);
               setIsSpeakingMyLine(false);
-              if (wasRecording && autoPlay) {
+              if (wasRecording && autoPlayRef.current) {
                 setTimeout(() => startRecording(), 200);
               }
             }}
@@ -392,134 +385,163 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
         )}
 
         {/* Recording banner */}
-        <div className={`
-          rounded-2xl border-2 p-5 mb-3 text-center transition-all duration-300
-          ${isRecording
-            ? 'border-destructive bg-destructive/10'
-            : 'border-primary bg-primary/10'
-          }
-        `}>
-          <div className="flex items-center justify-center gap-3 mb-3">
-            {isRecording && <span className="w-3 h-3 rounded-full bg-destructive animate-ping" />}
-            <p className={`font-bold text-xl ${isRecording ? 'text-destructive' : 'text-primary'}`}>
-              {isRecording ? '🎙 Parlez maintenant !' : '🎤 C\'est votre tour'}
-            </p>
-          </div>
-
-          {/* Mic button */}
-          <button
-            onClick={handleMicToggle}
-            disabled={isComparing}
-            className={`
-              relative w-24 h-24 rounded-full mx-auto flex items-center justify-center transition-all
-              ${isRecording
-                ? 'bg-destructive shadow-2xl shadow-destructive/50'
-                : 'bg-primary shadow-xl shadow-primary/30 hover:scale-105'
-              }
-            `}
-          >
-            {isRecording && (
-              <span className="absolute inset-0 rounded-full bg-destructive/50 animate-ping" />
-            )}
-            {isRecording
-              ? <MicOff className="w-10 h-10 text-white relative z-10" />
-              : <Mic className="w-10 h-10 text-primary-foreground relative z-10" />
+        {phase === 'line' && (
+          <div className={`
+            rounded-2xl border-2 p-5 mb-3 text-center transition-all duration-300
+            ${isRecording
+              ? 'border-destructive bg-destructive/10'
+              : 'border-primary bg-primary/10'
             }
-          </button>
+          `}>
+            <div className="flex items-center justify-center gap-3 mb-3">
+              {isRecording && <span className="w-3 h-3 rounded-full bg-destructive animate-ping" />}
+              <p className={`font-bold text-xl ${isRecording ? 'text-destructive' : 'text-primary'}`}>
+                {isRecording ? '🎙 Parlez maintenant !' : '🎤 C\'est votre tour'}
+              </p>
+            </div>
 
-          <p className="text-sm text-muted-foreground mt-2">
-            {isRecording ? 'Appuyez pour arrêter' : 'Appuyez pour commencer'}
-          </p>
-          {isRecording && autoPlay && (
-            <p className="text-sm text-muted-foreground mt-1 italic">
-              Dites votre réplique, <span className="font-bold text-destructive text-base not-italic">attendez 2 ou 3 secondes</span> puis dites <span className="font-bold text-destructive text-base not-italic">OK</span>
+            <button
+              onClick={handleMicToggle}
+              className={`
+                relative w-24 h-24 rounded-full mx-auto flex items-center justify-center transition-all
+                ${isRecording
+                  ? 'bg-destructive shadow-2xl shadow-destructive/50'
+                  : 'bg-primary shadow-xl shadow-primary/30 hover:scale-105'
+                }
+              `}
+            >
+              {isRecording && (
+                <span className="absolute inset-0 rounded-full bg-destructive/50 animate-ping" />
+              )}
+              {isRecording
+                ? <MicOff className="w-10 h-10 text-white relative z-10" />
+                : <Mic className="w-10 h-10 text-primary-foreground relative z-10" />
+              }
+            </button>
+
+            <p className="text-sm text-muted-foreground mt-2">
+              {isRecording ? 'Appuyez pour arrêter' : 'Appuyez pour commencer'}
             </p>
-          )}
-        </div>
+            {isRecording && (
+              <p className="text-sm text-muted-foreground mt-1 italic">
+                Dites votre réplique, <span className="font-bold text-destructive text-base not-italic">attendez 2-3 secondes</span> puis <span className="font-bold text-destructive text-base not-italic">OK</span>
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Comparing loader */}
+        {phase === 'comparing' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center py-8">
+            <Loader2 className="w-6 h-6 text-primary animate-spin" />
+          </motion.div>
+        )}
+
+        {/* Comparison result */}
+        {phase === 'result' && comparisonResult && (
+          <ComparisonResult
+            result={comparisonResult}
+            transcription={transcript}
+            onRetry={handleRetry}
+            onContinue={handleContinue}
+          />
+        )}
 
         {/* Modes */}
-        <div className="flex items-center justify-between mb-2">
-          <button
-            onClick={() => setTrainingMode(!trainingMode)}
-            className={`flex items-center gap-1 text-xs transition-colors ${trainingMode ? 'text-primary font-semibold' : 'text-muted-foreground hover:text-primary'}`}
-          >
-            <Dumbbell className="w-3 h-3" />
-            {trainingMode ? 'Mode entraînement actif' : 'Mode entraînement'}
-          </button>
-          {!trainingMode && (
+        {phase === 'line' && (
+          <div className="flex items-center justify-between mb-2">
             <button
-              onClick={() => setShowHint(!showHint)}
-              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+              onClick={() => setTrainingMode(!trainingMode)}
+              className={`flex items-center gap-1 text-xs transition-colors ${trainingMode ? 'text-primary font-semibold' : 'text-muted-foreground hover:text-primary'}`}
             >
-              {showHint ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-              {showHint ? 'Cacher le texte' : 'Voir le texte'}
+              <Dumbbell className="w-3 h-3" />
+              {trainingMode ? 'Mode entraînement actif' : 'Mode entraînement'}
             </button>
-          )}
-        </div>
+            {!trainingMode && (
+              <button
+                onClick={() => setShowHint(!showHint)}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+              >
+                {showHint ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                {showHint ? 'Cacher le texte' : 'Voir le texte'}
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Hint */}
-        <AnimatePresence>
-          {showHint && !trainingMode && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mb-3 px-4 py-2 bg-primary/5 border border-primary/20 rounded-xl"
-            >
-              <p className="text-sm text-muted-foreground italic">{line.text}</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {phase === 'line' && (
+          <AnimatePresence>
+            {showHint && !trainingMode && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-3 px-4 py-2 bg-primary/5 border border-primary/20 rounded-xl"
+              >
+                <p className="text-sm text-muted-foreground italic">{line.text}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
 
         {/* Training comparison */}
-        <AnimatePresence>
-          {trainingMode && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-            >
-              <TrainingComparison
-                originalText={line.text}
-                transcript={transcript}
-                isRecording={isRecording}
-                onMicToggle={handleMicToggle}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {phase === 'line' && (
+          <AnimatePresence>
+            {trainingMode && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+              >
+                <TrainingComparison
+                  originalText={line.text}
+                  transcript={transcript}
+                  isRecording={isRecording}
+                  onMicToggle={handleMicToggle}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
 
-        {/* Transcript display - only in normal mode */}
-        {!trainingMode && (
+        {/* Transcript display */}
+        {phase === 'line' && !trainingMode && (
           <div className="bg-background border border-border rounded-xl px-4 py-3 mb-3 min-h-[2.5rem]">
             <p className="text-foreground leading-relaxed">
-              {transcript || <span className="text-muted-foreground text-sm italic">En attente...</span>}
+              {transcript && transcript !== '🎤' ? transcript : <span className="text-muted-foreground text-sm italic">En attente...</span>}
               {isRecording && transcript && <span className="inline-block w-0.5 h-5 bg-primary ml-1 animate-pulse" />}
             </p>
           </div>
         )}
 
         {/* Action buttons */}
-        <div className="flex items-center justify-between gap-2">
-          <Button variant="ghost" size="sm" onClick={onSkip} className="text-muted-foreground gap-1">
-            Passer
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-          <div className="flex items-center gap-2">
-            {transcript && !trainingMode && (
-              <Button variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground">
-                <RotateCcw className="w-4 h-4 mr-1" />
-                Recommencer
-              </Button>
-            )}
-            {transcript && !isRecording && !trainingMode && (
-              <Button size="sm" onClick={handleSubmit} disabled={isComparing} className="bg-primary text-primary-foreground">
-                <Send className="w-4 h-4 mr-1" />
-                Valider
-              </Button>
-            )}
+        {phase === 'line' && (
+          <div className="flex items-center justify-between gap-2">
+            <Button variant="ghost" size="sm" onClick={handleSkip} className="text-muted-foreground gap-1">
+              Passer
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+            <div className="flex items-center gap-2">
+              {transcript && transcript !== '🎤' && !trainingMode && (
+                <Button variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground">
+                  <RotateCcw className="w-4 h-4 mr-1" />
+                  Recommencer
+                </Button>
+              )}
+              {transcript && transcript !== '🎤' && !isRecording && !trainingMode && (
+                <Button 
+                  size="sm" 
+                  onClick={() => handleSubmitRecording(transcript)}
+                  className="bg-primary text-primary-foreground"
+                >
+                  <Send className="w-4 h-4 mr-1" />
+                  Valider
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="shrink-0 mt-1">
