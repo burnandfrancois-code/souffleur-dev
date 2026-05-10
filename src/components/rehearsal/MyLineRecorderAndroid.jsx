@@ -59,16 +59,19 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
     recognitionRef.current = rec;
 
     rec.onstart = () => {
+      console.log('🎤 onstart - recording started');
       if (sessionIdRef.current === mySession && !userStoppedRef.current) setIsRecording(true);
     };
 
     rec.onresult = (event) => {
+      console.log('🎤 onresult -', event.results.length, 'résultats');
       if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
 
       // Collecter tous les résultats finaux
       for (let i = 0; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
           const word = event.results[i][0].transcript.trim();
+          console.log('✓ Final:', word);
           if (word && !finalWordsRef.current.includes(word)) {
             finalWordsRef.current.push(word);
           }
@@ -122,6 +125,7 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
     };
 
     rec.onerror = (e) => {
+      console.log('❌ onerror -', e.error);
       if (sessionIdRef.current !== mySession) return;
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         stopRecording();
@@ -140,8 +144,10 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
     };
 
     try {
+      console.log('🎤 rec.start() appelé');
       rec.start();
     } catch (e) {
+      console.error('❌ rec.start() erreur:', e.message);
       setSttError({ message: `Erreur: ${e.message}` });
       recognitionRef.current = null;
     }
