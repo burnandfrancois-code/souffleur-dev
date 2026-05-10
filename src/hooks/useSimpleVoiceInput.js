@@ -14,11 +14,17 @@ export function useSimpleVoiceInput() {
   const pendingTimersRef = useRef([]);
   const okDetectedRef = useRef(false);
   const intentionallyStopping = useRef(false);
+  const keepAliveIntervalRef = useRef(null);
+  const SpeechRecognitionRef = useRef(null);
 
   const stop = useCallback(() => {
     intentionallyStopping.current = true;
     userStoppedRef.current = true;
     sessionIdRef.current += 1;
+    if (keepAliveIntervalRef.current) {
+      clearInterval(keepAliveIntervalRef.current);
+      keepAliveIntervalRef.current = null;
+    }
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch (e) {}
     }
@@ -47,6 +53,7 @@ export function useSimpleVoiceInput() {
       setError({ message: 'Reconnaissance vocale non supportée' });
       return;
     }
+    SpeechRecognitionRef.current = SpeechRecognition;
 
     const rec = new SpeechRecognition();
     rec.continuous = true;
@@ -123,28 +130,45 @@ export function useSimpleVoiceInput() {
     rec.onend = () => {
       if (sessionIdRef.current !== mySession || intentionallyStopping.current || okDetectedRef.current) return;
       
-      // Immédiatement créer nouvelle instance et redémarrer
-      try {
-        const newRec = new SpeechRecognition();
-        newRec.continuous = true;
-        newRec.interimResults = true;
-        newRec.lang = 'fr-FR';
-        recognitionRef.current = newRec;
-        
-        newRec.onstart = () => {
-          if (sessionIdRef.current === mySession) setIsRecording(true);
-        };
-        
-        newRec.onresult = rec.onresult;
-        newRec.onerror = rec.onerror;
-        newRec.onend = rec.onend;
-        
-        newRec.start();
-      } catch (e) {}
+      // Redémarrer immédiatement sans délai
+      if (SpeechRecognitionRef.current) {
+        try {
+          const newRec = new SpeechRecognitionRef.current();
+          newRec.continuous = true;
+          newRec.interimResults = true;
+          newRec.lang = 'fr-FR';
+          recognitionRef.current = newRec;
+          
+          newRec.onstart = () => {
+            if (sessionIdRef.current === mySession) setIsRecording(true);
+          };
+          
+          newRec.onresult = rec.onresult;
+          newRec.onerror = rec.onerror;
+          newRec.onend = rec.onend;
+          
+          newRec.start();
+        } catch (e) {}
+      }
     };
 
     try {
       rec.start();
+      
+      // Keep-alive: redémarrer avant timeout de 30 secondes
+      if (keepAliveIntervalRef.current) {
+        clearInterval(keepAliveIntervalRef.current);
+      }
+      keepAliveIntervalRef.current = setInterval(() => {
+        if (sessionIdRef.current === mySession && !okDetectedRef.current && !intentionallyStopping.current) {
+          try {
+            if (recognitionRef.current) {
+              recognitionRef.current.stop();
+              // onend va automatiquement redémarrer
+            }
+          } catch (e) {}
+        }
+      }, 25000); // Redémarrer après 25 secondes pour éviter le timeout de 30
     } catch (e) {
       setError({ message: `Erreur: ${e.message}` });
     }
@@ -160,6 +184,9 @@ export function useSimpleVoiceInput() {
 
   useEffect(() => {
     return () => {
+      if (keepAliveIntervalRef.current) {
+        clearInterval(keepAliveIntervalRef.current);
+      }
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch (e) {}
       }
