@@ -84,7 +84,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     recognitionRef.current = rec;
 
     rec.onstart = () => {
-      console.log('[STT] onstart - session valide?', sessionIdRef.current === mySession);
+      console.log('[STT] ✓ onstart déclenché - session valide?', sessionIdRef.current === mySession);
       if (sessionIdRef.current === mySession && !userStoppedRef.current) {
         setIsRecording(true);
       }
@@ -165,6 +165,7 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     };
 
     rec.onerror = (e) => {
+      console.error('[STT] ❌ onerror:', e.error);
       if (sessionIdRef.current !== mySession) return;
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         stopRecording();
@@ -179,10 +180,11 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     };
 
     try {
-      console.log('[STT] rec.start() appelé - lang:', rec.lang, 'continuous:', rec.continuous);
+      console.log('[STT] 🎤 rec.start() appelé - lang:', rec.lang, 'continuous:', rec.continuous, 'interimResults:', rec.interimResults);
       rec.start();
+      console.log('[STT] ✓ rec.start() exécuté avec succès');
     } catch (e) {
-      console.error('[STT] rec.start() erreur:', e.message);
+      console.error('[STT] ❌ rec.start() erreur:', e.message);
       setSttError({ message: `⚠️ Erreur micro: ${e.message}` });
       recognitionRef.current = null;
     }
