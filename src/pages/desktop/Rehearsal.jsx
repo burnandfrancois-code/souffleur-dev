@@ -28,26 +28,8 @@ export default function DesktopRehearsal() {
   const [completed, setCompleted] = useState(new Set());
   const [scores, setScores] = useState([]);
   const [started, setStarted] = useState(false);
-  const [micPermissionChecked, setMicPermissionChecked] = useState(false);
-  const [micAllowed, setMicAllowed] = useState(false);
 
   const voiceRec = useSimpleVoiceInput();
-
-  const requestMicPermission = useCallback(async () => {
-    try {
-      // Petit délai pour laisser Windows appliquer la permission
-      await new Promise(r => setTimeout(r, 500));
-      
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(track => track.stop());
-      setMicAllowed(true);
-      setMicPermissionChecked(true);
-    } catch (e) {
-      console.error('Mic error:', e);
-      setMicAllowed(false);
-      setMicPermissionChecked(true);
-    }
-  }, []);
 
   const { data: script, isLoading } = useQuery({
     queryKey: ['script', scriptId],
