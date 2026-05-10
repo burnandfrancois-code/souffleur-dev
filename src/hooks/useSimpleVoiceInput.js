@@ -148,6 +148,16 @@ export function useSimpleVoiceInput() {
   }, [stop]);
 
   useEffect(() => {
+    // Demander la permission du micro au démarrage
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop());
+      } catch (e) {
+        // Permission refusée ou pas disponible - on continuera sans
+      }
+    })();
+
     return () => {
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch (e) {}
