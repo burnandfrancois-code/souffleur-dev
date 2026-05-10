@@ -202,16 +202,45 @@ export async function compareTexts(expectedText, spokenText) {
     for (let ei = 0; ei < m; ei++) {
       if (!matchedExpected.has(ei)) unmatchedExpectedIndices.push(ei);
     }
-    const unmatchedSpokenWords = [];
+    const unmatchedSpokenIndices = [];
     for (let si = 0; si < n; si++) {
-      if (!matchedSpoken.has(si)) unmatchedSpokenWords.push(spokenWords[si]);
+      if (!matchedSpoken.has(si)) unmatchedSpokenIndices.push(si);
     }
+    const unmatchedSpokenWords = unmatchedSpokenIndices.map(i => spokenWords[i]);
 
-    // Assigner séquentiellement les mots spoken non-matchés aux mots expected non-matchés
+    // Calcul de similarité pour appairage optimal
+    const similarity = (a, b) => {
+      if (a === b) return 1;
+      const pa = phoneticFR(a);
+      const pb = phoneticFR(b);
+      if (pa === pb) return 1;
+      const dist = levenshtein(pa, pb);
+      const maxLen = Math.max(pa.length, pb.length);
+      return maxLen > 0 ? 1 - (dist / maxLen) : 0;
+    };
+
+    // Appairage bipartite greedy basé sur la similarité
     const wrongMap = new Map(); // ei -> spoken word string
-    unmatchedExpectedIndices.forEach((ei, pos) => {
-      if (pos < unmatchedSpokenWords.length) {
-        wrongMap.set(ei, unmatchedSpokenWords[pos]);
+    const usedSpokenIndices = new Set();
+    
+    // Trier par similarité décroissante et assigner les meilleures paires
+    const pairs = [];
+    unmatchedExpectedIndices.forEach(ei => {
+      unmatchedSpokenWords.forEach((spokenWord, spokenPos) => {
+        pairs.push({
+          ei,
+          spokenPos,
+          spokenWord,
+          sim: similarity(expectedWords[ei], spokenWord)
+        });
+      });
+    });
+    pairs.sort((a, b) => b.sim - a.sim);
+    
+    pairs.forEach(({ ei, spokenPos, spokenWord }) => {
+      if (!wrongMap.has(ei) && !usedSpokenIndices.has(spokenPos)) {
+        wrongMap.set(ei, spokenWord);
+        usedSpokenIndices.add(spokenPos);
       }
     });
 
@@ -232,12 +261,6 @@ export async function compareTexts(expectedText, spokenText) {
 
     // Mots parlés non-matchés qui dépassent le nombre de mots attendus non-matchés
     const extraSpoken = unmatchedSpokenWords.slice(unmatchedExpectedIndices.length);
-
-    // Garder les indices des mots spoken non-matchés pour détecter les écarts
-    const unmatchedSpokenIndices = [];
-    for (let si = 0; si < n; si++) {
-      if (!matchedSpoken.has(si)) unmatchedSpokenIndices.push(si);
-    }
 
     const missingCount = wordResults.filter(w => w.status === 'missing').length;
     const accuracy = m > 0 ? Math.round((correctCount / m) * 100) : 0;
