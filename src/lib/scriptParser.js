@@ -190,15 +190,45 @@ export async function compareTexts(expectedText, spokenText) {
     }
 
     // Construire word_results pour chaque mot attendu
-    // Les mots spoken non matchés (dans l'ordre) sont assignés aux mots expected non matchés
-    const unmatchedSpoken = [];
+    // On fait un second alignement local entre mots expected non-matchés et mots spoken non-matchés
+    // pour déterminer lesquels sont vraiment "faux" (un spoken correspond) vs "manquants" (rien dit)
+    const unmatchedExpectedIndices = [];
+    for (let ei = 0; ei < m; ei++) {
+      if (!matchedExpected.has(ei)) unmatchedExpectedIndices.push(ei);
+    }
+    const unmatchedSpokenIndices = [];
     for (let si = 0; si < n; si++) {
-      if (!matchedSpoken.has(si)) unmatchedSpoken.push(si);
+      if (!matchedSpoken.has(si)) unmatchedSpokenIndices.push(si);
+    }
+
+    // Second LCS entre les deux listes non-matchées pour trouver les "faux" (appariements proches)
+    const ue = unmatchedExpectedIndices.map(i => expectedWords[i]);
+    const us = unmatchedSpokenIndices.map(i => spokenWords[i]);
+    const me2 = ue.length, ns2 = us.length;
+    const dp2 = Array.from({ length: me2 + 1 }, () => new Array(ns2 + 1).fill(0));
+    for (let i = 1; i <= me2; i++) {
+      for (let j = 1; j <= ns2; j++) {
+        dp2[i][j] = wordsMatch(ue[i-1], us[j-1])
+          ? dp2[i-1][j-1] + 1
+          : Math.max(dp2[i-1][j], dp2[i][j-1]);
+      }
+    }
+    // Reconstruire les paires faux (expected_idx -> spoken_idx)
+    const wrongPairs = new Map(); // unmatchedExpected position -> unmatchedSpoken position
+    let ri = me2, rj = ns2;
+    while (ri > 0 && rj > 0) {
+      if (wordsMatch(ue[ri-1], us[rj-1])) {
+        wrongPairs.set(ri-1, rj-1);
+        ri--; rj--;
+      } else if (dp2[ri-1][rj] >= dp2[ri][rj-1]) {
+        ri--;
+      } else {
+        rj--;
+      }
     }
 
     const wordResults = [];
     let correctCount = 0;
-    let unmatchedSpokenIdx = 0;
 
     for (let ei = 0; ei < m; ei++) {
       const word = expectedWords[ei];
@@ -206,9 +236,11 @@ export async function compareTexts(expectedText, spokenText) {
         wordResults.push({ word, status: 'correct', got: '' });
         correctCount++;
       } else {
-        if (unmatchedSpokenIdx < unmatchedSpoken.length) {
-          const si = unmatchedSpoken[unmatchedSpokenIdx++];
-          wordResults.push({ word, status: 'wrong', got: spokenWords[si] });
+        const uePos = unmatchedExpectedIndices.indexOf(ei);
+        if (wrongPairs.has(uePos)) {
+          const usPos = wrongPairs.get(uePos);
+          const spokenWord = us[usPos];
+          wordResults.push({ word, status: 'wrong', got: spokenWord });
         } else {
           wordResults.push({ word, status: 'missing', got: '' });
         }
