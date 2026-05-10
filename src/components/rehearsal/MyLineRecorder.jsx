@@ -140,12 +140,20 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
       // Ignorer si cette instance n'est plus la session active
       if (sessionIdRef.current !== mySession) return;
       if (userStoppedRef.current) return;
-      // Relancer la même instance (elle s'est arrêtée pour silence/timeout navigateur)
-      try {
-        rec.start();
-      } catch (e) {
-        // ignore
-      }
+      // Chrome ne permet pas de relancer la même instance — créer une nouvelle
+      setTimeout(() => {
+        if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
+        const newRec = new SpeechRecognition();
+        newRec.continuous = true;
+        newRec.interimResults = true;
+        newRec.lang = 'fr-FR';
+        recognitionRef.current = newRec;
+        newRec.onstart = rec.onstart;
+        newRec.onresult = rec.onresult;
+        newRec.onerror = rec.onerror;
+        newRec.onend = rec.onend;
+        try { newRec.start(); } catch (e) {}
+      }, 100);
     };
 
     try {
