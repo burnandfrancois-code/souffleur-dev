@@ -190,9 +190,15 @@ export async function compareTexts(expectedText, spokenText) {
     }
 
     // Construire word_results pour chaque mot attendu
-    const usedSpoken = new Set(matchedSpoken);
+    // Les mots spoken non matchés (dans l'ordre) sont assignés aux mots expected non matchés
+    const unmatchedSpoken = [];
+    for (let si = 0; si < n; si++) {
+      if (!matchedSpoken.has(si)) unmatchedSpoken.push(si);
+    }
+
     const wordResults = [];
     let correctCount = 0;
+    let unmatchedSpokenIdx = 0;
 
     for (let ei = 0; ei < m; ei++) {
       const word = expectedWords[ei];
@@ -200,14 +206,9 @@ export async function compareTexts(expectedText, spokenText) {
         wordResults.push({ word, status: 'correct', got: '' });
         correctCount++;
       } else {
-        // Chercher le premier mot spoken non utilisé
-        let bestIdx = -1;
-        for (let si = 0; si < n; si++) {
-          if (!usedSpoken.has(si)) { bestIdx = si; break; }
-        }
-        if (bestIdx !== -1) {
-          usedSpoken.add(bestIdx);
-          wordResults.push({ word, status: 'wrong', got: spokenWords[bestIdx] });
+        if (unmatchedSpokenIdx < unmatchedSpoken.length) {
+          const si = unmatchedSpoken[unmatchedSpokenIdx++];
+          wordResults.push({ word, status: 'wrong', got: spokenWords[si] });
         } else {
           wordResults.push({ word, status: 'missing', got: '' });
         }
