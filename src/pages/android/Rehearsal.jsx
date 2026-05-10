@@ -211,6 +211,30 @@ export default function AndroidRehearsal() {
     </div>
   );
 
+  if (error) return (
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="space-y-4 max-w-md w-full">
+        <p className="text-destructive font-bold text-center text-lg">Erreur de chargement</p>
+        <div className="bg-card border border-border rounded-lg p-3 text-xs text-foreground overflow-auto max-h-60">
+          <pre className="whitespace-pre-wrap break-words font-mono">
+            {error?.message || JSON.stringify(error)}
+          </pre>
+        </div>
+        <button
+          onClick={() => {
+            const text = error?.message || JSON.stringify(error);
+            navigator.clipboard.writeText(text);
+            alert('Erreur copiée au presse-papiers');
+          }}
+          className="w-full bg-primary text-primary-foreground py-2 rounded-lg text-sm font-semibold"
+        >
+          Copier l'erreur
+        </button>
+        <Button onClick={() => navigate('/android/')} variant="outline" className="w-full">Retour</Button>
+      </div>
+    </div>
+  );
+
   if (!script || lines.length === 0) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center space-y-4 px-4">
