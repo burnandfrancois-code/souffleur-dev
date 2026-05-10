@@ -21,11 +21,16 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   const lastOkTimeRef = useRef(0);
   const sessionIdRef = useRef(0); // ID unique par instance de reconnaissance
   const restartCountRef = useRef(0);
+  const restartTimerRef = useRef(null);
 
   const stopRecording = useCallback(() => {
     userStoppedRef.current = true;
     restartCountRef.current = 0;
     sessionIdRef.current += 1; // invalide toute instance précédente
+    if (restartTimerRef.current) {
+      clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = null;
+    }
     if (recognitionRef.current) {
       try {
         recognitionRef.current.abort();
@@ -159,7 +164,11 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
     rec.onend = () => {
       if (sessionIdRef.current !== mySession) return;
       if (userStoppedRef.current) return;
-      startRecordingRef.current();
+      restartTimerRef.current = setTimeout(() => {
+        if (sessionIdRef.current === mySession && !userStoppedRef.current) {
+          startRecordingRef.current();
+        }
+      }, 300);
     };
 
     try {
@@ -223,6 +232,9 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
   useEffect(() => {
     return () => {
       sessionIdRef.current += 1;
+      if (restartTimerRef.current) {
+        clearTimeout(restartTimerRef.current);
+      }
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch (e) {}
         recognitionRef.current = null;
