@@ -96,6 +96,27 @@ export default function Rehearsal() {
     };
   }, []);
 
+  const handleContinue = useCallback(() => {
+    const idx = currentLineIndexRef.current;
+    if (comparisonResult?.perfect) {
+      setCompletedMyLines(prev => new Set([...prev, idx]));
+    }
+
+    const nextIndex = idx + 1;
+    const nextLine = lines[nextIndex];
+
+    setComparisonResult(null);
+    setPhase('line');
+    setCurrentLineIndex(nextIndex);
+
+    if (!nextLine) return;
+
+    const nextIsPartner = normalize(nextLine.character) !== normalize(myCharacter);
+    if (nextIsPartner && autoPlayRef.current) {
+      launchSpeakChain(nextIndex, lines, myCharacter, characterGenders);
+    }
+  }, [lines, myCharacter, characterGenders, comparisonResult, launchSpeakChain, normalize]);
+
   const stopAll = useCallback(() => {
     if (myLineRecorderRef.current) {
       myLineRecorderRef.current.stop();
@@ -199,27 +220,6 @@ export default function Rehearsal() {
   const handleRetry = () => {
     setComparisonResult(null);
     setPhase('line');
-  };
-
-  const handleContinue = () => {
-    const idx = currentLineIndexRef.current;
-    if (comparisonResult?.perfect) {
-      setCompletedMyLines(prev => new Set([...prev, idx]));
-    }
-
-    const nextIndex = idx + 1;
-    const nextLine = lines[nextIndex];
-
-    setComparisonResult(null);
-    setPhase('line');
-    setCurrentLineIndex(nextIndex);
-
-    if (!nextLine) return;
-
-    const nextIsPartner = normalize(nextLine.character) !== normalize(myCharacter);
-    if (nextIsPartner && autoPlayRef.current) {
-      launchSpeakChain(nextIndex, lines, myCharacter, characterGenders);
-    }
   };
 
   const handleJumpTo = (idx) => {
