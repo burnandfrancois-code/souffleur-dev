@@ -156,10 +156,12 @@ export default function AndroidRehearsal() {
     const nextIndex = currentLineIndex + 1;
     const nextLine = lines[nextIndex];
     cancelAll();
+    setPhase('line');
+    setComparisonResult(null);
     setCurrentLineIndex(nextIndex);
     if (!nextLine) return;
     if (normalize(nextLine.character) !== normalize(myCharacter)) {
-      speakPartnerLines(nextIndex, lines, myCharacter, characterGenders, stripDirections);
+      launchSpeakChain(nextIndex);
     }
   };
 
@@ -306,7 +308,15 @@ export default function AndroidRehearsal() {
               <div key={currentLineIndex} className="space-y-3">
                 {isMyLine ? (
                   <>
-                    {phase === 'line' && <MyLineRecorder line={currentLineClean} onSubmit={handleSubmitRecording} onSkip={handleNextLine} autoPlay={true} />}
+                    {phase === 'line' && (
+                      <MyLineRecorder 
+                        ref={myLineRecorderRef}
+                        line={currentLineClean} 
+                        onSubmit={handleSubmitRecording} 
+                        onSkip={handleNextLine} 
+                        autoPlay={true} 
+                      />
+                    )}
                     {phase === 'comparing' && (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center py-6">
                         <Loader2 className="w-6 h-6 text-primary animate-spin" />
