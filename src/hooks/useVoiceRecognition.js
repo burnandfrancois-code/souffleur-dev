@@ -145,7 +145,15 @@ export function useVoiceRecognition() {
       if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
         stop();
         setError({ message: '⚠️ Permission micro refusée' });
+      } else if (e.error === 'network') {
+        console.log('[VoiceRecognition] network error, relance...');
       }
+    };
+
+    rec.onend = () => {
+      console.log('[VoiceRecognition] onend');
+      if (activeSessionIdRef.current !== newSessionId) return;
+      setIsRecording(false);
     };
 
     try {
