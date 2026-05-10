@@ -40,16 +40,28 @@ export default function ComparisonResult({ result, onRetry, onContinue }) {
           <p className="text-muted-foreground text-center text-sm">{result.feedback}</p>
         )}
 
-        {/* Mots corrects — en haut */}
-        {correctWords.length > 0 && (
+        {/* Texte complet avec points d'erreur */}
+        {wordResults.length > 0 && (
           <div style={{ borderRadius: '12px', border: '1px solid rgba(74,222,128,0.4)', backgroundColor: 'rgba(20,83,45,0.7)', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <p style={{ fontSize: '11px', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.08em' }}>✓ Corrects</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {correctWords.map((w, i) => (
-                <span key={i} style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, backgroundColor: 'rgba(74,222,128,0.25)', color: '#bbf7d0', border: '1px solid rgba(74,222,128,0.5)' }}>
-                  {w.word}
-                </span>
-              ))}
+            <p style={{ fontSize: '11px', fontWeight: 700, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.08em' }}>✓ Votre texte</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+              {wordResults.map((w, i) => {
+                if (w.status === 'correct' || w.status === 'phonetic') {
+                  return (
+                    <span key={i} style={{ padding: '2px 8px', borderRadius: '6px', fontSize: '0.875rem', fontWeight: 500, backgroundColor: 'rgba(74,222,128,0.25)', color: '#bbf7d0', border: '1px solid rgba(74,222,128,0.5)' }}>
+                      {w.word}
+                    </span>
+                  );
+                } else if (w.status === 'wrong') {
+                  return (
+                    <span key={i} title={`Dit : "${w.got}"`} style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#ef4444', flexShrink: 0 }} />
+                  );
+                } else {
+                  return (
+                    <span key={i} title={`Manquant : "${w.word}"`} style={{ display: 'inline-block', width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#eab308', flexShrink: 0 }} />
+                  );
+                }
+              })}
             </div>
           </div>
         )}
