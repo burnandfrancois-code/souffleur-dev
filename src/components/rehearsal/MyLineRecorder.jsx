@@ -71,6 +71,14 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
     setPhase('result');
   }, [currentLineClean.text]);
 
+  // Continuation vers prochaine réplique
+  const handleContinue = useCallback(() => {
+    setComparisonResult(null);
+    setPhase('line');
+    voiceRec.reset();
+    onLineAdvance?.();
+  }, [onLineAdvance, voiceRec]);
+
   // Auto-advance après résultat
   useEffect(() => {
     if (phase !== 'result' || !comparisonResult) return;
@@ -86,14 +94,6 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
       return () => clearTimeout(timer);
     }
   }, [phase, comparisonResult, handleContinue]);
-
-  // Continuation vers prochaine réplique
-  const handleContinue = useCallback(() => {
-    setComparisonResult(null);
-    setPhase('line');
-    voiceRec.reset();
-    onLineAdvance?.();
-  }, [onLineAdvance, voiceRec]);
 
   const handleRetry = useCallback(() => {
     setComparisonResult(null);
