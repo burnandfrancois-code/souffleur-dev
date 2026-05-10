@@ -32,6 +32,13 @@ export function useSimpleVoiceInput() {
    userStoppedRef.current = false;
    intentionallyStopping.current = false;
 
+   console.log('[useSimpleVoiceInput] START CALLED - sessionId:', mySession);
+   console.log('[useSimpleVoiceInput] Browser info:', { 
+     userAgent: navigator.userAgent,
+     mediaDevices: !!navigator.mediaDevices,
+     getUserMedia: !!navigator.mediaDevices?.getUserMedia,
+   });
+
    if (recognitionRef.current) {
      try { recognitionRef.current.abort(); } catch (e) {}
    }
@@ -46,9 +53,11 @@ export function useSimpleVoiceInput() {
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
+      console.error('[useSimpleVoiceInput] SpeechRecognition API not available');
       setError({ message: 'Reconnaissance vocale non supportée' });
       return;
     }
+    console.log('[useSimpleVoiceInput] SpeechRecognition API found');
     SpeechRecognitionRef.current = SpeechRecognition;
 
     const rec = new SpeechRecognition();
@@ -58,7 +67,11 @@ export function useSimpleVoiceInput() {
     recognitionRef.current = rec;
 
     rec.onstart = () => {
-      if (sessionIdRef.current === mySession) setIsRecording(true);
+      console.log('[useSimpleVoiceInput] onstart triggered - sessionId:', mySession);
+      if (sessionIdRef.current === mySession) {
+        console.log('[useSimpleVoiceInput] Setting isRecording to true');
+        setIsRecording(true);
+      }
     };
 
     rec.onresult = (event) => {
@@ -99,9 +112,12 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onerror = (e) => {
+       console.log('[useSimpleVoiceInput] onerror triggered:', { error: e.error, sessionId: mySession });
        if (sessionIdRef.current !== mySession) return;
        if (e.error === 'network') {
-         // Ignorer les erreurs réseau, elles sont généralement temporaires
+         console.log('[useSimpleVoiceInput] Network error (ignoring)');
+       } else if (e.error === 'not-allowed') {
+         console.error('[useSimpleVoiceInput] Permission denied by browser/OS');
        }
        // Ignorer les erreurs de permission et laisser onend redémarrer
      };
@@ -131,7 +147,13 @@ export function useSimpleVoiceInput() {
       }
     };
 
-    rec.start();
+    console.log('[useSimpleVoiceInput] Calling rec.start()');
+    try {
+      rec.start();
+      console.log('[useSimpleVoiceInput] rec.start() succeeded');
+    } catch (e) {
+      console.error('[useSimpleVoiceInput] rec.start() threw error:', e);
+    }
   }, [stop]);
 
   const reset = useCallback(() => {
