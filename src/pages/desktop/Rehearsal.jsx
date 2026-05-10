@@ -351,17 +351,20 @@ export default function Rehearsal() {
           onClick={async (e) => {
             e.preventDefault();
             try {
-              await navigator.mediaDevices.getUserMedia({ audio: true });
+              const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+              stream.getTracks().forEach(track => track.stop());
               autoPlayRef.current = autoPlay;
               speechRateRef.current = speechRate;
-              setStarted(true);
               await unlockAudioForDesktop();
+              setStarted(true);
               const firstLine = lines[0];
               if (firstLine && normalize(firstLine.character) !== normalize(myCharacter) && autoPlay) {
                 launchSpeakChain(0, lines, myCharacter, characterGenders);
               }
             } catch (e) {
-              alert('Microphone refusé. Vérifiez les paramètres de votre navigateur.');
+              if (e.name === 'NotAllowedError') {
+                alert('Microphone refusé. Vérifiez les paramètres de votre navigateur.');
+              }
             }
           }}
         >

@@ -188,15 +188,18 @@ export default function AndroidRehearsal() {
         className="w-full max-w-xs bg-primary text-primary-foreground font-body text-base gap-2 mt-4"
         onClick={async () => {
           try {
-            await navigator.mediaDevices.getUserMedia({ audio: true });
-            setStarted(true);
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(track => track.stop());
             await unlockAudioForAndroid();
+            setStarted(true);
             const firstLine = lines[0];
             if (firstLine && normalize(firstLine.character) !== normalize(myCharacter)) {
               speakPartnerLines(0, lines, myCharacter, characterGenders, stripDirections);
             }
           } catch (e) {
-            alert('Microphone refusé. Vérifiez les paramètres de votre navigateur.');
+            if (e.name === 'NotAllowedError') {
+              alert('Microphone refusé. Vérifiez les paramètres de votre navigateur.');
+            }
           }
         }}
       >
