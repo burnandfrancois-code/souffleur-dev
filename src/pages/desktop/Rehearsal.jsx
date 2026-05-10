@@ -28,8 +28,22 @@ export default function DesktopRehearsal() {
   const [completed, setCompleted] = useState(new Set());
   const [scores, setScores] = useState([]);
   const [started, setStarted] = useState(false);
+  const [micPermissionChecked, setMicPermissionChecked] = useState(false);
+  const [micAllowed, setMicAllowed] = useState(false);
 
   const voiceRec = useSimpleVoiceInput();
+
+  const requestMicPermission = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      setMicAllowed(true);
+      setMicPermissionChecked(true);
+    } catch (e) {
+      setMicAllowed(false);
+      setMicPermissionChecked(true);
+    }
+  };
 
   const { data: script, isLoading } = useQuery({
     queryKey: ['script', scriptId],
@@ -144,7 +158,18 @@ export default function DesktopRehearsal() {
         <h1 className="text-2xl font-bold">{script.title}</h1>
         <p className="text-muted-foreground">Rôle: <span className="text-primary font-semibold">{myCharacter}</span></p>
         <p className="text-sm text-muted-foreground">{lines.length} répliques • {myLineCount} à jouer</p>
-        <Button size="lg" onClick={() => setStarted(true)}>Commencer</Button>
+        
+        {!micPermissionChecked ? (
+          <Button size="lg" onClick={requestMicPermission}>Commencer</Button>
+        ) : !micAllowed ? (
+          <div className="text-center space-y-3">
+            <p className="text-destructive font-semibold">Microphone non autorisé</p>
+            <p className="text-sm text-muted-foreground">Veuillez autoriser l'accès au microphone pour continuer</p>
+            <Button size="lg" onClick={requestMicPermission}>Réessayer</Button>
+          </div>
+        ) : (
+          <Button size="lg" onClick={() => setStarted(true)}>Commencer la répétition</Button>
+        )}
       </div>
     );
   }
