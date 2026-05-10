@@ -324,7 +324,6 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
         )}
 
         {/* Recording banner */}
-        {!trainingMode && (
         <div className={`
           rounded-2xl border-2 p-5 mb-3 text-center transition-all duration-300
           ${isRecording
@@ -369,7 +368,6 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
             </p>
           )}
         </div>
-        )}
 
         {/* Modes */}
         <div className="flex items-center justify-between mb-2">
@@ -433,21 +431,20 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
           </div>
         )}
 
-        {/* Action buttons - only in normal mode */}
-        {!trainingMode && (
+        {/* Action buttons */}
         <div className="flex items-center justify-between gap-2">
           <Button variant="ghost" size="sm" onClick={onSkip} className="text-muted-foreground gap-1">
             Passer
             <ChevronRight className="w-4 h-4" />
           </Button>
           <div className="flex items-center gap-2">
-            {transcript && (
+            {transcript && !trainingMode && (
               <Button variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground">
                 <RotateCcw className="w-4 h-4 mr-1" />
                 Recommencer
               </Button>
             )}
-            {transcript && !isRecording && (
+            {transcript && !isRecording && !trainingMode && (
               <Button size="sm" onClick={handleSubmit} disabled={isComparing} className="bg-primary text-primary-foreground">
                 <Send className="w-4 h-4 mr-1" />
                 Valider
@@ -455,7 +452,6 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
             )}
           </div>
         </div>
-        )}
       </div>
 
       <div className="shrink-0 mt-1">
