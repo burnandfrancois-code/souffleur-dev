@@ -202,45 +202,16 @@ export async function compareTexts(expectedText, spokenText) {
     for (let ei = 0; ei < m; ei++) {
       if (!matchedExpected.has(ei)) unmatchedExpectedIndices.push(ei);
     }
-    const unmatchedSpokenIndices = [];
+    const unmatchedSpokenWords = [];
     for (let si = 0; si < n; si++) {
-      if (!matchedSpoken.has(si)) unmatchedSpokenIndices.push(si);
+      if (!matchedSpoken.has(si)) unmatchedSpokenWords.push(spokenWords[si]);
     }
-    const unmatchedSpokenWords = unmatchedSpokenIndices.map(i => spokenWords[i]);
 
-    // Calcul de similarité pour appairage optimal
-    const similarity = (a, b) => {
-      if (a === b) return 1;
-      const pa = phoneticFR(a);
-      const pb = phoneticFR(b);
-      if (pa === pb) return 1;
-      const dist = levenshtein(pa, pb);
-      const maxLen = Math.max(pa.length, pb.length);
-      return maxLen > 0 ? 1 - (dist / maxLen) : 0;
-    };
-
-    // Appairage bipartite greedy basé sur la similarité
+    // Assigner séquentiellement les mots spoken non-matchés aux mots expected non-matchés
     const wrongMap = new Map(); // ei -> spoken word string
-    const usedSpokenIndices = new Set();
-    
-    // Trier par similarité décroissante et assigner les meilleures paires
-    const pairs = [];
-    unmatchedExpectedIndices.forEach(ei => {
-      unmatchedSpokenWords.forEach((spokenWord, spokenPos) => {
-        pairs.push({
-          ei,
-          spokenPos,
-          spokenWord,
-          sim: similarity(expectedWords[ei], spokenWord)
-        });
-      });
-    });
-    pairs.sort((a, b) => b.sim - a.sim);
-    
-    pairs.forEach(({ ei, spokenPos, spokenWord }) => {
-      if (!wrongMap.has(ei) && !usedSpokenIndices.has(spokenPos)) {
-        wrongMap.set(ei, spokenWord);
-        usedSpokenIndices.add(spokenPos);
+    unmatchedExpectedIndices.forEach((ei, pos) => {
+      if (pos < unmatchedSpokenWords.length) {
+        wrongMap.set(ei, unmatchedSpokenWords[pos]);
       }
     });
 
@@ -272,8 +243,7 @@ export async function compareTexts(expectedText, spokenText) {
       correctCount,
       missingCount,
       extra_spoken: extraSpoken,
-      extraCount: Math.max(0, n - matchedSpoken.size),
-      unmatchedSpokenIndices
+      extraCount: Math.max(0, n - matchedSpoken.size)
     };
   } catch (error) {
     console.error('Error comparing texts:', error);
