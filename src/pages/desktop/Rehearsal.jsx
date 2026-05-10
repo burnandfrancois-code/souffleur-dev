@@ -38,7 +38,6 @@ export default function Rehearsal() {
   const [autoPlay, setAutoPlay] = useState(() => localStorage.getItem('souffleur_autoplay') !== 'false');
   const [showMyLines, setShowMyLines] = useState(false);
   const [speechRate, setSpeechRate] = useState(() => parseFloat(localStorage.getItem('souffleur_rate') || '1'));
-  const [isStarting, setIsStarting] = useState(false);
 
   const scrollRef = useRef(null);
   const myLineRecorderRef = useRef(null);
@@ -348,11 +347,9 @@ export default function Rehearsal() {
 
         <Button
            size="lg"
-           disabled={isStarting}
-           className="bg-primary text-primary-foreground text-lg px-10 py-6 gap-3 disabled:opacity-50"
+           className="bg-primary text-primary-foreground text-lg px-10 py-6 gap-3"
            onClick={async (e) => {
              e.preventDefault();
-             setIsStarting(true);
              try {
                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                stream.getTracks().forEach(track => track.stop());
@@ -364,7 +361,6 @@ export default function Rehearsal() {
                  launchSpeakChain(0, lines, myCharacter, characterGenders);
                }
              } catch (e) {
-               setIsStarting(false);
                if (e.name === 'NotAllowedError') {
                  alert('Microphone refusé. Vérifiez les paramètres de votre navigateur.');
                } else {
@@ -373,7 +369,7 @@ export default function Rehearsal() {
              }
            }}
          >
-           {isStarting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Mic className="w-6 h-6" />}
+           <Mic className="w-6 h-6" />
            Commencer la répétition
          </Button>
       </div>
