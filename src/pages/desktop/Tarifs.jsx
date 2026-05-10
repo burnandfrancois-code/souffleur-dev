@@ -8,42 +8,93 @@ export default function DesktopTarifs() {
 
   const plans = [
     {
-      name: 'Essai Gratuit',
+      name: 'Essai gratuit',
       price: 'Gratuit',
-      duration: '7 jours',
+      subtitle: '1 texte · 7 jours',
       features: [
-        'Jusqu\'à 3 textes',
+        '1 texte importé',
+        'Accès pendant 7 jours',
         'Reconnaissance vocale',
-        'Feedback IA basique',
-        'Export résultats'
-      ]
+        'Analyse IA des erreurs'
+      ],
+      cta: 'Commencer gratuitement'
     },
     {
-      name: 'Pro',
-      price: '9.99',
+      name: 'Texte unique',
+      price: '2.99',
+      currency: '€',
+      subtitle: 'Paiement unique',
+      features: [
+        '1 texte importé',
+        'Accès illimité dans le temps',
+        'Reconnaissance vocale',
+        'Analyse IA des erreurs'
+      ],
+      cta: 'Choisir ce forfait'
+    },
+    {
+      name: 'Mensuel Solo',
+      price: '4.99',
+      currency: '€',
       duration: '/mois',
       popular: true,
+      subtitle: '1 personne',
+      badge: 'Populaire',
       features: [
         'Textes illimités',
-        'Reconnaissance vocale avancée',
-        'Feedback IA détaillé',
-        'Historique complet',
-        'Voix premium',
-        'Support prioritaire'
-      ]
+        '1 utilisateur',
+        'Reconnaissance vocale',
+        'Analyse IA des erreurs',
+        'Résiliation à tout moment'
+      ],
+      cta: 'S\'abonner'
     },
     {
-      name: 'Premium',
-      price: '19.99',
+      name: 'Mensuel Troupe',
+      price: '19.90',
+      currency: '€',
       duration: '/mois',
+      subtitle: 'Jusqu\'à 10 personnes',
       features: [
-        'Tout Plan Pro',
-        'Collaboration (bêta)',
-        'Voix personnalisées',
-        'Export PDF détaillé',
-        'API accès',
-        'Support VIP'
-      ]
+        'Textes illimités',
+        'Jusqu\'à 10 utilisateurs',
+        'Reconnaissance vocale',
+        'Analyse IA des erreurs',
+        'Résiliation à tout moment'
+      ],
+      cta: 'S\'abonner'
+    },
+    {
+      name: 'Annuel Solo',
+      price: '39.90',
+      currency: '€',
+      duration: '/an',
+      subtitle: '1 personne',
+      badge: '2 mois offerts',
+      features: [
+        'Textes illimités',
+        '1 utilisateur',
+        'Reconnaissance vocale',
+        'Analyse IA des erreurs',
+        'Économisez 20% vs mensuel'
+      ],
+      cta: 'S\'abonner'
+    },
+    {
+      name: 'Annuel Troupe',
+      price: '149.00',
+      currency: '€',
+      duration: '/an',
+      subtitle: 'Jusqu\'à 10 personnes',
+      badge: '2 mois offerts',
+      features: [
+        'Textes illimités',
+        'Jusqu\'à 10 utilisateurs',
+        'Reconnaissance vocale',
+        'Analyse IA des erreurs',
+        'Économisez 20% vs mensuel'
+      ],
+      cta: 'S\'abonner'
     }
   ];
 
@@ -64,61 +115,62 @@ export default function DesktopTarifs() {
 
       <main className="px-4 py-12">
         <div className="max-w-5xl mx-auto space-y-12">
-          <div className="text-center space-y-4">
-            <h1 className="text-4xl font-bold text-foreground">Nos Offres</h1>
-            <p className="text-lg text-muted-foreground">Choisissez le plan qui vous convient</p>
+          <div className="text-center space-y-3">
+            <h1 className="text-5xl font-bold text-foreground">Choisissez votre <span className="text-primary">formule</span></h1>
+            <p className="text-lg text-muted-foreground">Répétez votre texte sans partenaire, à votre rythme. Commencez gratuitement, sans carte bancaire.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {plans.map((plan) => (
               <div
                 key={plan.name}
-                className={`rounded-2xl border-2 p-8 space-y-6 transition-all ${
+                className={`rounded-2xl border-2 p-6 space-y-5 transition-all relative ${
                   plan.popular
-                    ? 'border-primary bg-primary/5 shadow-lg'
-                    : 'border-border bg-card hover:border-primary/50'
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border/50 bg-card/50 hover:border-border'
                 }`}
               >
-                {plan.popular && (
-                  <div className="inline-block bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-semibold">
-                    Le plus populaire
+                {plan.badge && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-semibold">
+                    {plan.badge}
                   </div>
                 )}
 
-                <div className="space-y-2">
-                  <h3 className="text-2xl font-bold text-foreground">{plan.name}</h3>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold text-foreground">{plan.price}</span>
-                    {plan.duration && <span className="text-muted-foreground">{plan.duration}</span>}
-                  </div>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
+                  {plan.subtitle && <p className="text-xs text-muted-foreground">{plan.subtitle}</p>}
                 </div>
 
-                <ul className="space-y-3">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-bold text-foreground">{plan.price}</span>
+                  {plan.currency && <span className="text-sm text-muted-foreground">{plan.currency}</span>}
+                  {plan.duration && <span className="text-sm text-muted-foreground">{plan.duration}</span>}
+                </div>
+
+                <ul className="space-y-2">
                   {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-center gap-3">
-                      <Check className="w-5 h-5 text-primary shrink-0" />
-                      <span className="text-sm text-muted-foreground">{feature}</span>
+                    <li key={feature} className="flex items-start gap-2.5">
+                      <Check className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      <span className="text-sm text-muted-foreground leading-snug">{feature}</span>
                     </li>
                   ))}
                 </ul>
 
                 <Button
                   className={`w-full ${
-                    plan.popular
-                      ? 'bg-primary text-primary-foreground'
-                      : 'border border-border hover:bg-secondary'
+                    plan.popular || plan.name === 'Essai gratuit'
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      : 'border border-border text-foreground hover:bg-secondary'
                   }`}
                 >
-                  {plan.name === 'Essai Gratuit' ? 'Démarrer' : 'S\'abonner'}
+                  {plan.cta}
                 </Button>
               </div>
             ))}
           </div>
 
-          <div className="bg-secondary/50 border border-border rounded-2xl p-8 text-center space-y-3">
-            <h3 className="text-lg font-semibold text-foreground">Besoin d\'aide ?</h3>
-            <p className="text-muted-foreground">Contactez notre équipe pour des offres personnalisées ou des questions</p>
-            <Button variant="outline">Nous contacter</Button>
+          <div className="text-center text-xs text-muted-foreground border-t border-border pt-6">
+            <p>Paiement sécurisé par Stripe · Sans engagement pour les essais · Résiliation en un clic pour les abonnements</p>
           </div>
         </div>
       </main>
