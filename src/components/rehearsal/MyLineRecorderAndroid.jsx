@@ -19,10 +19,12 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
   const lastOkTimeRef = useRef(0);
   const startRecordingRef = useRef(null);
   const autoStartedRef = useRef(false);
+  const restartCountRef = useRef(0);
 
   const stopRecording = useCallback(() => {
     userStoppedRef.current = true;
     autoStartedRef.current = false;
+    restartCountRef.current = 0;
     sessionIdRef.current += 1;
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch (e) {}
@@ -140,15 +142,22 @@ export default function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay
     };
 
     rec.onend = () => {
-      addLog('🎤 onend - recording ended');
+      addLog(`🎤 onend - restart ${restartCountRef.current}`);
       if (sessionIdRef.current !== mySession) return;
       if (userStoppedRef.current) return;
-      // Attendre 2s avant de relancer (évite boucles rapides)
-      addLog('⏱ relance après 2s...');
+      
+      restartCountRef.current += 1;
+      if (restartCountRef.current > 3) {
+        addLog('❌ trop de relances, arrêt');
+        setSttError({ message: 'Micro ne détecte rien — vérifiez la permission' });
+        return;
+      }
+      
+      addLog(`⏱ relance ${restartCountRef.current} après 3s...`);
       setTimeout(() => {
         if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
         startRecordingRef.current();
-      }, 2000);
+      }, 3000);
     };
 
     try {
