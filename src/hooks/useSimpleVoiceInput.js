@@ -27,21 +27,22 @@ export function useSimpleVoiceInput() {
   }, []);
 
   const start = useCallback((onFinalTranscript) => {
-    sessionIdRef.current += 1;
-    const mySession = sessionIdRef.current;
-    userStoppedRef.current = false;
-    intentionallyStopping.current = false;
+   sessionIdRef.current += 1;
+   const mySession = sessionIdRef.current;
+   userStoppedRef.current = false;
+   intentionallyStopping.current = false;
 
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
-    }
+   if (recognitionRef.current) {
+     try { recognitionRef.current.abort(); } catch (e) {}
+   }
 
-    setTranscript('');
-    setError(null);
-    finalWordsRef.current = [];
-    interimRef.current = '';
-    lastOkTimeRef.current = 0;
-    okDetectedRef.current = false;
+   setTranscript('');
+   setError(null);
+   finalWordsRef.current = [];
+   interimRef.current = '';
+   lastOkTimeRef.current = 0;
+   okDetectedRef.current = false;
+   localStorage.removeItem('souffleur_instant_mic');
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {

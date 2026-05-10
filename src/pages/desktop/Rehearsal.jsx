@@ -72,6 +72,13 @@ export default function Rehearsal() {
 
   const stripDirections = (text) => text?.replace(/\([^)]*\)?/g, '').replace(/\[[^\]]*\]?/g, '').replace(/\s+/g, ' ').trim() || '';
 
+  // Set flag to force instant mic start when landing on user's line
+  useEffect(() => {
+    if (isMyLine && phase === 'line' && started) {
+      localStorage.setItem('souffleur_instant_mic', 'true');
+    }
+  }, [isMyLine, phase, started]);
+
   const lines = script?.lines || [];
   const myCharacter = script?.my_character;
   const characterGenders = script?.character_genders || {};
@@ -290,15 +297,6 @@ export default function Rehearsal() {
       </div>
     );
   }
-
-  useEffect(() => {
-    if (!isMyLine || phase !== 'line' || !started || !myLineRecorderRef.current) return;
-    
-    const timer = setTimeout(() => {
-      myLineRecorderRef.current.startRecording?.();
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [isMyLine, phase, started]);
 
   if (!started) {
     return (
