@@ -69,9 +69,18 @@ export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1.
     try {
       if (signal?.aborted) { resolve(); return; }
 
+      // Map vitesses pour accélération
+      const rateMap = {
+        1: 1.3,
+        1.5: 1.7,
+        2: 2.5,
+        3: 3.5
+      };
+      const actualRate = rateMap[rate] || rate;
+
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = lang;
-      utterance.rate = rate;
+      utterance.rate = actualRate;
       utterance.pitch = gender === 'female' ? 1.3 : 0.8;
       utterance.volume = 1;
 
