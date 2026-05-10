@@ -268,14 +268,17 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
 
   // Reset + auto-start when line changes
   useEffect(() => {
-    console.log('[STT] useEffect: line changed, stopRecording');
+    const now = Date.now();
+    const timeSinceStart = now - lastStartTimeRef.current;
+    console.log('[STT] useEffect: line changed - timeSinceStart:', timeSinceStart, 'ms');
+    
     // Ne pas arrêter si on vient juste de démarrer (éviter les races)
-    const timeSinceStart = Date.now() - lastStartTimeRef.current;
-    if (timeSinceStart < 500) {
-      console.log('[STT] ⚠ Ignorer stopRecording, démarrage trop récent');
+    if (timeSinceStart < 1000) {
+      console.log('[STT] ⚠ Ignorer stopRecording, démarrage trop récent (< 1s)');
       return;
     }
     
+    console.log('[STT] Proceeding with stopRecording');
     stopRecording();
     finalWordsRef.current = [];
     interimRef.current = '';
