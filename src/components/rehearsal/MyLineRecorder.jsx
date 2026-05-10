@@ -199,11 +199,11 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, onSubmit, onSk
 
     if (autoPlay && !trainingMode) {
       const timer = setTimeout(() => {
-        startRecording();
+        startRecordingRef.current();
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [line, stopRecording, startRecording, autoPlay, trainingMode]);
+  }, [line, autoPlay, trainingMode]);
 
   const handleSubmit = () => {
     const final = transcript.trim();
