@@ -311,16 +311,53 @@ export default function Home() {
              )}
 
             {step === 'character' && parsedScript && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">
-                    {editingScriptId ? 'Modifier le rôle et les genres :' : 'Pièce détectée :'}
-                  </p>
-                  <p className="text-xl font-bold text-foreground mt-1">{parsedScript.title}</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {parsedScript.lines?.length} répliques · {parsedScript.characters?.length} personnages
-                  </p>
-                </div>
+               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
+                 {integrityReport && integrityReport.differences > 0 && (
+                   <motion.div
+                     initial={{ opacity: 0, y: -10 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     className="bg-destructive/10 border border-destructive/30 rounded-xl p-5 space-y-3"
+                   >
+                     <div className="flex items-start gap-3">
+                       <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                       <div className="flex-1">
+                         <p className="font-bold text-destructive uppercase text-sm">Différences importantes</p>
+                         <div className="text-xs text-muted-foreground mt-2 grid grid-cols-2 gap-2">
+                           <div>
+                             <p>Personnages : {parsedScript.characters?.length}</p>
+                             <p>Longueur orig. : {integrityReport.original_length} chars</p>
+                             <p className="text-destructive">Δ {integrityReport.difference_percentage}%</p>
+                           </div>
+                           <div>
+                             <p>Répliques : {parsedScript.lines?.length}</p>
+                             <p>Longueur parsée : {integrityReport.parsed_length} chars</p>
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                     {integrityReport.differences > 0 && (
+                       <button
+                         onClick={() => setShowDiffDetails(!showDiffDetails)}
+                         className="text-xs text-destructive hover:text-destructive/80 transition-colors flex items-center gap-1"
+                       >
+                         ▶ Voir détails
+                       </button>
+                     )}
+                   </motion.div>
+                 )}
+
+                 <div className="text-center space-y-2">
+                   <p className="text-sm text-muted-foreground">Pièce détectée :</p>
+                   <p className="text-2xl font-bold text-foreground">{parsedScript.title}</p>
+                   <p className="text-sm text-muted-foreground">
+                     {parsedScript.lines?.length} répliques · {parsedScript.characters?.length} personnages
+                   </p>
+                 </div>
+
+                 <div className="text-center">
+                   <p className="text-lg font-bold text-foreground mb-1">Quel personnage jouez-vous ?</p>
+                   <p className="text-xs text-muted-foreground">Indiquez le genre de chaque personnage pour varier les voix</p>
+                 </div>
 
                 {parsedScript.characters?.length > 0 ? (
                   <CharacterSelector
