@@ -103,14 +103,13 @@ export function useSimpleVoiceInput() {
         }
 
         try {
-          // Convertir le blob en base64
-          const arrayBuffer = await blob.arrayBuffer();
-          const bytes = new Uint8Array(arrayBuffer);
-          let binary = '';
-          for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-          }
-          const audioBase64 = 'data:audio/webm;base64,' + btoa(binary);
+          // Convertir le blob en base64 avec FileReader (plus fiable sur Android)
+          const audioBase64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = (e) => reject(new Error('FileReader error: ' + e.message));
+            reader.readAsDataURL(blob);
+          });
           
           console.log('[WHISPER] Sending audio to transcribeAudioV2, blob size:', blob.size, 'base64 length:', audioBase64.length);
           const response = await base44.functions.invoke('transcribeAudioV2', { audio: audioBase64 });
