@@ -155,6 +155,10 @@ export function useSimpleVoiceInput() {
   }, []);
 
   const start = useCallback(async (onFinalTranscript) => {
+    // Arrêter toute synthèse vocale EN COURS avant de démarrer le micro
+    window.speechSynthesis?.cancel();
+    await new Promise(resolve => setTimeout(resolve, 200)); // Délai pour que la TTS s'arrête vraiment
+    
     activeRef.current = false;
     submittedRef.current = false;
     destroyRecognition();
