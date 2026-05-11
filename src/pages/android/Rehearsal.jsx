@@ -203,7 +203,7 @@ export default function AndroidRehearsal() {
       const timer = setTimeout(() => handleContinue(), 1200);
       return () => clearTimeout(timer);
     }
-  }, [phase, comparisonResult]);
+  }, [phase, comparisonResult, handleContinue]);
 
   // Lancer/arrêter l'écoute des commandes selon la phase
   useEffect(() => {
