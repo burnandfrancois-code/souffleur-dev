@@ -8,7 +8,14 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
 
   // Unlock audio on Android on first use
   useEffect(() => {
-    unlockAudioForAndroid();
+    (async () => {
+      try {
+        await unlockAudioForAndroid();
+        console.log('[Hook] Android audio unlocked');
+      } catch (e) {
+        console.error('[Hook] Failed to unlock audio:', e);
+      }
+    })();
   }, []);
 
   const speakPartnerLines = useCallback(async (startIndex, lines, myCharacter, genders, stripDirections) => {
