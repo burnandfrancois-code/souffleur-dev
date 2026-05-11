@@ -15,8 +15,8 @@ export function useSimpleVoiceInput() {
   const recognitionRef = useRef(null);
   const onFinalRef = useRef(null);
   const accumulatedRef = useRef('');
-  // Ref miroir de isRecording pour éviter les flash false→true dans onstart
   const isRecordingRef = useRef(false);
+  const micStreamRef = useRef(null); // garde le stream getUserMedia actif
 
   const setRecording = (val) => {
     isRecordingRef.current = val;
@@ -28,6 +28,10 @@ export function useSimpleVoiceInput() {
       const r = recognitionRef.current;
       recognitionRef.current = null;
       try { r.onstart = null; r.onresult = null; r.onerror = null; r.onend = null; r.abort(); } catch (e) {}
+    }
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach(t => t.stop());
+      micStreamRef.current = null;
     }
   }, []);
 
@@ -142,11 +146,11 @@ export function useSimpleVoiceInput() {
     setError(null);
     isRecordingRef.current = false;
 
-    // Demander explicitement la permission micro avant de lancer STT
-    // Chrome exige getUserMedia avant SpeechRecognition sur HTTPS
+    // Obtenir la permission micro ET garder le stream actif
+    // Chrome avorte SpeechRecognition si aucun stream audio n'est ouvert
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(t => t.stop()); // libérer le stream, STT prend le relais
+      micStreamRef.current = stream; // NE PAS arrêter le stream — on le garde ouvert
     } catch (e) {
       setError({ message: 'Permission micro refusée. Autorisez le microphone dans votre navigateur.' });
       return;
