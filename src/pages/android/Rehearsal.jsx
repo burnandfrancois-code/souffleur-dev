@@ -90,6 +90,53 @@ export default function AndroidRehearsal() {
 
   useEffect(() => () => cancelAll(), [cancelAll]);
 
+  const stopCommandListening = useCallback(() => {
+    commandActiveRef.current = false;
+    commandVoice.stop();
+    commandVoice.reset();
+  }, [commandVoice]);
+
+  const startCommandListening = useCallback(() => {
+    if (commandActiveRef.current) return;
+    commandActiveRef.current = true;
+    commandVoice.start((text) => {
+      if (!commandActiveRef.current) return;
+      const t = text.toLowerCase().trim();
+      console.log('[COMMAND] Heard:', t);
+      if (/passer|suivant|next/.test(t)) {
+        console.log('[COMMAND] Continue detected');
+        commandActiveRef.current = false;
+        handleContinueRef.current?.();
+      } else if (/r[eé]essayer|retry|again/.test(t)) {
+        console.log('[COMMAND] Retry detected');
+        commandActiveRef.current = false;
+        handleRetryRef.current?.();
+      }
+    });
+  }, [commandVoice]);
+
+  const handleRetry = () => {
+    stopCommandListening();
+    setComparisonResult(null);
+    setPhase('line');
+  };
+
+  const handleContinue = useCallback(() => {
+    stopCommandListening();
+    const idx = currentLineIndexRef.current;
+    if (comparisonResult?.perfect) setCompletedMyLines(prev => new Set([...prev, idx]));
+    const nextIndex = idx + 1;
+    const nextLine = lines[nextIndex];
+    setComparisonResult(null);
+    setPhase('line');
+    setCurrentLineIndex(nextIndex);
+    if (!nextLine) return;
+    if (normalize(nextLine.character) !== normalize(myCharacter)) {
+      speakPartnerLines(nextIndex, lines, myCharacter, characterGenders, stripDirections);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comparisonResult, lines, myCharacter, characterGenders, stopCommandListening]);
+
   // Auto-launch recording quand on arrive à une ligne du user en phase 'line'
   useEffect(() => {
     if (phase === 'line' && isMyLine && myLineRecorderRef.current) {
@@ -158,31 +205,6 @@ export default function AndroidRehearsal() {
     }
   }, [phase, comparisonResult]);
 
-  const stopCommandListening = useCallback(() => {
-    commandActiveRef.current = false;
-    commandVoice.stop();
-    commandVoice.reset();
-  }, [commandVoice]);
-
-  const startCommandListening = useCallback(() => {
-    if (commandActiveRef.current) return; // Éviter les appels multiples
-    commandActiveRef.current = true;
-    commandVoice.start((text) => {
-      if (!commandActiveRef.current) return;
-      const t = text.toLowerCase().trim();
-      console.log('[COMMAND] Heard:', t);
-      if (/passer|suivant|next/.test(t)) {
-        console.log('[COMMAND] Continue detected');
-        commandActiveRef.current = false;
-        handleContinueRef.current?.();
-      } else if (/r[eé]essayer|retry|again/.test(t)) {
-        console.log('[COMMAND] Retry detected');
-        commandActiveRef.current = false;
-        handleRetryRef.current?.();
-      }
-    });
-  }, [commandVoice]);
-
   // Lancer/arrêter l'écoute des commandes selon la phase
   useEffect(() => {
     if (phase === 'result') {
@@ -192,28 +214,6 @@ export default function AndroidRehearsal() {
       stopCommandListening();
     }
   }, [phase, startCommandListening, stopCommandListening]);
-
-  const handleRetry = () => {
-    stopCommandListening();
-    setComparisonResult(null);
-    setPhase('line');
-  };
-
-  const handleContinue = useCallback(() => {
-    stopCommandListening();
-    const idx = currentLineIndexRef.current;
-    if (comparisonResult?.perfect) setCompletedMyLines(prev => new Set([...prev, idx]));
-    const nextIndex = idx + 1;
-    const nextLine = lines[nextIndex];
-    setComparisonResult(null);
-    setPhase('line');
-    setCurrentLineIndex(nextIndex);
-    if (!nextLine) return;
-    if (normalize(nextLine.character) !== normalize(myCharacter)) {
-      speakPartnerLines(nextIndex, lines, myCharacter, characterGenders, stripDirections);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [comparisonResult, lines, myCharacter, characterGenders, stopCommandListening]);
 
   useEffect(() => { handleContinueRef.current = handleContinue; }, [handleContinue]);
   useEffect(() => { handleRetryRef.current = handleRetry; }, [handleRetry]);
