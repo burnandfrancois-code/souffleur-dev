@@ -1,53 +1,57 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { motion } from 'framer-motion';
 import { MicOff, Loader2 } from 'lucide-react';
-import { useWhisperRecorder } from '@/hooks/useWhisperRecorder';
+import { useSimpleVoiceInput } from '@/hooks/useSimpleVoiceInput';
 import { compareTexts } from '@/lib/scriptParser';
 
-export default function MyLineRecorderAndroidWhisper({ line, onLineAdvance }) {
-  const voiceRec = useWhisperRecorder();
+const MyLineRecorderAndroidWhisper = forwardRef(function MyLineRecorderAndroidWhisper({ line, onSubmit, onSkip, autoPlay }, ref) {
+  const voiceRec = useSimpleVoiceInput();
   const [phase, setPhase] = useState('recording'); // recording, comparing, result
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const stripDirections = (text) =>
     text?.replace(/\([^)]*\)?/g, '').replace(/\[[^\]]*\]?/g, '').replace(/\s+/g, ' ').trim() || '';
 
-  // Démarrer l'enregistrement au montage
+  useImperativeHandle(ref, () => ({
+    startRecording: () => voiceRec.start(handleFinalText)
+  }), [voiceRec]);
+
+  const handleFinalText = async (finalText) => {
+    setPhase('comparing');
+    try {
+      const compareResult = await compareTexts(stripDirections(line.text), finalText);
+      setResult(compareResult);
+      setPhase('result');
+    } catch (e) {
+      setError('Erreur comparaison');
+      setPhase('recording');
+      setResult(null);
+    }
+  };
+
   useEffect(() => {
-    voiceRec.start(async (finalText) => {
-      setPhase('comparing');
-      try {
-        const compareResult = await compareTexts(stripDirections(line.text), finalText);
-        setResult(compareResult);
-        setPhase('result');
-      } catch (e) {
-        setError('Erreur comparaison');
-        setPhase('recording');
-      }
-    });
+    if (autoPlay) {
+      voiceRec.start(handleFinalText);
+    }
     return () => voiceRec.stop();
-  }, [line, voiceRec]);
+  }, [autoPlay, line]);
 
   const handleRetry = () => {
     voiceRec.reset();
     setResult(null);
     setError(null);
     setPhase('recording');
-    voiceRec.start(async (finalText) => {
-      setPhase('comparing');
-      try {
-        const compareResult = await compareTexts(stripDirections(line.text), finalText);
-        setResult(compareResult);
-        setPhase('result');
-      } catch (e) {
-        setError('Erreur comparaison');
-        setPhase('recording');
-      }
-    });
+    voiceRec.start(handleFinalText);
   };
 
   const handleContinue = () => {
-    onLineAdvance(result?.accuracy ?? 0);
+    onSubmit(result);
+  };
+
+  const handleSkipClick = () => {
+    voiceRec.stop();
+    voiceRec.reset();
+    onSkip();
   };
 
   return (
@@ -100,6 +104,16 @@ export default function MyLineRecorderAndroidWhisper({ line, onLineAdvance }) {
         </div>
       )}
 
+      {/* Skip button */}
+      {phase === 'recording' && (
+        <button
+          onClick={handleSkipClick}
+          className="w-full px-3 py-2 text-xs text-muted-foreground hover:text-foreground transition"
+        >
+          Passer
+        </button>
+      )}
+
       {/* Error */}
       {error && (
         <div className="rounded-lg bg-destructive/10 border border-destructive px-3 py-2 text-xs text-destructive">
@@ -108,4 +122,6 @@ export default function MyLineRecorderAndroidWhisper({ line, onLineAdvance }) {
       )}
     </div>
   );
-}
+});
+
+export default MyLineRecorderAndroidWhisper;
