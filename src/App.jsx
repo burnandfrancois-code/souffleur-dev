@@ -20,6 +20,7 @@ const AndroidHome = lazy(() => import('@/pages/android/Home'));
 const AndroidRehearsal = lazy(() => import('@/pages/android/Rehearsal'));
 const AndroidMyScripts = lazy(() => import('@/pages/android/MyScripts'));
 const AndroidTarifs = lazy(() => import('@/pages/android/Tarifs'));
+const AndroidHelp = lazy(() => import('@/pages/android/Help'));
 const RehearsalTest = lazy(() => import('@/pages/RehearsalTest'));
 const AndroidTTSTest = lazy(() => import('@/pages/AndroidTTSTest'));
 const AndroidRehearsalDebug = lazy(() => import('@/pages/AndroidRehearsalDebug'));
@@ -64,6 +65,7 @@ const AuthenticatedApp = () => {
         <Route path="/android/rehearsal" element={<AndroidRehearsal />} />
         <Route path="/android/my-scripts" element={<AndroidMyScripts />} />
         <Route path="/android/tarifs" element={<AndroidTarifs />} />
+        <Route path="/android/help" element={<AndroidHelp />} />
         <Route path="/rehearsal-test" element={<RehearsalTest />} />
         <Route path="/android-tts-test" element={<AndroidTTSTest />} />
         <Route path="/android/rehearsal-debug" element={<AndroidRehearsalDebug />} />
