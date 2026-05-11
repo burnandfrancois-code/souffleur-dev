@@ -25,6 +25,7 @@ export function useSimpleVoiceInput() {
     if (isRecordingRef.current === val) return;
     isRecordingRef.current = val;
     setIsRecording(val);
+    console.log('[RECORDING] State changed to:', val);
   };
 
   const destroyRecognition = useCallback(() => {
@@ -65,17 +66,19 @@ export function useSimpleVoiceInput() {
 
           if (!activeRef.current || submittedRef.current) return;
 
-          accumulatedRef.current = (accumulatedRef.current + ' ' + text).trim();
+          if (text.trim()) {
+            accumulatedRef.current = (accumulatedRef.current + ' ' + text).trim();
+          }
           const displayed = accumulatedRef.current;
           setTranscript(displayed);
 
-          // Détecter "OK"
+          // Détecter "OK" (exact match ou au début/fin)
           const allText = displayed.toLowerCase();
-          const hasOk = /\b(ok|okay|o\s*\.?\s*k)\b|^(ok|okay)$/.test(allText);
+          const hasOk = /\bok\b/.test(allText) || /^ok\s/.test(allText) || /\sok$/.test(allText);
           if (hasOk && onFinalRef.current) {
             console.log('[WHISPER] OK detected! Submitting...');
             submittedRef.current = true;
-            const finalText = allText.replace(/\b(ok|okay|o\s*\.?\s*k)\b|^(ok|okay)$/g, '').trim();
+            const finalText = allText.replace(/\bok\b/g, '').trim();
             const cb = onFinalRef.current;
             activeRef.current = false;
             isRecordingRef.current = false;
@@ -84,15 +87,13 @@ export function useSimpleVoiceInput() {
             return;
           }
 
-          // Relancer avec délai court pour laisser le système respirer
+          // Relancer immédiatement pour rester en recording continu sans interruption
           if (activeRef.current && !submittedRef.current) {
-            await new Promise(resolve => setTimeout(resolve, 50));
             recordWithWhisper();
           }
         } catch (e) {
           console.error('[WHISPER] Error transcribing:', e);
           if (activeRef.current && !submittedRef.current) {
-            await new Promise(resolve => setTimeout(resolve, 50));
             recordWithWhisper();
           }
         }
