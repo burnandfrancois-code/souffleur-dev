@@ -120,11 +120,16 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onend = () => {
-      console.log('[STT] onend - recognition stopped');
-      if (!activeRef.current || submittedRef.current) return;
-      // Relancer uniquement si toujours actif et pas soumis
+      console.log('[STT] onend - activeRef:', activeRef.current, 'submittedRef:', submittedRef.current);
+      if (!activeRef.current || submittedRef.current) {
+        console.log('[STT] onend - NOT restarting');
+        return;
+      }
       setTimeout(() => {
-        if (activeRef.current && !submittedRef.current) createAndStart();
+        if (activeRef.current && !submittedRef.current) {
+          console.log('[STT] onend - restarting recognition');
+          createAndStart();
+        }
       }, 300);
     };
 
