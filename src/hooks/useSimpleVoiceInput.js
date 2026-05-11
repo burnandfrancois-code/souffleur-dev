@@ -121,6 +121,7 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onend = () => {
+      console.log('[STT] onend - recognition stopped');
       if (!activeRef.current || submittedRef.current) return;
       // Chrome a coupé malgré continuous=true — relancer SANS toucher à isRecording
       setTimeout(() => {
