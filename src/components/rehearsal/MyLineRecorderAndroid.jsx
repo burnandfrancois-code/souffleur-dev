@@ -38,7 +38,8 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
 
      if (autoPlay && !autoPlayDoneRef.current) {
        autoPlayDoneRef.current = true;
-       // Sauter directement au micro rouge sans passer par le jaune
+       setIsInitialized(true);
+       // Lancer le recording immédiatement (saute l'écran jaune)
        startRecordingRef.current?.();
      } else {
        setIsInitialized(false);
