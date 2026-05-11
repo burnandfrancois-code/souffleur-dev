@@ -1,132 +1,155 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
 
+/**
+ * Hook de reconnaissance vocale continue.
+ * Reste ouvert jusqu'à ce que l'utilisateur dise "OK".
+ * Chrome peut couper la reconnaissance même en continuous=true — on relance silencieusement sans changer isRecording.
+ */
 export function useSimpleVoiceInput() {
   const [transcript, setTranscript] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState(null);
 
-  const recognitionRef = useRef(null);
+  // Tout l'état mutable est dans des refs pour éviter les re-renders qui perturbent les hooks
   const activeRef = useRef(false);
-  const onFinalRef = useRef(null);
-  const finalAccumulatedRef = useRef('');
   const submittedRef = useRef(false);
+  const recognitionRef = useRef(null);
+  const onFinalRef = useRef(null);
+  const accumulatedRef = useRef('');
 
-  const stopAll = useCallback(() => {
-    activeRef.current = false;
-    submittedRef.current = false;
-    onFinalRef.current = null;
+  const destroyRecognition = useCallback(() => {
     if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
+      const r = recognitionRef.current;
       recognitionRef.current = null;
+      try { r.onstart = null; r.onresult = null; r.onerror = null; r.onend = null; r.abort(); } catch (e) {}
     }
-    setIsRecording(false);
   }, []);
 
-  const start = useCallback((onFinalTranscript) => {
-    stopAll();
+  const createAndStart = useCallback(() => {
+    destroyRecognition();
 
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) {
-      setError({ message: 'Reconnaissance vocale non supportée. Utilisez Chrome ou Safari.' });
-      return;
-    }
+    if (!SR) return;
 
-    activeRef.current = true;
-    submittedRef.current = false;
-    onFinalRef.current = onFinalTranscript;
-    finalAccumulatedRef.current = '';
-    setTranscript('');
-    setError(null);
+    const rec = new SR();
+    rec.lang = 'fr-FR';
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    recognitionRef.current = rec;
 
-    const recognition = new SR();
-    recognition.lang = 'fr-FR';
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-    recognitionRef.current = recognition;
-
-    recognition.onstart = () => {
+    rec.onstart = () => {
+      // On ne change isRecording que lors du vrai premier démarrage
       if (activeRef.current) setIsRecording(true);
     };
 
-    recognition.onresult = (event) => {
+    rec.onresult = (event) => {
       if (!activeRef.current || submittedRef.current) return;
 
-      let newFinal = '';
+      let newFinals = '';
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const t = event.results[i][0].transcript;
-        if (event.results[i].isFinal) newFinal += t + ' ';
-        else interim += t;
+        if (event.results[i].isFinal) {
+          newFinals += event.results[i][0].transcript;
+        } else {
+          interim += event.results[i][0].transcript;
+        }
       }
 
-      if (newFinal) finalAccumulatedRef.current += newFinal;
-      const displayed = (finalAccumulatedRef.current + interim).trim();
+      if (newFinals) accumulatedRef.current += ' ' + newFinals;
+      const displayed = (accumulatedRef.current + ' ' + interim).trim();
       setTranscript(displayed);
 
-      // Détecter "OK" uniquement dans les segments finaux
-      if (newFinal) {
-        const allWords = finalAccumulatedRef.current.trim().split(/\s+/);
-        const hasOk = allWords.some(w => /^(ok|okay)$/i.test(w));
-        if (hasOk && onFinalRef.current) {
-          const finalText = allWords.filter(w => !/^(ok|okay)$/i.test(w)).join(' ').trim();
+      // Détecter "OK" uniquement dans les finals
+      if (newFinals) {
+        const allFinalWords = accumulatedRef.current.trim().split(/\s+/);
+        const hasOk = allFinalWords.some(w => /^(ok|okay)$/i.test(w));
+        if (hasOk && onFinalRef.current && !submittedRef.current) {
+          const finalText = allFinalWords.filter(w => !/^(ok|okay)$/i.test(w)).join(' ').trim();
           if (finalText) {
             submittedRef.current = true;
             const cb = onFinalRef.current;
-            stopAll();
+            // Arrêter proprement puis appeler le callback
+            activeRef.current = false;
+            destroyRecognition();
+            setIsRecording(false);
             cb(finalText);
           }
         }
       }
     };
 
-    recognition.onerror = (event) => {
+    rec.onerror = (event) => {
       if (!activeRef.current) return;
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        activeRef.current = false;
+        destroyRecognition();
+        setIsRecording(false);
         setError({ message: 'Permission micro refusée. Autorisez le microphone dans votre navigateur.' });
-        stopAll();
-        return;
       }
-      // Pour no-speech / network / audio-capture : ignorer, onend va relancer
+      // no-speech / network : onend va relancer
     };
 
-    recognition.onend = () => {
+    rec.onend = () => {
       if (!activeRef.current || submittedRef.current) return;
-      // Chrome coupe parfois même en continuous=true — on relance silencieusement
-      try {
-        recognitionRef.current = recognition;
-        recognition.start();
-      } catch (e) {
-        // Si on ne peut pas relancer le même objet, on en crée un nouveau
-        setTimeout(() => {
-          if (!activeRef.current || submittedRef.current) return;
-          start(onFinalRef.current);
-        }, 300);
-      }
+      // Chrome a coupé malgré continuous=true — relancer silencieusement
+      // On NE change PAS isRecording pour éviter le clignotement
+      setTimeout(() => {
+        if (!activeRef.current || submittedRef.current) return;
+        createAndStart();
+      }, 150);
     };
 
     try {
-      recognition.start();
+      rec.start();
     } catch (e) {
       setError({ message: 'Erreur démarrage micro : ' + e.message });
-      stopAll();
+      activeRef.current = false;
+      setIsRecording(false);
     }
-  }, [stopAll]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const stop = useCallback(() => {
-    stopAll();
-  }, [stopAll]);
+  const start = useCallback((onFinalTranscript) => {
+    // Stopper proprement d'abord
+    activeRef.current = false;
+    submittedRef.current = false;
+    destroyRecognition();
 
-  const reset = useCallback(() => {
-    stopAll();
-    finalAccumulatedRef.current = '';
+    accumulatedRef.current = '';
+    onFinalRef.current = onFinalTranscript;
     setTranscript('');
     setError(null);
-  }, [stopAll]);
+    setIsRecording(false);
+
+    activeRef.current = true;
+    createAndStart();
+  }, [destroyRecognition, createAndStart]);
+
+  const stop = useCallback(() => {
+    activeRef.current = false;
+    submittedRef.current = false;
+    destroyRecognition();
+    setIsRecording(false);
+  }, [destroyRecognition]);
+
+  const reset = useCallback(() => {
+    activeRef.current = false;
+    submittedRef.current = false;
+    destroyRecognition();
+    accumulatedRef.current = '';
+    onFinalRef.current = null;
+    setTranscript('');
+    setError(null);
+    setIsRecording(false);
+  }, [destroyRecognition]);
 
   useEffect(() => {
-    return () => { stopAll(); };
-  }, [stopAll]);
+    return () => {
+      activeRef.current = false;
+      destroyRecognition();
+    };
+  }, [destroyRecognition]);
 
   return { transcript, isRecording, error, start, stop, reset };
 }
