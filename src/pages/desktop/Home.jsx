@@ -49,6 +49,27 @@ export default function Home() {
     
     (async () => {
       try {
+        // Vérifier si on a un scriptId en paramètres (pour modifier le rôle)
+        const scriptId = urlParams.get('scriptId');
+        if (scriptId) {
+          const scripts = await base44.entities.Script.filter({ id: scriptId });
+          if (scripts && scripts.length > 0) {
+            const script = scripts[0];
+            setEditingScriptId(script.id);
+            setParsedScript({
+              title: script.title,
+              characters: script.characters || [],
+              lines: script.lines || []
+            });
+            setSelectedCharacter(script.my_character || '');
+            setCharacterGenders(script.character_genders || {});
+            setFileUrl(script.file_url || '');
+            setStep('character');
+          }
+          setIsLoadingLast(false);
+          return;
+        }
+        
         const scripts = await base44.entities.Script.list('-created_date', 1);
         if (scripts && scripts.length > 0) setLastScript(scripts[0]);
       } catch (e) {
