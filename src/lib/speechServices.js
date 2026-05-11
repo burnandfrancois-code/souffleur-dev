@@ -2,6 +2,7 @@ let audioContextDesktop = null;
 let audioContextAndroid = null;
 let currentUtterance = null;
 let mediaStream = null;
+let androidInitialized = false;
 
 export async function unlockAudioForDesktop() {
   try {
@@ -24,9 +25,15 @@ export async function unlockAudioContextDesktop() {
 
 export async function unlockAudioForAndroid() {
   try {
-    if (!mediaStream) {
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Initialiser une seule fois
+    if (!androidInitialized) {
+      if (!mediaStream) {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('[TTS] Android media stream unlocked');
+      }
+      androidInitialized = true;
     }
+    
     if (!audioContextAndroid) {
       audioContextAndroid = new (window.AudioContext || window.webkitAudioContext)();
     }
