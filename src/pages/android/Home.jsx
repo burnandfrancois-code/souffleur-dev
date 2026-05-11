@@ -94,9 +94,9 @@ export default function AndroidHome() {
     setLogs([]);
     
     try {
-      // Timeout global: 90s max (fallback si le backend traîne)
+      // Timeout global: 120s max
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Analyse bloquée — le backend ne répond pas. Essayez avec un fichier plus petit.')), 90000)
+        setTimeout(() => reject(new Error('Analyse bloquée — le backend ne répond pas. Essayez avec un fichier plus petit.')), 120000)
       );
 
       const parsePromise = parseScriptWithLLM(url, uploadedFileName, (progressValue) => {
@@ -108,9 +108,11 @@ export default function AndroidHome() {
       const result = await Promise.race([parsePromise, timeoutPromise]);
       
       if (!result?.characters || result.characters.length === 0) {
-        toast.error('Impossible d\'extraire les personnages. Vérifiez le fichier.');
-        setIsProcessing(false);
-        return;
+        throw new Error('Aucun personnage trouvé. Vérifiez le format du fichier.');
+      }
+      
+      if (!result?.lines || result.lines.length === 0) {
+        throw new Error('Aucune réplique trouvée. Le fichier est peut-être vide.');
       }
       
       const initialGenders = {};
@@ -134,9 +136,10 @@ export default function AndroidHome() {
       setStep('summary');
       navigate('/android/?step=summary', { replace: true });
     } catch (err) {
-      toast.error('Erreur : ' + (err?.message || 'Impossible d\'analyser le fichier'));
-    } finally {
+      console.error('[Android Home] Error:', err);
       setIsProcessing(false);
+      const errorMsg = err?.message || 'Impossible d\'analyser le fichier';
+      toast.error(errorMsg);
     }
   };
 
