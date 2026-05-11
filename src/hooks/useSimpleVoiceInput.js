@@ -170,6 +170,7 @@ export function useSimpleVoiceInput() {
     }
 
     activeRef.current = true;
+    setRecording(true); // Mettre à true immédiatement — ne pas attendre onstart
     createAndStart();
   }, [destroyRecognition, createAndStart]);
 
