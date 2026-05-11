@@ -50,21 +50,15 @@ export function useSimpleVoiceInput() {
     recognitionRef.current = rec;
 
     rec.onstart = () => {
-      console.log('[STT] onstart');
       if (activeRef.current) {
         isRecordingRef.current = true;
         setIsRecording(true);
       }
     };
 
-    rec.onsoundstart = () => console.log('[STT] onsoundstart — son détecté');
     rec.onspeechstart = () => {
-      console.log('[STT] onspeechstart — parole détectée');
       setError(null); // Effacer les erreurs précédentes
     };
-    rec.onspeechend = () => console.log('[STT] onspeechend');
-    rec.onsoundend = () => console.log('[STT] onsoundend');
-    rec.onnomatch = () => console.log('[STT] onnomatch');
 
     rec.onresult = (event) => {
       if (!activeRef.current || submittedRef.current) return;
@@ -83,12 +77,8 @@ export function useSimpleVoiceInput() {
 
       if (newFinals) {
         accumulatedRef.current = (accumulatedRef.current + newFinals).trim();
-        console.log('[STT] FINAL:', accumulatedRef.current);
       }
       const displayed = (accumulatedRef.current + interim).trim();
-      if (displayed !== accumulatedRef.current) {
-        console.log('[STT] interim:', interim.trim());
-      }
       setTranscript(displayed);
 
       // Détecter "OK" dans les segments finaux
@@ -110,7 +100,6 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onerror = (event) => {
-      console.log('[STT] onerror:', event.error, event.message);
       if (!activeRef.current) return;
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
         activeRef.current = false;
@@ -127,7 +116,6 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onend = () => {
-      console.log('[STT] onend — active:', activeRef.current, 'submitted:', submittedRef.current);
       if (!activeRef.current || submittedRef.current) return;
       // Chrome a coupé malgré continuous=true — relancer SANS toucher à isRecording
       setTimeout(() => {
