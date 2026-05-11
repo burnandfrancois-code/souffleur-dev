@@ -73,27 +73,23 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
     };
 
     rec.onresult = (event) => {
-      addLog(`🎤 onresult - ${event.results.length} résultats`);
+      addLog(`🎤 onresult - resultIndex: ${event.resultIndex}, total: ${event.results.length}`);
       if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
 
-      // Collecter tous les résultats finaux
-      for (let i = 0; i < event.results.length; i++) {
+      // Collecter UNIQUEMENT les nouveaux résultats finaux (depuis resultIndex)
+      for (let i = event.resultIndex; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
           const word = event.results[i][0].transcript.trim();
           addLog(`✓ Final: ${word}`);
-          if (word && !finalWordsRef.current.includes(word)) {
-            finalWordsRef.current.push(word);
-          }
+          if (word) finalWordsRef.current.push(word);
         }
       }
 
-      // Récupérer le dernier résultat intermédiaire
+      // Récupérer le dernier résultat intermédiaire uniquement
       interimRef.current = '';
-      for (let i = event.results.length - 1; i >= 0; i--) {
-        if (!event.results[i].isFinal) {
-          interimRef.current = event.results[i][0].transcript.trim();
-          break;
-        }
+      const last = event.results[event.results.length - 1];
+      if (last && !last.isFinal) {
+        interimRef.current = last[0].transcript.trim();
       }
 
       // Afficher final + interim en temps réel
@@ -155,6 +151,9 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
       }
       
       addLog(`↻ relance ${restartCountRef.current}...`);
+      // Réinitialiser l'accumulation pour éviter la répétition des segments
+      finalWordsRef.current = [];
+      interimRef.current = '';
       const delay = setTimeout(() => startRecordingRef.current(), 500);
     };
 
