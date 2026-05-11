@@ -37,6 +37,7 @@ export function useSimpleVoiceInput() {
   }, []);
 
   const createAndStart = useCallback(() => {
+    if (!activeRef.current || submittedRef.current) return; // Pas de relance si pas actif
     destroyRecognition();
 
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -122,7 +123,11 @@ export function useSimpleVoiceInput() {
 
     rec.onend = () => {
       console.log('[STT] onend - recognition stopped');
-      // Ne rien relancer — le micro doit rester ouvert jusqu'à "OK"
+      if (!activeRef.current || submittedRef.current) return;
+      // Relancer uniquement si toujours actif et pas soumis
+      setTimeout(() => {
+        if (activeRef.current && !submittedRef.current) createAndStart();
+      }, 300);
     };
 
     try {
