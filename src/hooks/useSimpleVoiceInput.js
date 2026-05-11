@@ -6,15 +6,17 @@ export function useSimpleVoiceInput() {
   const [error, setError] = useState(null);
 
   const recognitionRef = useRef(null);
-  const activeRef = useRef(false); // true = on veut rester en écoute
+  const activeRef = useRef(false);
   const onFinalRef = useRef(null);
   const finalAccumulatedRef = useRef('');
+  const submittedRef = useRef(false); // true = on a déjà déclenché le callback
 
   const stopAll = useCallback(() => {
     activeRef.current = false;
     onFinalRef.current = null;
+    submittedRef.current = false;
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (e) {}
+      try { recognitionRef.current.abort(); } catch (e) {}
       recognitionRef.current = null;
     }
     setIsRecording(false);
@@ -30,18 +32,20 @@ export function useSimpleVoiceInput() {
     }
 
     activeRef.current = true;
+    submittedRef.current = false;
     onFinalRef.current = onFinalTranscript;
     finalAccumulatedRef.current = '';
     setTranscript('');
     setError(null);
 
     const launchRecognition = () => {
-      if (!activeRef.current) return;
+      if (!activeRef.current || submittedRef.current) return;
 
       const recognition = new SR();
       recognition.lang = 'fr-FR';
-      recognition.continuous = true;
+      recognition.continuous = false; // plus stable sur Chrome desktop
       recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
       recognitionRef.current = recognition;
 
       recognition.onstart = () => {
@@ -49,26 +53,32 @@ export function useSimpleVoiceInput() {
       };
 
       recognition.onresult = (event) => {
-        if (!activeRef.current) return;
+        if (!activeRef.current || submittedRef.current) return;
 
         let newFinal = '';
         let interim = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
+        for (let i = 0; i < event.results.length; i++) {
           const t = event.results[i][0].transcript;
           if (event.results[i].isFinal) newFinal += t + ' ';
           else interim += t;
         }
-        if (newFinal) finalAccumulatedRef.current += newFinal;
+
+        if (newFinal) {
+          finalAccumulatedRef.current += newFinal;
+        }
+
         const displayed = (finalAccumulatedRef.current + interim).trim();
         setTranscript(displayed);
 
-        // Détecter la commande "OK" dans le texte final
+        // Détecter "OK" dans les nouveaux résultats finaux
         if (newFinal) {
-          const words = finalAccumulatedRef.current.trim().split(/\s+/);
+          const allText = finalAccumulatedRef.current.trim();
+          const words = allText.split(/\s+/);
           const hasOk = words.some(w => /^(ok|okay)$/i.test(w));
           if (hasOk && onFinalRef.current) {
             const finalText = words.filter(w => !/^(ok|okay)$/i.test(w)).join(' ').trim();
             if (finalText) {
+              submittedRef.current = true;
               const cb = onFinalRef.current;
               stopAll();
               cb(finalText);
@@ -83,13 +93,13 @@ export function useSimpleVoiceInput() {
           setError({ message: 'Permission micro refusée. Autorisez le microphone dans votre navigateur.' });
           stopAll();
         }
-        // autres erreurs : onend va relancer
+        // 'no-speech', 'network', etc. → onend relancera
       };
 
       recognition.onend = () => {
-        if (!activeRef.current) return;
-        // relancer automatiquement pour écoute continue
-        setTimeout(launchRecognition, 150);
+        if (!activeRef.current || submittedRef.current) return;
+        // Relancer pour écoute continue (Chrome coupe après ~7-10s sans parole)
+        setTimeout(launchRecognition, 200);
       };
 
       try {
@@ -116,7 +126,7 @@ export function useSimpleVoiceInput() {
 
   useEffect(() => {
     return () => { stopAll(); };
-  }, []);
+  }, [stopAll]);
 
   return { transcript, isRecording, error, start, stop, reset };
 }
