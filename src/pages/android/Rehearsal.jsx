@@ -104,6 +104,16 @@ export default function AndroidRehearsal() {
     speakPartnerLines(index, lines, myCharacter, characterGenders, stripDirections);
   }, [speakPartnerLines, lines, myCharacter, characterGenders]);
 
+  // Lancer la lecture de la première ligne au démarrage
+  useEffect(() => {
+    if (started && lines.length > 0) {
+      const firstLine = lines[0];
+      if (firstLine && normalize(firstLine.character) !== normalize(myCharacter)) {
+        launchSpeakChain(0);
+      }
+    }
+  }, [started, lines, myCharacter, launchSpeakChain]);
+
   const handleSubmitRecording = async (spokenText) => {
     const idx = currentLineIndexRef.current;
     const lineText = currentLineClean.text;
