@@ -42,13 +42,15 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
     speakSessionRef.current += 1;
     compareSessionRef.current += 1;
     setIsSpeakingPartner(false);
-  }, [voiceRec]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const startRecording = useCallback(() => {
     voiceRec.start((finalText) => {
       handleSubmitRecording(finalText);
     });
-  }, [voiceRec]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => { startRecordingRef.current = startRecording; }, [startRecording]);
 
@@ -78,7 +80,8 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
     setPhase('line');
     voiceRec.reset();
     onLineAdvance?.();
-  }, [onLineAdvance, voiceRec]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onLineAdvance]);
 
   // Auto-advance après résultat
   useEffect(() => {
@@ -128,7 +131,8 @@ const MyLineRecorder = forwardRef(function MyLineRecorder({ line, script, myChar
       
       return () => clearTimeout(timer);
     }
-  }, [line, trainingMode, voiceRec.reset]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [line, trainingMode]);
 
   const isRecording = voiceRec.isRecording;
   const handleMicToggle = () => {
