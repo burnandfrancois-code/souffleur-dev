@@ -48,12 +48,12 @@ const MyLineRecorderAndroidWhisper = forwardRef(function MyLineRecorderAndroidWh
     onSubmit(result);
   };
 
-  // Auto-advance si >= 80% et pas de mots manquants
+  // Auto-advance si >= 90% sans mots manquants
   useEffect(() => {
     if (phase === 'result' && result) {
       const accuracy = result.accuracy ?? 0;
       const hasMissingWords = (result.word_results || []).some(w => w.status === 'missing');
-      const shouldAdvance = (result.perfect || accuracy >= 80) && !hasMissingWords;
+      const shouldAdvance = (result.perfect || accuracy >= 90) && !hasMissingWords;
       
       if (shouldAdvance) {
         const timer = setTimeout(() => {
