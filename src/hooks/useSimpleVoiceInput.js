@@ -89,11 +89,15 @@ export function useSimpleVoiceInput() {
 
       // Détecter "OK" dans les segments finaux
       if (newFinals && !submittedRef.current) {
-        const allFinalWords = accumulatedRef.current.trim().split(/\s+/);
-        const hasOk = allFinalWords.some(w => /^(ok|okay)$/i.test(w));
+        const allFinalText = accumulatedRef.current.toLowerCase();
+        console.log('[STT] Checking for OK in:', allFinalText);
+        // Accepter "ok", "okay", "o k", espacé ou pas
+        const hasOk = /\b(ok|okay|o\s*k)\b/.test(allFinalText);
         if (hasOk && onFinalRef.current) {
+          console.log('[STT] OK detected! Submitting...');
           submittedRef.current = true;
-          const finalText = allFinalWords.filter(w => !/^(ok|okay)$/i.test(w)).join(' ').trim();
+          // Enlever "ok"/"okay" du texte final
+          const finalText = allFinalText.replace(/\b(ok|okay|o\s*k)\b/g, '').trim();
           const cb = onFinalRef.current;
           activeRef.current = false;
           destroyRecognition();
