@@ -87,19 +87,17 @@ export function useSimpleVoiceInput() {
       setTranscript(displayed);
 
       // Détecter "OK" dans les segments finaux
-      if (newFinals) {
+      if (newFinals && !submittedRef.current) {
         const allFinalWords = accumulatedRef.current.trim().split(/\s+/);
         const hasOk = allFinalWords.some(w => /^(ok|okay)$/i.test(w));
-        if (hasOk && onFinalRef.current && !submittedRef.current) {
+        if (hasOk && onFinalRef.current) {
+          submittedRef.current = true;
           const finalText = allFinalWords.filter(w => !/^(ok|okay)$/i.test(w)).join(' ').trim();
-          if (finalText) {
-            submittedRef.current = true;
-            const cb = onFinalRef.current;
-            activeRef.current = false;
-            destroyRecognition();
-            setRecording(false);
-            cb(finalText);
-          }
+          const cb = onFinalRef.current;
+          activeRef.current = false;
+          destroyRecognition();
+          setRecording(false);
+          cb(finalText);
         }
       }
     };
