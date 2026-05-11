@@ -67,16 +67,13 @@ export function useSimpleVoiceInput() {
     rec.onnomatch = () => console.log('[STT] onnomatch');
 
     rec.onresult = (event) => {
-      console.log('[STT] onresult — results:', event.results.length, 'isFinal:', event.results[event.results.length - 1]?.isFinal);
       if (!activeRef.current || submittedRef.current) return;
 
       let newFinals = '';
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcript = event.results[i][0].transcript;
-        console.log('[STT]', i, 'isFinal:', event.results[i].isFinal, 'text:', transcript);
         if (event.results[i].isFinal) {
-          // Compter tous les finals (même déjà vus) pour l'accumulation
           newFinals += ' ' + transcript;
           finalCountRef.current = i + 1;
         } else {
@@ -86,10 +83,12 @@ export function useSimpleVoiceInput() {
 
       if (newFinals) {
         accumulatedRef.current = (accumulatedRef.current + newFinals).trim();
-        console.log('[STT] accumulated:', accumulatedRef.current);
+        console.log('[STT] FINAL:', accumulatedRef.current);
       }
       const displayed = (accumulatedRef.current + interim).trim();
-      console.log('[STT] displayed:', displayed);
+      if (displayed !== accumulatedRef.current) {
+        console.log('[STT] interim:', interim.trim());
+      }
       setTranscript(displayed);
 
       // Détecter "OK" dans les segments finaux
