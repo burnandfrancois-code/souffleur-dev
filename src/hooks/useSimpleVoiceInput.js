@@ -8,11 +8,11 @@ export function useSimpleVoiceInput() {
 
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
-  const chunksRef = useRef([]);
+  const allChunksRef = useRef([]); // ALL chunks since start (needed for valid WebM header)
   const sessionIdRef = useRef(0);
   const onFinalRef = useRef(null);
   const pollTimerRef = useRef(null);
-  const accumulatedTranscriptRef = useRef('');
+  const lastTranscriptRef = useRef('');
   const isSendingRef = useRef(false);
 
   const stopPoll = useCallback(() => {
@@ -29,17 +29,16 @@ export function useSimpleVoiceInput() {
     reader.readAsDataURL(blob);
   });
 
-  const sendChunk = useCallback(async (mySession) => {
+  const sendAndTranscribe = useCallback(async (mySession) => {
     if (isSendingRef.current) return;
-    if (chunksRef.current.length === 0) return;
+    if (allChunksRef.current.length === 0) return;
 
-    const chunksCopy = [...chunksRef.current];
-    chunksRef.current = [];
     isSendingRef.current = true;
 
     try {
-      const blob = new Blob(chunksCopy, { type: 'audio/webm' });
-      if (blob.size < 1000) { isSendingRef.current = false; return; }
+      // Send ALL chunks from the start so the WebM header is included
+      const blob = new Blob(allChunksRef.current, { type: 'audio/webm' });
+      if (blob.size < 500) { isSendingRef.current = false; return; }
 
       const base64 = await blobToBase64(blob);
 
@@ -50,14 +49,14 @@ export function useSimpleVoiceInput() {
 
       if (sessionIdRef.current !== mySession) { isSendingRef.current = false; return; }
 
-      if (text) {
-        accumulatedTranscriptRef.current = (accumulatedTranscriptRef.current + ' ' + text).trim();
-        setTranscript(accumulatedTranscriptRef.current);
+      if (text && text !== lastTranscriptRef.current) {
+        lastTranscriptRef.current = text;
+        setTranscript(text);
 
         // Detect "OK" command
-        const words = accumulatedTranscriptRef.current.split(/\s+/);
-        const hasOk = words.some(w => /^(ok|okay|o\.k\.)$/i.test(w));
-        if (hasOk && onFinalRef.current) {
+        const words = text.split(/\s+/);
+        const okIndex = words.findIndex(w => /^(ok|okay|o\.k\.)$/i.test(w));
+        if (okIndex !== -1 && onFinalRef.current) {
           const finalText = words.filter(w => !/^(ok|okay|o\.k\.)$/i.test(w)).join(' ').trim();
           if (finalText) {
             stopPoll();
@@ -68,7 +67,7 @@ export function useSimpleVoiceInput() {
         }
       }
     } catch (e) {
-      console.warn('[useSimpleVoiceInput] sendChunk error:', e);
+      console.warn('[useSimpleVoiceInput] transcribe error:', e);
     } finally {
       isSendingRef.current = false;
     }
@@ -93,8 +92,8 @@ export function useSimpleVoiceInput() {
     const mySession = sessionIdRef.current;
 
     onFinalRef.current = onFinalTranscript;
-    accumulatedTranscriptRef.current = '';
-    chunksRef.current = [];
+    allChunksRef.current = [];
+    lastTranscriptRef.current = '';
     isSendingRef.current = false;
     setTranscript('');
     setError(null);
@@ -130,26 +129,26 @@ export function useSimpleVoiceInput() {
     mediaRecorderRef.current = recorder;
 
     recorder.ondataavailable = (e) => {
-      if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+      if (e.data && e.data.size > 0) allChunksRef.current.push(e.data);
     };
 
     recorder.onerror = (e) => console.error('[useSimpleVoiceInput] recorder error:', e);
 
-    // Collect chunks every 500ms
-    recorder.start(500);
+    // Collect a chunk every 250ms
+    recorder.start(250);
 
-    // Send to Whisper every 4 seconds
+    // Transcribe every 3 seconds
     pollTimerRef.current = setInterval(() => {
-      if (sessionIdRef.current === mySession) sendChunk(mySession);
-    }, 4000);
+      if (sessionIdRef.current === mySession) sendAndTranscribe(mySession);
+    }, 3000);
 
-  }, [stopPoll, sendChunk]);
+  }, [stopPoll, sendAndTranscribe]);
 
   const reset = useCallback(() => {
     stop();
     setTranscript('');
     setError(null);
-    accumulatedTranscriptRef.current = '';
+    lastTranscriptRef.current = '';
   }, [stop]);
 
   useEffect(() => {
