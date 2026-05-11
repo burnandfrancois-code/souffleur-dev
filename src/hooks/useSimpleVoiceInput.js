@@ -53,10 +53,8 @@ export function useSimpleVoiceInput() {
     recognitionRef.current = rec;
 
     rec.onstart = () => {
-      console.log('[STT] onstart');
-      if (activeRef.current && !submittedRef.current) {
-        setRecording(true);
-      }
+      console.log('[STT] onstart - recognition ready');
+      setRecording(true);
     };
 
     rec.onspeechstart = () => {
@@ -145,8 +143,11 @@ export function useSimpleVoiceInput() {
     };
 
     try {
+      console.log('[STT] Calling rec.start()');
       rec.start();
+      console.log('[STT] rec.start() called successfully');
     } catch (e) {
+      console.error('[STT] Error calling rec.start():', e);
       setError({ message: 'Erreur démarrage micro : ' + e.message });
       activeRef.current = false;
       setRecording(false);
@@ -155,9 +156,10 @@ export function useSimpleVoiceInput() {
   }, []);
 
   const start = useCallback(async (onFinalTranscript) => {
+    console.log('[STT] start() called');
     // Arrêter toute synthèse vocale EN COURS avant de démarrer le micro
     window.speechSynthesis?.cancel();
-    await new Promise(resolve => setTimeout(resolve, 200)); // Délai pour que la TTS s'arrête vraiment
+    await new Promise(resolve => setTimeout(resolve, 300)); // Délai plus long pour Android
     
     activeRef.current = false;
     submittedRef.current = false;
@@ -173,15 +175,19 @@ export function useSimpleVoiceInput() {
     // Obtenir la permission micro ET garder le stream actif
     // Chrome avorte SpeechRecognition si aucun stream audio n'est ouvert
     try {
+      console.log('[STT] Requesting getUserMedia');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       micStreamRef.current = stream; // NE PAS arrêter le stream — on le garde ouvert
+      console.log('[STT] Got media stream');
     } catch (e) {
+      console.error('[STT] getUserMedia error:', e);
       setError({ message: 'Permission micro refusée. Autorisez le microphone dans votre navigateur.' });
       return;
     }
 
     activeRef.current = true;
-    setRecording(true); // Mettre à true immédiatement — ne pas attendre onstart
+    setRecording(true);
+    console.log('[STT] About to call createAndStart');
     createAndStart();
   }, [destroyRecognition, createAndStart]);
 
