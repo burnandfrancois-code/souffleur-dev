@@ -172,7 +172,6 @@ export default function AndroidRehearsal() {
   const handleNextLine = () => {
     const nextIndex = currentLineIndex + 1;
     const nextLine = lines[nextIndex];
-    cancelAll();
     setCurrentLineIndex(nextIndex);
     if (!nextLine) return;
     if (normalize(nextLine.character) !== normalize(myCharacter)) {
