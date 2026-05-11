@@ -53,17 +53,22 @@ export function useSimpleVoiceInput() {
       // Déterminer le codec supporté
       let mimeType = 'audio/webm';
       if (!MediaRecorder.isTypeSupported(mimeType)) {
-        console.warn('[WHISPER] audio/webm not supported, trying audio/mp4');
-        mimeType = 'audio/mp4';
+        console.warn('[WHISPER] audio/webm not supported, trying audio/webm;codecs=opus');
+        mimeType = 'audio/webm;codecs=opus';
         if (!MediaRecorder.isTypeSupported(mimeType)) {
-          console.warn('[WHISPER] audio/mp4 not supported, trying default');
-          mimeType = '';
+          console.warn('[WHISPER] audio/webm with opus not supported, trying audio/mp4');
+          mimeType = 'audio/mp4';
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            console.warn('[WHISPER] audio/mp4 not supported, trying default');
+            mimeType = '';
+          }
         }
       }
       console.log('[WHISPER] Using mimeType:', mimeType);
 
       const mediaRecorder = new MediaRecorder(micStreamRef.current, mimeType ? { mimeType } : {});
       const chunks = [];
+      const actualMimeType = mediaRecorder.mimeType; // Récupérer le type réel utilisé
 
       mediaRecorder.ondataavailable = (e) => {
         console.log('[WHISPER] ondataavailable triggered, size:', e.data.size);
@@ -77,7 +82,7 @@ export function useSimpleVoiceInput() {
 
       mediaRecorder.onstop = async () => {
         if (!activeRef.current || submittedRef.current) return;
-        console.log('[WHISPER] onstop triggered, chunks:', chunks.length, 'total size:', chunks.reduce((a, c) => a + c.size, 0));
+        console.log('[WHISPER] onstop triggered, chunks:', chunks.length, 'actualMimeType:', actualMimeType, 'total size:', chunks.reduce((a, c) => a + c.size, 0));
         if (chunks.length === 0) {
           console.warn('[WHISPER] No audio chunks recorded');
           if (activeRef.current && !submittedRef.current) {
@@ -86,8 +91,8 @@ export function useSimpleVoiceInput() {
           return;
         }
 
-        const blob = new Blob(chunks, { type: 'audio/webm' });
-        console.log('[WHISPER] Got audio blob, size:', blob.size);
+        const blob = new Blob(chunks, { type: actualMimeType || 'audio/webm' });
+        console.log('[WHISPER] Got audio blob, size:', blob.size, 'type:', blob.type);
 
         if (blob.size === 0) {
           console.warn('[WHISPER] Blob size is 0, no audio data');
