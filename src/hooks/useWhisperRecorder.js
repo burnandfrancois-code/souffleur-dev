@@ -11,10 +11,12 @@ export function useWhisperRecorder() {
   const chunksRef = useRef([]);
   const onCompleteRef = useRef(null);
   const intervalRef = useRef(null);
+  const transcriptRef = useRef('');
   const isProcessingRef = useRef(false);
+  const isStoppedRef = useRef(false);
 
   const sendChunk = useCallback(async () => {
-    if (isProcessingRef.current || chunksRef.current.length === 0) return;
+    if (isProcessingRef.current || chunksRef.current.length === 0 || isStoppedRef.current) return;
     
     isProcessingRef.current = true;
     const chunks = chunksRef.current;
@@ -33,7 +35,8 @@ export function useWhisperRecorder() {
       const text = response.data?.text || '';
 
       if (text.trim()) {
-        const newTranscript = (transcript + ' ' + text).trim();
+        const newTranscript = (transcriptRef.current + ' ' + text).trim();
+        transcriptRef.current = newTranscript;
         setTranscript(newTranscript);
 
         // Détecte "OK"
@@ -52,7 +55,7 @@ export function useWhisperRecorder() {
     }
 
     isProcessingRef.current = false;
-  }, [transcript]);
+  }, []);
 
   const start = useCallback(async (onComplete) => {
     window.speechSynthesis?.cancel();
@@ -66,9 +69,11 @@ export function useWhisperRecorder() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       micStreamRef.current = stream;
       onCompleteRef.current = onComplete;
+      transcriptRef.current = '';
       setTranscript('');
       setError(null);
       chunksRef.current = [];
+      isStoppedRef.current = false;
 
       mediaRecorderRef.current = new MediaRecorder(stream);
       mediaRecorderRef.current.ondataavailable = (e) => {
@@ -77,14 +82,14 @@ export function useWhisperRecorder() {
       mediaRecorderRef.current.start();
       setIsRecording(true);
 
-      // Envoyer les chunks toutes les 6 secondes
-      intervalRef.current = setInterval(sendChunk, 6000);
+      intervalRef.current = setInterval(() => sendChunk(), 6000);
     } catch (e) {
       setError({ message: 'Erreur micro: ' + e.message });
     }
   }, [sendChunk]);
 
   const stop = useCallback(() => {
+    isStoppedRef.current = true;
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (mediaRecorderRef.current?.state === 'recording') {
       mediaRecorderRef.current.stop();
@@ -101,11 +106,13 @@ export function useWhisperRecorder() {
     setTranscript('');
     setError(null);
     chunksRef.current = [];
+    transcriptRef.current = '';
   }, [stop]);
 
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      isStoppedRef.current = true;
       stop();
     };
   }, [stop]);
