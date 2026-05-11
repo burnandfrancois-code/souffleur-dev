@@ -50,10 +50,23 @@ export function useSimpleVoiceInput() {
 
     console.log('[WHISPER] Starting recording chunk...');
     try {
-      const mediaRecorder = new MediaRecorder(micStreamRef.current, { mimeType: 'audio/webm' });
+      // Déterminer le codec supporté
+      let mimeType = 'audio/webm';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        console.warn('[WHISPER] audio/webm not supported, trying audio/mp4');
+        mimeType = 'audio/mp4';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          console.warn('[WHISPER] audio/mp4 not supported, trying default');
+          mimeType = '';
+        }
+      }
+      console.log('[WHISPER] Using mimeType:', mimeType);
+
+      const mediaRecorder = new MediaRecorder(micStreamRef.current, mimeType ? { mimeType } : {});
       const chunks = [];
 
       mediaRecorder.ondataavailable = (e) => {
+        console.log('[WHISPER] ondataavailable triggered, size:', e.data.size);
         if (e.data.size > 0) chunks.push(e.data);
       };
       
