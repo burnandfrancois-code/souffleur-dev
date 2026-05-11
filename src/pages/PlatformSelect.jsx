@@ -95,58 +95,64 @@ export default function PlatformSelect() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg">
           <motion.button
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1 }}
-            onClick={() => handleSelect('desktop')}
-            className={`p-6 rounded-2xl border-2 transition-all cursor-pointer group ${
-              detected === 'desktop'
-                ? 'border-primary bg-primary/10 ring-2 ring-primary/30'
-                : 'border-border hover:border-primary/50'
-            }`}
-          >
-            <Monitor className="w-8 h-8 text-primary mx-auto mb-3 group-hover:scale-110 transition-transform" />
-            <p className="font-bold text-foreground mb-1">Desktop</p>
-            <p className="text-xs text-muted-foreground mb-2">
-              Version complète avec choix des voix
-            </p>
-            {detected === 'desktop' && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-xs text-primary font-semibold mt-2 flex items-center justify-center gap-1"
-              >
-                ✓ Détecté
-              </motion.div>
-            )}
-          </motion.button>
+             initial={{ opacity: 0, scale: 0.9 }}
+             animate={{ opacity: 1, scale: 1 }}
+             transition={{ delay: 0.1 }}
+             onClick={() => handleSelect('desktop')}
+             className={`p-6 rounded-2xl border-2 transition-all cursor-pointer group ${
+               detected === 'desktop'
+                 ? 'border-primary bg-primary/10 ring-2 ring-primary/30'
+                 : 'border-border hover:border-primary/50'
+             }`}
+           >
+             <Monitor className="w-8 h-8 text-primary mx-auto mb-3 group-hover:scale-110 transition-transform" />
+             <p className="font-bold text-foreground mb-1">Desktop</p>
+             <p className="text-xs text-muted-foreground mb-2">
+               Version complète avec choix des voix
+             </p>
+             <p className="text-xs font-semibold text-primary mb-2">
+               Plus rapide (recommandée)
+             </p>
+             {detected === 'desktop' && (
+               <motion.div
+                 initial={{ opacity: 0, scale: 0.8 }}
+                 animate={{ opacity: 1, scale: 1 }}
+                 className="text-xs text-primary font-semibold mt-2 flex items-center justify-center gap-1"
+               >
+                 ✓ Détecté
+               </motion.div>
+             )}
+           </motion.button>
 
           <motion.button
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            onClick={() => handleSelect('android')}
-            className={`p-6 rounded-2xl border-2 transition-all cursor-pointer group ${
-              detected === 'android'
-                ? 'border-primary bg-primary/10 ring-2 ring-primary/30'
-                : 'border-border hover:border-primary/50'
-            }`}
-          >
-            <Smartphone className="w-8 h-8 text-primary mx-auto mb-3 group-hover:scale-110 transition-transform" />
-            <p className="font-bold text-foreground mb-1">Smartphone</p>
-            <p className="text-xs text-muted-foreground mb-2">
-              Version mobile optimisée
-            </p>
-            {detected === 'android' && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-xs text-primary font-semibold mt-2 flex items-center justify-center gap-1"
-              >
-                ✓ Détecté
-              </motion.div>
-            )}
-          </motion.button>
+             initial={{ opacity: 0, scale: 0.9 }}
+             animate={{ opacity: 1, scale: 1 }}
+             transition={{ delay: 0.2 }}
+             onClick={() => handleSelect('android')}
+             className={`p-6 rounded-2xl border-2 transition-all cursor-pointer group ${
+               detected === 'android'
+                 ? 'border-primary bg-primary/10 ring-2 ring-primary/30'
+                 : 'border-border hover:border-primary/50'
+             }`}
+           >
+             <Smartphone className="w-8 h-8 text-primary mx-auto mb-3 group-hover:scale-110 transition-transform" />
+             <p className="font-bold text-foreground mb-1">Smartphone</p>
+             <p className="text-xs text-muted-foreground mb-2">
+               Version mobile optimisée
+             </p>
+             <p className="text-xs font-semibold text-muted-foreground mb-2">
+               Plus lente que Desktop
+             </p>
+             {detected === 'android' && (
+               <motion.div
+                 initial={{ opacity: 0, scale: 0.8 }}
+                 animate={{ opacity: 1, scale: 1 }}
+                 className="text-xs text-primary font-semibold mt-2 flex items-center justify-center gap-1"
+               >
+                 ✓ Détecté
+               </motion.div>
+             )}
+           </motion.button>
         </div>
 
         {detected && autoRedirecting && (
