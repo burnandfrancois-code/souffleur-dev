@@ -77,18 +77,18 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
       )}
 
       {/* Mic button */}
-      {!isInitialized ? (
-        <div className="rounded-xl border-2 border-primary bg-primary/10 p-6 text-center">
-          <p className="text-sm text-primary mb-3">Prêt à commencer ?</p>
-          <button
-            onClick={() => { setIsInitialized(true); setTimeout(() => startRecording(), 100); }}
-            className="relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all bg-primary shadow-lg shadow-primary/30 hover:scale-105"
-          >
-            <Mic className="w-8 h-8 text-primary-foreground relative z-10" />
-          </button>
-          <p className="text-xs text-muted-foreground mt-3">Cliquez pour activer le micro</p>
-        </div>
-      ) : voiceRec.isRecording ? (
+       {!isInitialized && !voiceRec.isRecording ? (
+         <div className="rounded-xl border-2 border-primary bg-primary/10 p-6 text-center">
+           <p className="text-sm text-primary mb-3">Prêt à commencer ?</p>
+           <button
+             onClick={() => { setIsInitialized(true); setTimeout(() => startRecording(), 100); }}
+             className="relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all bg-primary shadow-lg shadow-primary/30 hover:scale-105"
+           >
+             <Mic className="w-8 h-8 text-primary-foreground relative z-10" />
+           </button>
+           <p className="text-xs text-muted-foreground mt-3">Cliquez pour activer le micro</p>
+         </div>
+       ) : voiceRec.isRecording ? (
         <div className="rounded-xl border-2 border-destructive bg-destructive/10 p-4 text-center">
           <button
             onClick={handleMicToggle}
