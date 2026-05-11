@@ -34,21 +34,26 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
     await new Promise(resolve => setTimeout(resolve, 300));
 
     let index = startIndex;
+    console.log('[PARTNER] Starting speakPartnerLines at index:', startIndex, 'total lines:', lines.length);
     while (session === speakSessionRef.current && index < lines.length) {
       const line = lines[index];
+      console.log('[PARTNER] Line', index, ':', line?.character, '(my char:', myCharacter, ')');
       if (!line) break;
 
       if (norm(line.character) === norm(myCharacter)) {
+        console.log('[PARTNER] Reached my line, stopping');
         onLineChange(index);
         onSpeakingChange(false);
         return;
       }
 
+      console.log('[PARTNER] Speaking partner line at index:', index);
       onLineChange(index);
       onSpeakingChange(true);
       const gender = genders[line.character] || 'male';
       const textToSpeak = stripDirections(line.text);
       
+      console.log('[PARTNER] Text to speak:', textToSpeak.substring(0, 60), 'gender:', gender, 'rate:', speechRateRef.current);
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
