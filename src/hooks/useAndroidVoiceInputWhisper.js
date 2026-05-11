@@ -115,9 +115,9 @@ export function useAndroidVoiceInputWhisper() {
           setTranscript(displayed);
           interimRef.current = '';
 
-          // ===== DÉTECTION "OK" (plus robuste pour Android) =====
-           const allText = displayed.toLowerCase().replace(/[.,!?]/g, '');
-           const hasOk = /\bok\b/.test(allText) || /^ok\s/.test(allText) || /\sok$/.test(allText) || /\so\.k\.?\b/.test(allText);
+          // ===== DÉTECTION "OK" (plus robuste pour Android/Whisper) =====
+           const allText = displayed.toLowerCase().replace(/[.,!?'-]/g, '');
+           const hasOk = /\bok\b/.test(allText) || /^ok\s/.test(allText) || /\sok$/.test(allText) || /\so\.k\.?\b/.test(allText) || /\bd'accord\b/.test(allText);
           
           if (hasOk && onFinalRef.current) {
             // Soumettre le texte nettoyé (sans "ok")
@@ -144,14 +144,14 @@ export function useAndroidVoiceInputWhisper() {
       };
 
       mediaRecorder.start();
-      
-      // Capture chunks de 2.5s pour avoir assez de contenu (y compris "OK")
+
+      // Capture chunks de 5s pour avoir assez de contenu (phrase + "OK")
       // Whisper besoin de suffisamment d'audio pour bien transcrire
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
           mediaRecorder.stop();
         }
-      }, 2500);
+      }, 5000);
 
     } catch (e) {
       setError({ message: 'Erreur micro : ' + e.message });
