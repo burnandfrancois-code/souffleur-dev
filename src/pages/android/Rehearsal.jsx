@@ -89,6 +89,16 @@ export default function AndroidRehearsal() {
 
   useEffect(() => () => cancelAll(), [cancelAll]);
 
+  // Auto-launch recording quand on arrive à une ligne du user en phase 'line'
+  useEffect(() => {
+    if (phase === 'line' && isMyLine && myLineRecorderRef.current) {
+      console.log('[REHEARSAL] Auto-launching recording for user line');
+      setTimeout(() => {
+        myLineRecorderRef.current?.startRecording?.();
+      }, 200);
+    }
+  }, [phase, isMyLine]);
+
   // Auto-redirect to home after rehearsal completes
   useEffect(() => {
     if (isFinished) {
