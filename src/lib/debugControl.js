@@ -2,7 +2,7 @@
 // Usage: window.debugControl.toggle() ou window.debugControl.isEnabled()
 
 export const debugControl = {
-  _enabled: false,
+  _enabled: true,  // ACTIVÉ par défaut pour voir les problèmes
   
   toggle() {
     this._enabled = !this._enabled;
