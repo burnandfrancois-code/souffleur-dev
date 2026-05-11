@@ -76,10 +76,9 @@ export function useSimpleVoiceInput() {
         const transcript = event.results[i][0].transcript;
         console.log('[STT]', i, 'isFinal:', event.results[i].isFinal, 'text:', transcript);
         if (event.results[i].isFinal) {
-          // Ignorer les finals déjà comptabilisés dans une session précédente
-          if (i < finalCountRef.current) continue;
-          finalCountRef.current = i + 1;
+          // Compter tous les finals (même déjà vus) pour l'accumulation
           newFinals += ' ' + transcript;
+          finalCountRef.current = i + 1;
         } else {
           interim += ' ' + transcript;
         }
