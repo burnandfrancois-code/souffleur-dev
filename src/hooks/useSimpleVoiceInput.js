@@ -77,6 +77,7 @@ export function useSimpleVoiceInput() {
 
       if (newFinals) {
         accumulatedRef.current = (accumulatedRef.current + newFinals).trim();
+        console.log('[STT] FINAL received:', accumulatedRef.current);
       }
       const displayed = (accumulatedRef.current + interim).trim();
       setTranscript(displayed);
@@ -100,6 +101,7 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onerror = (event) => {
+      console.error('[STT] Error event:', event.error);
       if (!activeRef.current) return;
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
         activeRef.current = false;
