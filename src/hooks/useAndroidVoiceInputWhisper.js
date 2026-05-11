@@ -115,9 +115,9 @@ export function useAndroidVoiceInputWhisper() {
           setTranscript(displayed);
           interimRef.current = '';
 
-          // ===== DÉTECTION "OK" (identique à Desktop) =====
-          const allText = displayed.toLowerCase();
-          const hasOk = /\bok\b/.test(allText) || /^ok\s/.test(allText) || /\sok$/.test(allText);
+          // ===== DÉTECTION "OK" (plus robuste pour Android) =====
+           const allText = displayed.toLowerCase().replace(/[.,!?]/g, '');
+           const hasOk = /\bok\b/.test(allText) || /^ok\s/.test(allText) || /\sok$/.test(allText) || /\so\.k\.?\b/.test(allText);
           
           if (hasOk && onFinalRef.current) {
             // Soumettre le texte nettoyé (sans "ok")
