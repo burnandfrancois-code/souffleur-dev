@@ -8,7 +8,7 @@ import { useSimpleVoiceInput } from '@/hooks/useSimpleVoiceInput';
 const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay }, ref) {
   const voiceRec = useSimpleVoiceInput();
   const [sttError, setSttError] = useState(null);
-  const [hasStarted, setHasStarted] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const autoPlayDoneRef = useRef(false);
   const startRecordingRef = useRef(null);
 
@@ -34,10 +34,12 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
   useEffect(() => {
     voiceRec.reset();
     setSttError(null);
+    setIsInitialized(false);
     autoPlayDoneRef.current = false;
 
     if (autoPlay && !autoPlayDoneRef.current) {
       autoPlayDoneRef.current = true;
+      setIsInitialized(true);
       setTimeout(() => startRecordingRef.current?.(), 100);
     }
   }, [line, autoPlay, voiceRec.reset]);
@@ -73,7 +75,18 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
       )}
 
       {/* Mic button */}
-      {voiceRec.isRecording ? (
+      {!isInitialized ? (
+        <div className="rounded-xl border-2 border-primary bg-primary/10 p-6 text-center">
+          <p className="text-sm text-primary mb-3">Prêt à commencer ?</p>
+          <button
+            onClick={() => { setIsInitialized(true); setTimeout(() => startRecording(), 100); }}
+            className="relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all bg-primary shadow-lg shadow-primary/30 hover:scale-105"
+          >
+            <Mic className="w-8 h-8 text-primary-foreground relative z-10" />
+          </button>
+          <p className="text-xs text-muted-foreground mt-3">Cliquez pour activer le micro</p>
+        </div>
+      ) : voiceRec.isRecording ? (
         <div className="rounded-xl border-2 border-destructive bg-destructive/10 p-4 text-center">
           <button
             onClick={handleMicToggle}
@@ -85,15 +98,14 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
           <p className="text-sm font-semibold text-destructive">🎙 Parlez !</p>
         </div>
       ) : (
-        <div className="rounded-xl border-2 border-primary bg-primary/10 p-6 text-center">
-          <p className="text-sm text-primary mb-3">Prêt à commencer ?</p>
+        <div className="rounded-xl border-2 border-primary bg-primary/10 p-4 text-center">
           <button
             onClick={handleMicToggle}
-            className="relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all bg-primary shadow-lg shadow-primary/30 hover:scale-105"
+            className="relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all mb-3 bg-primary shadow-lg shadow-primary/30 hover:scale-105"
           >
             <Mic className="w-8 h-8 text-primary-foreground relative z-10" />
           </button>
-          <p className="text-xs text-muted-foreground mt-3">Cliquez pour activer le micro</p>
+          <p className="text-sm font-semibold text-primary">🎤 C'est votre tour</p>
         </div>
       )}
 
