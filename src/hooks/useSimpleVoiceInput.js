@@ -150,9 +150,9 @@ export function useSimpleVoiceInput() {
             return;
           }
 
-          // Relancer immédiatement pour rester en recording continu sans interruption
+          // Relancer avec délai pour éviter le rate limiting
           if (activeRef.current && !submittedRef.current) {
-            setTimeout(() => recordWithWhisper(), 200);
+            setTimeout(() => recordWithWhisper(), 1500);
           }
         } catch (e) {
           console.error('[WHISPER] Error transcribing:', e);
@@ -178,7 +178,7 @@ export function useSimpleVoiceInput() {
       console.error('[WHISPER] Recording error:', e);
       setError({ message: 'Erreur micro : ' + e.message });
       if (activeRef.current && !submittedRef.current) {
-        setTimeout(() => recordWithWhisper(), 1000);
+        setTimeout(() => recordWithWhisper(), 1500);
       }
     }
   }, [setError, setRecording]);
