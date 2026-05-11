@@ -31,18 +31,20 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
   }), [startRecording, voiceRec.stop, voiceRec.reset]);
 
   // Reset quand la ligne change — lancer l'enregistrement automatiquement si autoPlay
-  useEffect(() => {
-    voiceRec.reset();
-    setSttError(null);
-    setIsInitialized(false);
-    autoPlayDoneRef.current = false;
+   useEffect(() => {
+     voiceRec.reset();
+     setSttError(null);
+     autoPlayDoneRef.current = false;
 
-    if (autoPlay && !autoPlayDoneRef.current) {
-      autoPlayDoneRef.current = true;
-      setIsInitialized(true);
-      setTimeout(() => startRecordingRef.current?.(), 100);
-    }
-  }, [line, autoPlay, voiceRec.reset]);
+     if (autoPlay && !autoPlayDoneRef.current) {
+       autoPlayDoneRef.current = true;
+       setIsInitialized(true);
+       // Lancer immédiatement sans délai
+       startRecordingRef.current?.();
+     } else {
+       setIsInitialized(false);
+     }
+   }, [line, autoPlay, voiceRec.reset]);
 
   // Copier les erreurs du hook
   useEffect(() => {
