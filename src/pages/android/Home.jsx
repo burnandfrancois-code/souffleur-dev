@@ -194,7 +194,6 @@ export default function AndroidHome() {
             <Theater className="w-6 h-6 text-primary shrink-0" />
             <div>
               <h1 className="text-base font-bold text-foreground">SOUFFLEUR</h1>
-              <p className="text-xs text-muted-foreground">by Happy Good Lines</p>
             </div>
           </div>
           <div className="flex items-center gap-1">

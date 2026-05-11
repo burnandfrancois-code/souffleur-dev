@@ -27,9 +27,7 @@ export default function Landing() {
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Theater className="w-7 h-7 text-primary" />
-            <h1 className="text-xl font-bold text-foreground">
-              SOUFFLEUR <span className="text-primary text-sm font-normal">by Happy Good Lines</span>
-            </h1>
+            <h1 className="text-xl font-bold text-foreground">SOUFFLEUR</h1>
           </div>
           <Button onClick={handleLogin} className="bg-primary text-primary-foreground gap-2">
             Se connecter
