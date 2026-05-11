@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Theater, Loader2, Mic, ChevronRight, ChevronLeft, List, X, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { unlockAudioForAndroid, stopSpeaking } from '@/lib/speechServices';
+import { unlockAudioForAndroid, stopSpeaking, speakText } from '@/lib/speechServices';
 import { compareTexts } from '@/lib/scriptParser';
 import PartnerLine from '@/components/rehearsal/PartnerLine';
 import MyLineRecorder from '@/components/rehearsal/MyLineRecorderAndroid';
@@ -240,6 +240,11 @@ export default function AndroidRehearsal() {
           try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             stream.getTracks().forEach(track => track.stop());
+            
+            // Test TTS simple
+            await unlockAudioForAndroid();
+            await speakText('Bienvenue, commençons le répétition.', 'fr-FR', 'female', 1);
+            
             setStarted(true);
             const firstLine = lines[0];
             if (firstLine && normalize(firstLine.character) !== normalize(myCharacter)) {
