@@ -133,7 +133,7 @@ export default function PlatformSelect() {
             }`}
           >
             <Smartphone className="w-8 h-8 text-primary mx-auto mb-3 group-hover:scale-110 transition-transform" />
-            <p className="font-bold text-foreground mb-1">Smart Phone</p>
+            <p className="font-bold text-foreground mb-1">Smartphone</p>
             <p className="text-xs text-muted-foreground mb-2">
               Version mobile optimisée
             </p>
