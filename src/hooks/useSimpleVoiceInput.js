@@ -50,6 +50,7 @@ export function useSimpleVoiceInput() {
     recognitionRef.current = rec;
 
     rec.onstart = () => {
+      console.log('[STT] onstart');
       if (activeRef.current) {
         isRecordingRef.current = true;
         setIsRecording(true);
@@ -57,10 +58,12 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onspeechstart = () => {
-      setError(null); // Effacer les erreurs précédentes
+      console.log('[STT] onspeechstart');
+      setError(null);
     };
 
     rec.onresult = (event) => {
+      console.log('[STT] onresult, isFinal:', event.results[event.results.length - 1]?.isFinal);
       if (!activeRef.current || submittedRef.current) return;
 
       let newFinals = '';
