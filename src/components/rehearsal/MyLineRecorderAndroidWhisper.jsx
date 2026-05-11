@@ -48,6 +48,16 @@ const MyLineRecorderAndroidWhisper = forwardRef(function MyLineRecorderAndroidWh
     onSubmit(result);
   };
 
+  // Auto-advance si >= 90%
+  useEffect(() => {
+    if (phase === 'result' && result && result.accuracy >= 90) {
+      const timer = setTimeout(() => {
+        onSubmit(result);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, result, onSubmit]);
+
   const handleSkipClick = () => {
     voiceRec.stop();
     voiceRec.reset();
