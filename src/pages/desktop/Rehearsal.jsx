@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { speakText, stopSpeaking } from '@/lib/speechServices';
 import RehearsalProgress from '@/components/rehearsal/RehearsalProgress';
 import PartnerLine from '@/components/rehearsal/PartnerLine';
-import MyLineRecorder from '@/components/rehearsal/MyLineRecorder';
+import MyLineRecorder from '@/components/rehearsal/MyLineRecorderV2';
 import SessionSummary from '@/components/rehearsal/SessionSummary';
 import MyLinesPanel from '@/components/rehearsal/MyLinesPanel';
 

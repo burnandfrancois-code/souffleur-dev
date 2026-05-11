@@ -10,6 +10,7 @@ import { compareTexts } from '@/lib/scriptParser';
 import PartnerLine from '@/components/rehearsal/PartnerLine';
 import MyLineRecorder from '@/components/rehearsal/MyLineRecorderAndroid';
 import ComparisonResult from '@/components/rehearsal/ComparisonResultAndroid';
+import { useSimpleVoiceInput } from '@/hooks/useSimpleVoiceInput';
 import RehearsalProgress from '@/components/rehearsal/RehearsalProgress';
 import SessionSummary from '@/components/rehearsal/SessionSummary';
 import VoiceAccess from '@/components/rehearsal/VoiceAccess';
@@ -44,6 +45,11 @@ export default function AndroidRehearsal() {
   const currentLineIndexRef = useRef(currentLineIndex);
   const myLineRecorderRef = useRef(null);
   const compareSessionRef = useRef(0);
+
+  const commandVoice = useSimpleVoiceInput();
+  const commandActiveRef = useRef(false);
+  const handleContinueRef = useRef(null);
+  const handleRetryRef = useRef(null);
 
   useEffect(() => {
     currentLineIndexRef.current = currentLineIndex;
@@ -106,12 +112,46 @@ export default function AndroidRehearsal() {
     }
   }, [phase, comparisonResult]);
 
+  const stopCommandListening = useCallback(() => {
+    commandActiveRef.current = false;
+    commandVoice.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const startCommandListening = useCallback(() => {
+    commandActiveRef.current = true;
+    commandVoice.start((text) => {
+      if (!commandActiveRef.current) return;
+      const t = text.toLowerCase().trim();
+      if (/passer/.test(t)) {
+        commandActiveRef.current = false;
+        handleContinueRef.current?.();
+      } else if (/r[eé]essayer/.test(t)) {
+        commandActiveRef.current = false;
+        handleRetryRef.current?.();
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Lancer/arrêter l'écoute des commandes selon la phase
+  useEffect(() => {
+    if (phase === 'result') {
+      setTimeout(() => startCommandListening(), 400);
+    } else {
+      stopCommandListening();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
   const handleRetry = () => {
+    stopCommandListening();
     setComparisonResult(null);
     setPhase('line');
   };
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
+    stopCommandListening();
     const idx = currentLineIndexRef.current;
     if (comparisonResult?.perfect) setCompletedMyLines(prev => new Set([...prev, idx]));
     const nextIndex = idx + 1;
@@ -123,7 +163,11 @@ export default function AndroidRehearsal() {
     if (normalize(nextLine.character) !== normalize(myCharacter)) {
       speakPartnerLines(nextIndex, lines, myCharacter, characterGenders, stripDirections);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comparisonResult, lines, myCharacter, characterGenders, stopCommandListening]);
+
+  useEffect(() => { handleContinueRef.current = handleContinue; }, [handleContinue]);
+  useEffect(() => { handleRetryRef.current = handleRetry; }, [handleRetry]);
 
   const handleNextLine = () => {
     const nextIndex = currentLineIndex + 1;
