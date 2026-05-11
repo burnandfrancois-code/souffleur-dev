@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Theater, Loader2, Mic } from 'lucide-react';
+import { ArrowLeft, Theater, Loader2, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { speakText, stopSpeaking } from '@/lib/speechServices';
-import { compareTexts } from '@/lib/scriptParser';
-import ComparisonResult from '@/components/rehearsal/ComparisonResult';
+import RehearsalProgress from '@/components/rehearsal/RehearsalProgress';
+import PartnerLine from '@/components/rehearsal/PartnerLine';
+import MyLineRecorder from '@/components/rehearsal/MyLineRecorder';
 import SessionSummary from '@/components/rehearsal/SessionSummary';
-import { useSimpleVoiceInput } from '@/hooks/useSimpleVoiceInput';
+import MyLinesPanel from '@/components/rehearsal/MyLinesPanel';
 
 export default function DesktopRehearsal() {
   const navigate = useNavigate();
@@ -23,13 +24,14 @@ export default function DesktopRehearsal() {
   }, [scriptId, navigate]);
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [phase, setPhase] = useState('line');
-  const [result, setResult] = useState(null);
-  const [completed, setCompleted] = useState(new Set());
-  const [scores, setScores] = useState([]);
+  const [completedMyLines, setCompletedMyLines] = useState(0);
+  const [lineScores, setLineScores] = useState([]);
+  const [showMyLines, setShowMyLines] = useState(false);
   const [started, setStarted] = useState(false);
+  const [isSpeakingPartner, setIsSpeakingPartner] = useState(false);
 
-  const voiceRec = useSimpleVoiceInput();
+  const myLineRecorderRef = useRef(null);
+  const speakAbortRef = useRef(null);
 
   const { data: script, isLoading } = useQuery({
     queryKey: ['script', scriptId],
@@ -48,83 +50,54 @@ export default function DesktopRehearsal() {
   const myLineCount = lines.filter(l => normalize(l.character) === normalize(myCharacter)).length;
   const isFinished = lines.length > 0 && currentIndex >= lines.length;
 
-  const stripDirections = (text) => 
+  const stripDirections = (text) =>
     text?.replace(/\([^)]*\)?/g, '').replace(/\[[^\]]*\]?/g, '').replace(/\s+/g, ' ').trim() || '';
 
-  const submitRecording = useCallback(async (text) => {
-    voiceRec.stop();
-    setPhase('comparing');
-    const compResult = await compareTexts(stripDirections(currentLine.text), text);
-    setResult(compResult);
-    setScores(prev => [...prev, compResult.accuracy ?? 0]);
-    if (compResult.perfect) {
-      setCompleted(prev => new Set([...prev, currentIndex]));
+  // Auto-play partner lines
+  const speakPartnerLine = useCallback(async (line) => {
+    if (speakAbortRef.current) speakAbortRef.current.abort();
+    const controller = new AbortController();
+    speakAbortRef.current = controller;
+    const gender = genders[line.character] || 'male';
+    setIsSpeakingPartner(true);
+    await speakText(stripDirections(line.text), 'fr-FR', gender, 1, controller.signal);
+    if (!controller.signal.aborted) {
+      setIsSpeakingPartner(false);
     }
-    setPhase('result');
-  }, [currentLine, currentIndex, voiceRec]);
+  }, [genders]);
 
-  // Auto-start recording when arriving at my line
+  // When line changes, auto-play partner or auto-record my line
   useEffect(() => {
-    if (phase === 'line' && isMyLine && started && !voiceRec.isRecording) {
-      const timer = setTimeout(() => {
-        voiceRec.start((finalText) => {
-          submitRecording(finalText);
-        });
-      }, 100);
-      return () => clearTimeout(timer);
+    if (!started || !currentLine) return;
+    if (!isMyLine) {
+      speakPartnerLine(currentLine);
     }
-  }, [phase, isMyLine, started, voiceRec, submitRecording]);
+  }, [currentIndex, started]);
 
-  // Auto-advance on perfect
-  useEffect(() => {
-    if (phase !== 'result' || !result) return;
-    const hasMissing = (result.word_results || []).some(w => w.status === 'missing');
-    const shouldAdvance = (result.perfect || (result.accuracy ?? 0) >= 80) && !hasMissing;
-    if (shouldAdvance) {
-      const timer = setTimeout(() => handleContinue(), 1500);
-      return () => clearTimeout(timer);
+  const handleLineAdvance = useCallback((score) => {
+    if (score !== undefined) {
+      setLineScores(prev => [...prev, score]);
+      if (score >= 80) setCompletedMyLines(prev => prev + 1);
     }
-  }, [phase, result]);
-
-  const handleContinue = useCallback(() => {
-    setResult(null);
-    setPhase('line');
-    voiceRec.reset();
+    if (speakAbortRef.current) speakAbortRef.current.abort();
+    setIsSpeakingPartner(false);
     setCurrentIndex(prev => prev + 1);
-  }, [voiceRec]);
+  }, []);
 
-  const handleRetry = useCallback(() => {
-    setResult(null);
-    setPhase('line');
-    voiceRec.reset();
-    setTimeout(() => {
-      voiceRec.start((finalText) => {
-        submitRecording(finalText);
-      });
-    }, 200);
-  }, [voiceRec, submitRecording]);
+  const handleJumpTo = useCallback((index) => {
+    if (speakAbortRef.current) speakAbortRef.current.abort();
+    setIsSpeakingPartner(false);
+    myLineRecorderRef.current?.reset();
+    setCurrentIndex(index);
+  }, []);
 
-  const handleNext = () => {
-    voiceRec.stop();
-    setResult(null);
-    setPhase('line');
-    voiceRec.reset();
-    setCurrentIndex(prev => prev + 1);
+  const handleRestart = () => {
+    if (speakAbortRef.current) speakAbortRef.current.abort();
+    setCurrentIndex(0);
+    setCompletedMyLines(0);
+    setLineScores([]);
+    setStarted(false);
   };
-
-  const speakPartner = useCallback(async () => {
-    voiceRec.stop();
-    const gender = genders[currentLine.character] || 'male';
-    await speakText(stripDirections(currentLine.text), 'fr-FR', gender, 1);
-    // Auto-restart recording if it was my turn
-    if (isMyLine) {
-      setTimeout(() => {
-        voiceRec.start((finalText) => {
-          submitRecording(finalText);
-        });
-      }, 300);
-    }
-  }, [currentLine, genders, isMyLine, voiceRec, submitRecording]);
 
   if (isLoading) {
     return (
@@ -156,105 +129,78 @@ export default function DesktopRehearsal() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      {/* Header */}
       <header className="sticky top-0 z-10 bg-background/80 backdrop-blur border-b border-border px-4 py-3">
         <div className="max-w-3xl mx-auto">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
               <Button variant="ghost" size="icon" onClick={() => navigate('/desktop/')}>
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <div>
-                <h1 className="text-lg font-bold">{script.title}</h1>
+                <h1 className="text-lg font-bold leading-tight">{script.title}</h1>
                 <p className="text-xs text-primary">Rôle: {myCharacter}</p>
               </div>
             </div>
-            <Theater className="w-6 h-6 text-primary" />
+            <Button variant="ghost" size="icon" onClick={() => setShowMyLines(true)}>
+              <List className="w-5 h-5" />
+            </Button>
           </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Réplique {currentIndex + 1} / {lines.length}</span>
-            <span>{completed.size} / {myLineCount} validées</span>
-          </div>
+          {!isFinished && (
+            <RehearsalProgress
+              currentIndex={currentIndex}
+              totalLines={lines.length}
+              myLineCount={myLineCount}
+              completedMyLines={completedMyLines}
+            />
+          )}
         </div>
       </header>
 
+      {/* Main content */}
       <main className="flex-1 overflow-y-auto px-4 py-6">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto space-y-4">
           <AnimatePresence mode="wait">
             {isFinished ? (
               <SessionSummary
-                lineScores={scores}
+                key="summary"
+                lineScores={lineScores}
                 myLineCount={myLineCount}
-                completedMyLines={completed.size}
+                completedMyLines={completedMyLines}
                 scriptTitle={script.title}
-                onRestart={() => {
-                  setCurrentIndex(0);
-                  setCompleted(new Set());
-                  setScores([]);
-                  setPhase('line');
-                  voiceRec.reset();
-                }}
+                onRestart={handleRestart}
               />
             ) : currentLine && (
-              <motion.div key={currentIndex} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-                <div className="text-center text-sm text-muted-foreground">
-                  {currentLine.act && `Acte ${currentLine.act}`}{currentLine.scene && ` • Scène ${currentLine.scene}`}
-                </div>
+              <motion.div key={currentIndex} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+                {/* Act/Scene label */}
+                {(currentLine.act || currentLine.scene) && (
+                  <p className="text-xs text-center text-muted-foreground mb-3">
+                    {currentLine.act && `Acte ${currentLine.act}`}
+                    {currentLine.scene && ` • Scène ${currentLine.scene}`}
+                  </p>
+                )}
 
                 {isMyLine ? (
-                  <>
-                    {phase === 'line' && (
-                      <div className="space-y-4">
-                        <div className="rounded-2xl border-2 border-primary bg-primary/10 p-8 text-center">
-                          <p className="text-sm text-muted-foreground mb-3">Votre réplique:</p>
-                          <p className="text-lg leading-relaxed text-foreground mb-6">{currentLine.text}</p>
-                          <div className={`rounded-full w-20 h-20 mx-auto flex items-center justify-center transition-all ${
-                            voiceRec.isRecording ? 'bg-destructive animate-pulse' : 'bg-primary'
-                          }`}>
-                            <div className="text-white text-2xl">🎤</div>
-                          </div>
-                          <p className="text-sm text-primary font-semibold mt-4">
-                            {voiceRec.isRecording ? '🔴 ENREGISTREMENT' : 'Microphone prêt'}
-                          </p>
-                        </div>
-
-                        {voiceRec.transcript && (
-                          <div className="bg-background border border-border rounded-lg p-4">
-                            <p className="text-sm text-foreground">{voiceRec.transcript}</p>
-                          </div>
-                        )}
-
-                        <Button onClick={handleNext} variant="outline" className="w-full">
-                          Passer cette réplique
-                        </Button>
-                      </div>
-                    )}
-
-                    {phase === 'comparing' && (
-                      <div className="flex justify-center py-8">
-                        <Loader2 className="w-6 h-6 text-primary animate-spin" />
-                      </div>
-                    )}
-
-                    {phase === 'result' && result && (
-                      <ComparisonResult
-                        result={result}
-                        transcription={voiceRec.transcript}
-                        onRetry={handleRetry}
-                        onContinue={handleContinue}
-                      />
-                    )}
-                  </>
+                  <MyLineRecorder
+                    ref={myLineRecorderRef}
+                    line={currentLine}
+                    script={script}
+                    myCharacter={myCharacter}
+                    onLineAdvance={handleLineAdvance}
+                  />
                 ) : (
-                  <div className="space-y-4">
-                    <div className="rounded-2xl bg-secondary/50 border border-border p-4">
-                      <p className="text-xs text-muted-foreground mb-2 uppercase">{currentLine.character}</p>
-                      <p className="text-lg leading-relaxed text-foreground mb-4">{currentLine.text}</p>
-                      <Button onClick={speakPartner} variant="outline" className="w-full">
-                        Écouter
-                      </Button>
-                    </div>
-                    <Button onClick={handleNext} className="w-full">
-                      Suivant
+                  <PartnerLine
+                    line={currentLine}
+                    isSpeaking={isSpeakingPartner}
+                    onSpeak={() => speakPartnerLine(currentLine)}
+                  />
+                )}
+
+                {/* Next button for partner lines */}
+                {!isMyLine && (
+                  <div className="mt-4 flex justify-end">
+                    <Button onClick={() => handleLineAdvance()} className="bg-primary text-primary-foreground">
+                      Suivant →
                     </Button>
                   </div>
                 )}
@@ -263,6 +209,19 @@ export default function DesktopRehearsal() {
           </AnimatePresence>
         </div>
       </main>
+
+      {/* My Lines Panel */}
+      <AnimatePresence>
+        {showMyLines && (
+          <MyLinesPanel
+            lines={lines}
+            myCharacter={myCharacter}
+            currentLineIndex={currentIndex}
+            onJumpTo={handleJumpTo}
+            onClose={() => setShowMyLines(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
