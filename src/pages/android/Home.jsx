@@ -228,10 +228,10 @@ export default function AndroidHome() {
           <div className="flex items-center gap-1">
             <button
               onClick={() => navigate('/android/my-scripts')}
-              className="p-2 rounded-full hover:bg-secondary transition-colors"
+              className="px-3 py-1.5 rounded-full hover:bg-secondary transition-colors"
               title="Mes textes"
             >
-              <List className="w-5 h-5 text-foreground" />
+              <span className="text-xs font-semibold text-yellow-400">Textes</span>
             </button>
             <button
               onClick={() => navigate('/android/help')}
