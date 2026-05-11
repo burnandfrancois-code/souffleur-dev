@@ -76,7 +76,16 @@ export function useSimpleVoiceInput() {
         console.log('[WHISPER] Got audio blob, size:', blob.size);
 
         try {
-          const response = await base44.functions.invoke('transcribeAudioV2', { audio: blob });
+          // Convertir le blob en base64
+          const reader = new FileReader();
+          reader.readAsDataURL(blob);
+          const audioBase64 = await new Promise((resolve, reject) => {
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+          });
+          
+          console.log('[WHISPER] Sending audio to transcribeAudioV2, size:', audioBase64.length);
+          const response = await base44.functions.invoke('transcribeAudioV2', { audio: audioBase64 });
           const text = response.data?.transcript || response.data?.text || '';
           console.log('[WHISPER] Transcript:', text, 'response:', response.data);
 
