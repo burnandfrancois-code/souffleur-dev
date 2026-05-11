@@ -130,9 +130,9 @@ export function useAndroidVoiceInputWhisper() {
             return;
           }
 
-          // Relancer avec délai (rate limit : 3 req/min = 20s minimum)
+          // Relancer immédiatement pour capturer plus de phrases
           if (activeRef.current && !submittedRef.current) {
-            setTimeout(() => recordWithWhisper(), 20000);
+            setTimeout(() => recordWithWhisper(), 1500);
           }
         } catch (e) {
           console.error('[WHISPER] Error transcribing:', e);

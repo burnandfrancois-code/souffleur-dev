@@ -40,10 +40,16 @@ export default function AndroidRehearsal() {
   const [showLinesList, setShowLinesList] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
   const [trainingMode, setTrainingMode] = useState(urlParams.get('training') === 'true');
+  const [autoMode, setAutoMode] = useState(true);
+  const [speechRate, setSpeechRate] = useState(1);
 
   const autoAdvanceThreshold = 80;
-  const speechRateRef = useRef(1);
+  const speechRateRef = useRef(speechRate);
   const currentLineIndexRef = useRef(currentLineIndex);
+  
+  useEffect(() => {
+    speechRateRef.current = speechRate;
+  }, [speechRate]);
   const myLineRecorderRef = useRef(null);
   const compareSessionRef = useRef(0);
   const mainScrollRef = useRef(null);
@@ -275,7 +281,54 @@ export default function AndroidRehearsal() {
         <p className="font-body text-xs text-muted-foreground">{myLineCount} répliques à jouer</p>
       </div>
 
-      <div className="flex flex-col gap-3 w-full max-w-xs">
+      <div className="flex flex-col gap-4 w-full max-w-xs">
+        {/* Manuel/Auto selector */}
+        <div className="bg-secondary/50 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase">Mode d'avancement</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setAutoMode(false)}
+              className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                !autoMode
+                  ? 'bg-primary text-primary-foreground'
+                  : 'border border-primary/30 text-muted-foreground hover:bg-primary/10'
+              }`}
+            >
+              Manuel
+            </button>
+            <button
+              onClick={() => setAutoMode(true)}
+              className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                autoMode
+                  ? 'bg-primary text-primary-foreground'
+                  : 'border border-primary/30 text-muted-foreground hover:bg-primary/10'
+              }`}
+            >
+              Auto
+            </button>
+          </div>
+        </div>
+
+        {/* Speed selector */}
+        <div className="bg-secondary/50 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase">Vitesse partenaire</p>
+          <div className="grid grid-cols-4 gap-1">
+            {[1, 1.5, 2, 3].map((rate) => (
+              <button
+                key={rate}
+                onClick={() => setSpeechRate(rate)}
+                className={`px-2 py-2 rounded-lg text-xs font-medium transition-all ${
+                  speechRate === rate
+                    ? 'bg-primary text-primary-foreground'
+                    : 'border border-primary/30 text-muted-foreground hover:bg-primary/10'
+                }`}
+              >
+                {rate}x
+              </button>
+            ))}
+          </div>
+        </div>
+
         <Button
           size="lg"
           className="bg-primary text-primary-foreground font-body text-base gap-2"
@@ -422,7 +475,7 @@ export default function AndroidRehearsal() {
                 {isMyLine ? (
                   <>
                     {console.log('[REHEARSAL] Rendering MyLineRecorder, phase:', phase, 'isMyLine:', isMyLine) || true}
-                    {phase === 'line' && <MyLineRecorder ref={myLineRecorderRef} line={currentLineClean} onSubmit={handleSubmitRecording} onSkip={handleNextLine} autoPlay={true} />}
+                    {phase === 'line' && <MyLineRecorder ref={myLineRecorderRef} line={currentLineClean} onSubmit={handleSubmitRecording} onSkip={handleNextLine} autoPlay={autoMode} />}
                     {phase === 'comparing' && (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center py-6">
                         <Loader2 className="w-6 h-6 text-primary animate-spin" />
