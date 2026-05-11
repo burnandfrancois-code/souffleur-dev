@@ -121,7 +121,14 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onend = () => {
-      console.log('[STT] onend - silence détecté, mais on NE relance PAS automatiquement');
+      console.log('[STT] onend - silence détecté');
+      // Arrêter si la synthèse vocale est en cours
+      if (window.speechSynthesis?.speaking) {
+        console.log('[STT] TTS speaking, stopping voice input');
+        activeRef.current = false;
+        setRecording(false);
+        return;
+      }
       // Le silence ne doit rien déclencher. Seul "OK" ferme la session.
       // Garder le micro rouge ouvert en attente du "OK".
       if (!activeRef.current || submittedRef.current) {
