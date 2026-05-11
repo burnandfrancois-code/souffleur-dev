@@ -40,13 +40,27 @@ Deno.serve(async (req) => {
 
     // Appeler OpenAI
     console.log('[V5] Calling OpenAI with key:', apiKey.substring(0, 20) + '...');
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: formData
-    });
+    
+    let response;
+    let retries = 0;
+    const maxRetries = 3;
+    
+    while (retries < maxRetries) {
+      response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: formData
+      });
+      
+      if (response.status !== 429) break;
+      
+      retries++;
+      const delayMs = 1000 * retries;
+      console.log('[V5] Rate limited, retrying in', delayMs, 'ms (attempt', retries, ')');
+      await new Promise(r => setTimeout(r, delayMs));
+    }
 
     console.log('[V5] OpenAI response status:', response.status);
     const data = await response.json();
