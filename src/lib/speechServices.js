@@ -157,12 +157,19 @@ export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1.
       // Arrêter tout ce qui parle actuellement
       window.speechSynthesis.cancel();
       
-      // Petit délai puis lancer
+      // Délai plus long sur Android pour laisser le cancel se propager
+      const delay = /Android/i.test(navigator.userAgent) ? 200 : 50;
       const speakTimeout = setTimeout(() => {
         if (signal?.aborted) { resolve(); return; }
         console.log('[TTS] Speaking:', text.substring(0, 50), 'rate:', actualRate, 'volume:', utterance.volume);
-        window.speechSynthesis.speak(utterance);
-      }, 50);
+        try {
+          window.speechSynthesis.speak(utterance);
+          console.log('[TTS] Utterance queued, speaking:', window.speechSynthesis.speaking);
+        } catch (e) {
+          console.error('[TTS] Error calling speak():', e);
+          resolve();
+        }
+      }, delay);
       
       signal?.addEventListener('abort', () => {
         clearTimeout(speakTimeout);
