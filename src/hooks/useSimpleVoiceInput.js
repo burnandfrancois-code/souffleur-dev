@@ -121,11 +121,13 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onend = () => {
-      console.log('[STT] onend - activeRef:', activeRef.current, 'submittedRef:', submittedRef.current);
+      console.log('[STT] onend - activeRef:', activeRef.current, 'submittedRef:', submittedRef.current, 'isRecordingRef:', isRecordingRef.current);
       if (!activeRef.current || submittedRef.current) {
-        console.log('[STT] onend - NOT restarting');
+        console.log('[STT] onend - NOT restarting, setting recording to false');
+        setRecording(false);
         return;
       }
+      console.log('[STT] onend - will restart, keeping isRecording true');
       setTimeout(() => {
         if (activeRef.current && !submittedRef.current) {
           console.log('[STT] onend - restarting recognition');
