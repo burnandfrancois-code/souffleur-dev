@@ -15,6 +15,7 @@ export function useSimpleVoiceInput() {
   const recognitionRef = useRef(null);
   const onFinalRef = useRef(null);
   const accumulatedRef = useRef('');
+  const finalCountRef = useRef(0); // nombre de résultats finals déjà traités (toutes sessions confondues)
   const isRecordingRef = useRef(false);
   const micStreamRef = useRef(null); // garde le stream getUserMedia actif
 
@@ -70,6 +71,9 @@ export function useSimpleVoiceInput() {
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
+          // Ignorer les finals déjà comptabilisés dans une session précédente
+          if (i < finalCountRef.current) continue;
+          finalCountRef.current = i + 1;
           newFinals += event.results[i][0].transcript;
         } else {
           interim += event.results[i][0].transcript;
@@ -141,6 +145,7 @@ export function useSimpleVoiceInput() {
     destroyRecognition();
 
     accumulatedRef.current = '';
+    finalCountRef.current = 0;
     onFinalRef.current = onFinalTranscript;
     setTranscript('');
     setError(null);
@@ -172,6 +177,7 @@ export function useSimpleVoiceInput() {
     submittedRef.current = false;
     destroyRecognition();
     accumulatedRef.current = '';
+    finalCountRef.current = 0;
     onFinalRef.current = null;
     setTranscript('');
     setError(null);
