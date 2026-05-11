@@ -15,7 +15,6 @@ import RehearsalProgress from '@/components/rehearsal/RehearsalProgress';
 import SessionSummary from '@/components/rehearsal/SessionSummary';
 import VoiceAccess from '@/components/rehearsal/VoiceAccess';
 import { usePartnerSpeaker } from '@/hooks/usePartnerSpeaker';
-import DebugLog from '@/components/rehearsal/DebugLog';
 
 export default function AndroidRehearsal() {
   const navigate = useNavigate();
@@ -228,7 +227,6 @@ export default function AndroidRehearsal() {
 
   if (!started) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background gap-6 px-4 py-8">
-      <DebugLog show={true} />
       <div className="text-center space-y-2">
         <Theater className="w-10 h-10 text-primary mx-auto" />
         <h1 className="font-display text-xl font-bold text-foreground">{script.title}</h1>
@@ -271,7 +269,6 @@ export default function AndroidRehearsal() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <DebugLog show={true} />
       <header className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/30 px-3 py-2">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
