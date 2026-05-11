@@ -102,6 +102,11 @@ export function useSimpleVoiceInput() {
         destroyRecognition();
         setRecording(false);
         setError({ message: 'Permission micro refusée. Autorisez le microphone dans votre navigateur.' });
+      } else if (event.error === 'aborted') {
+        // Chrome bloque les relances automatiques — on arrête la boucle
+        activeRef.current = false;
+        destroyRecognition();
+        setRecording(false);
       }
       // no-speech / network : onend va relancer silencieusement
     };
@@ -126,7 +131,7 @@ export function useSimpleVoiceInput() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const start = useCallback((onFinalTranscript) => {
+  const start = useCallback(async (onFinalTranscript) => {
     activeRef.current = false;
     submittedRef.current = false;
     destroyRecognition();
@@ -135,9 +140,17 @@ export function useSimpleVoiceInput() {
     onFinalRef.current = onFinalTranscript;
     setTranscript('');
     setError(null);
-    // Remettre isRecordingRef à false pour que onstart puisse passer à true
     isRecordingRef.current = false;
-    // Ne pas appeler setRecording(false) ici pour éviter le flash si on était déjà en train d'enregistrer
+
+    // Demander explicitement la permission micro avant de lancer STT
+    // Chrome exige getUserMedia avant SpeechRecognition sur HTTPS
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop()); // libérer le stream, STT prend le relais
+    } catch (e) {
+      setError({ message: 'Permission micro refusée. Autorisez le microphone dans votre navigateur.' });
+      return;
+    }
 
     activeRef.current = true;
     createAndStart();
