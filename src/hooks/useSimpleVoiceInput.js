@@ -58,30 +58,39 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onsoundstart = () => console.log('[STT] onsoundstart — son détecté');
-    rec.onspeechstart = () => console.log('[STT] onspeechstart — parole détectée');
+    rec.onspeechstart = () => {
+      console.log('[STT] onspeechstart — parole détectée');
+      setError(null); // Effacer les erreurs précédentes
+    };
     rec.onspeechend = () => console.log('[STT] onspeechend');
     rec.onsoundend = () => console.log('[STT] onsoundend');
     rec.onnomatch = () => console.log('[STT] onnomatch');
 
     rec.onresult = (event) => {
-      console.log('[STT] onresult — results:', event.results.length);
+      console.log('[STT] onresult — results:', event.results.length, 'isFinal:', event.results[event.results.length - 1]?.isFinal);
       if (!activeRef.current || submittedRef.current) return;
 
       let newFinals = '';
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        console.log('[STT]', i, 'isFinal:', event.results[i].isFinal, 'text:', transcript);
         if (event.results[i].isFinal) {
           // Ignorer les finals déjà comptabilisés dans une session précédente
           if (i < finalCountRef.current) continue;
           finalCountRef.current = i + 1;
-          newFinals += event.results[i][0].transcript;
+          newFinals += ' ' + transcript;
         } else {
-          interim += event.results[i][0].transcript;
+          interim += ' ' + transcript;
         }
       }
 
-      if (newFinals) accumulatedRef.current += ' ' + newFinals;
-      const displayed = (accumulatedRef.current + ' ' + interim).trim();
+      if (newFinals) {
+        accumulatedRef.current = (accumulatedRef.current + newFinals).trim();
+        console.log('[STT] accumulated:', accumulatedRef.current);
+      }
+      const displayed = (accumulatedRef.current + interim).trim();
+      console.log('[STT] displayed:', displayed);
       setTranscript(displayed);
 
       // Détecter "OK" dans les segments finaux

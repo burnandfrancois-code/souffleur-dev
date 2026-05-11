@@ -8,9 +8,13 @@ import TrainingComparison from './TrainingComparison';
 import ComparisonResult from './ComparisonResult';
 import { forwardRef, useImperativeHandle } from 'react';
 import { useSimpleVoiceInput } from '@/hooks/useSimpleVoiceInput';
+import { useAndroidVoiceInput } from '@/hooks/useAndroidVoiceInput';
 
 const MyLineRecorderV2 = forwardRef(function MyLineRecorderV2({ line, script, myCharacter, onLineAdvance }, ref) {
-  const voiceRec = useSimpleVoiceInput();
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  const voiceRecAndroid = useAndroidVoiceInput();
+  const voiceRecSimple = useSimpleVoiceInput();
+  const voiceRec = isAndroid ? voiceRecAndroid : voiceRecSimple;
   const commandVoice = useSimpleVoiceInput();
 
   const [showHint, setShowHint] = useState(false);
@@ -234,7 +238,7 @@ const MyLineRecorderV2 = forwardRef(function MyLineRecorderV2({ line, script, my
             </p>
             {isRecording && (
               <p className="text-sm text-muted-foreground mt-1 italic">
-                Dites votre réplique, <span className="font-bold text-destructive text-base not-italic">attendez 2-3 secondes</span> puis <span className="font-bold text-destructive text-base not-italic">OK</span>
+                Dites votre réplique, <span className="font-bold text-destructive text-base not-italic">puis attendez {isAndroid ? '1-2 sec' : '2-3 sec'}</span>
               </p>
             )}
           </div>
