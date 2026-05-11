@@ -104,19 +104,7 @@ export default function AndroidRehearsal() {
     speakPartnerLines(index, lines, myCharacter, characterGenders, stripDirections);
   }, [speakPartnerLines, lines, myCharacter, characterGenders]);
 
-  // Lancer la lecture de la première ligne au démarrage (une seule fois)
-  useEffect(() => {
-    if (started && lines.length > 0 && currentLineIndex === 0) {
-      const firstLine = lines[0];
-      if (firstLine && normalize(firstLine.character) !== normalize(myCharacter)) {
-        // Délai court pour laisser l'état se stabiliser
-        const timer = setTimeout(() => {
-          launchSpeakChain(0);
-        }, 100);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [started]); // Dépendance minimale pour éviter les rappels multiples
+
 
   const handleSubmitRecording = async (spokenText) => {
     const idx = currentLineIndexRef.current;
@@ -274,10 +262,12 @@ export default function AndroidRehearsal() {
             await speakText('Bienvenue, commençons le répétition.', 'fr-FR', 'female', 1);
             
             setStarted(true);
-            const firstLine = lines[0];
-            if (firstLine && normalize(firstLine.character) !== normalize(myCharacter)) {
-              speakPartnerLines(0, lines, myCharacter, characterGenders, stripDirections);
-            }
+            // Lancer la lecture immédiatement
+            setTimeout(() => {
+              if (lines[0] && normalize(lines[0].character) !== normalize(myCharacter)) {
+                speakPartnerLines(0, lines, myCharacter, characterGenders, stripDirections);
+              }
+            }, 200);
           } catch (e) {
             setStarted(false);
             if (e.name === 'NotAllowedError') {
