@@ -1,204 +1,174 @@
 import React, { useState, useEffect, useRef, useCallback, forwardRef } from 'react';
 import { motion } from 'framer-motion';
-import { Mic, MicOff, Send, RotateCcw, AlertCircle, Loader2 } from 'lucide-react';
+import { Mic, MicOff, Send, RotateCcw, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { speakText } from '@/lib/speechServices';
 import { useImperativeHandle } from 'react';
 
 const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, onSubmit, onSkip, autoPlay }, ref) {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [sttError, setSttError] = useState(null);
-  const [isSpeakingLine, setIsSpeakingLine] = useState(false);
-  const [debugLogs, setDebugLogs] = useState([]);
   const [hasStarted, setHasStarted] = useState(false);
-  const autoStartedRef = useRef(false);
 
   const recognitionRef = useRef(null);
-  const userStoppedRef = useRef(false);
-  const sessionIdRef = useRef(0);
-  const finalWordsRef = useRef([]);
-  const interimRef = useRef('');
-  const lastOkTimeRef = useRef(0);
+  const activeRef = useRef(false);       // session active ?
+  const submittedRef = useRef(false);    // OK déjà déclenché ?
+  const accumulatedRef = useRef('');     // texte final accumulé
+  const finalCountRef = useRef(0);       // nb résultats finals déjà traités (toutes sessions)
   const startRecordingRef = useRef(null);
-  const restartCountRef = useRef(0);
+  const micStreamRef = useRef(null);
 
-  const stopRecording = useCallback(() => {
-    userStoppedRef.current = true;
-    restartCountRef.current = 0;
-    sessionIdRef.current += 1;
+  const destroyRecognition = useCallback(() => {
     if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
+      const r = recognitionRef.current;
       recognitionRef.current = null;
+      try { r.onstart = null; r.onresult = null; r.onerror = null; r.onend = null; r.abort(); } catch (e) {}
     }
-    setIsRecording(false);
   }, []);
 
-  const addLog = (msg) => {
-    setDebugLogs(prev => [...prev.slice(-9), msg]);
-    console.log(msg);
-  };
+  const createAndStart = useCallback(() => {
+    destroyRecognition();
 
-  const startRecording = useCallback(() => {
-    sessionIdRef.current += 1;
-    const mySession = sessionIdRef.current;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
 
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
-      recognitionRef.current = null;
-    }
-
-    userStoppedRef.current = false;
-    lastOkTimeRef.current = 0;
-    finalWordsRef.current = [];
-    interimRef.current = '';
-    setTranscript('');
-    setSttError(null);
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setSttError({ message: 'Reconnaissance vocale non supportée' });
-      return;
-    }
-
-    const rec = new SpeechRecognition();
+    const rec = new SR();
+    rec.lang = 'fr-FR';
     rec.continuous = true;
     rec.interimResults = true;
-    rec.lang = 'fr-FR';
+    rec.maxAlternatives = 1;
     recognitionRef.current = rec;
 
     rec.onstart = () => {
-      addLog(`🎤 onstart - lang: ${rec.lang}, continuous: ${rec.continuous}, interim: ${rec.interimResults}`);
-      if (sessionIdRef.current === mySession && !userStoppedRef.current) setIsRecording(true);
+      if (activeRef.current) setIsRecording(true);
     };
 
     rec.onresult = (event) => {
-      addLog(`🎤 onresult - resultIndex: ${event.resultIndex}, total: ${event.results.length}`);
-      if (sessionIdRef.current !== mySession || userStoppedRef.current) return;
+      if (!activeRef.current || submittedRef.current) return;
 
-      // Collecter UNIQUEMENT les nouveaux résultats finaux (depuis resultIndex)
+      let newFinals = '';
+      let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
-          const word = event.results[i][0].transcript.trim();
-          addLog(`✓ Final: ${word}`);
-          if (word) finalWordsRef.current.push(word);
+          if (i < finalCountRef.current) continue; // déjà traité
+          finalCountRef.current = i + 1;
+          newFinals += event.results[i][0].transcript;
+        } else {
+          interim += event.results[i][0].transcript;
         }
       }
 
-      // Récupérer le dernier résultat intermédiaire uniquement
-      interimRef.current = '';
-      const last = event.results[event.results.length - 1];
-      if (last && !last.isFinal) {
-        interimRef.current = last[0].transcript.trim();
-      }
+      if (newFinals) accumulatedRef.current += ' ' + newFinals;
+      const displayed = (accumulatedRef.current + ' ' + interim).trim();
+      setTranscript(displayed);
 
-      // Afficher final + interim en temps réel
-      const fullText = finalWordsRef.current.join(' ') +
-        (interimRef.current ? (finalWordsRef.current.length > 0 ? ' ' : '') + interimRef.current : '');
-      const displayText = fullText.trim();
-      setTranscript(displayText);
-
-      // Détecter commande "OK"
-      const words = displayText.split(/\s+/);
-      const hasOkCommand = words.some(w => {
-        const lower = w.toLowerCase();
-        return lower === 'ok' || lower === 'okay' || lower === 'o.k.' || lower === 'oke';
-      });
-
-      if (hasOkCommand) {
-        const now = Date.now();
-        if (now - lastOkTimeRef.current > 1000) {
-          lastOkTimeRef.current = now;
-          const finalText = words
-            .filter(w => {
-              const lower = w.toLowerCase();
-              return lower !== 'ok' && lower !== 'okay' && lower !== 'o.k.' && lower !== 'oke';
-            })
-            .join(' ')
-            .trim();
-
+      // Détecter "OK"
+      if (newFinals) {
+        const allWords = accumulatedRef.current.trim().split(/\s+/);
+        const hasOk = allWords.some(w => /^(ok|okay|o\.k\.|oke)$/i.test(w));
+        if (hasOk && !submittedRef.current) {
+          const finalText = allWords.filter(w => !/^(ok|okay|o\.k\.|oke)$/i.test(w)).join(' ').trim();
           if (finalText) {
-            const capturedSession = mySession;
-            setTimeout(() => {
-              if (sessionIdRef.current !== capturedSession) return;
-              stopRecording();
-              onSubmit(finalText);
-            }, 200);
+            submittedRef.current = true;
+            activeRef.current = false;
+            destroyRecognition();
+            setIsRecording(false);
+            onSubmit(finalText);
           }
         }
       }
     };
 
-    rec.onerror = (e) => {
-      addLog(`❌ onerror - ${e.error}`);
-      if (sessionIdRef.current !== mySession) return;
-      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-        stopRecording();
-        setSttError({ message: 'Permission micro refusée' });
+    rec.onerror = (event) => {
+      if (!activeRef.current) return;
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        activeRef.current = false;
+        destroyRecognition();
+        setIsRecording(false);
+        setSttError({ message: 'Permission micro refusée. Autorisez le microphone dans votre navigateur.' });
+      } else if (event.error === 'aborted') {
+        activeRef.current = false;
+        destroyRecognition();
+        setIsRecording(false);
       }
     };
 
     rec.onend = () => {
-      addLog(`🎤 onend - restart ${restartCountRef.current}`);
-      if (sessionIdRef.current !== mySession) return;
-      if (userStoppedRef.current) return;
-      
-      restartCountRef.current += 1;
-      if (restartCountRef.current > 5) {
-        addLog('❌ trop de relances, arrêt');
-        setSttError({ message: 'Micro ne détecte rien — vérifiez la permission' });
-        return;
-      }
-      
-      addLog(`↻ relance ${restartCountRef.current}...`);
-      // Réinitialiser l'accumulation pour éviter la répétition des segments
-      finalWordsRef.current = [];
-      interimRef.current = '';
-      const delay = setTimeout(() => startRecordingRef.current(), 500);
+      if (!activeRef.current || submittedRef.current) return;
+      // Chrome a coupé — relancer sans toucher à isRecording ni à l'accumulation
+      setTimeout(() => {
+        if (!activeRef.current || submittedRef.current) return;
+        createAndStart();
+      }, 150);
     };
 
     try {
-      addLog('🎤 rec.start() appelé');
       rec.start();
     } catch (e) {
-      addLog(`❌ rec.start() erreur: ${e.message}`);
-      setSttError({ message: `Erreur: ${e.message}` });
-      recognitionRef.current = null;
+      setSttError({ message: 'Erreur démarrage micro : ' + e.message });
+      activeRef.current = false;
+      setIsRecording(false);
     }
-  }, [stopRecording, onSubmit]);
+  }, [destroyRecognition, onSubmit]);
+
+  const startRecording = useCallback(async () => {
+    activeRef.current = false;
+    submittedRef.current = false;
+    destroyRecognition();
+    accumulatedRef.current = '';
+    finalCountRef.current = 0;
+    setTranscript('');
+    setSttError(null);
+    setIsRecording(false);
+
+    if (!micStreamRef.current) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        micStreamRef.current = stream;
+      } catch (e) {
+        setSttError({ message: 'Permission micro refusée. Autorisez le microphone dans votre navigateur.' });
+        return;
+      }
+    }
+
+    activeRef.current = true;
+    createAndStart();
+  }, [destroyRecognition, createAndStart]);
+
+  const stopRecording = useCallback(() => {
+    activeRef.current = false;
+    submittedRef.current = false;
+    destroyRecognition();
+    setIsRecording(false);
+  }, [destroyRecognition]);
 
   useEffect(() => { startRecordingRef.current = startRecording; }, [startRecording]);
 
-  useImperativeHandle(ref, () => ({
-    startRecording,
-    stopRecording
-  }), [startRecording, stopRecording]);
+  useImperativeHandle(ref, () => ({ startRecording, stopRecording }), [startRecording, stopRecording]);
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch (e) {
-          // ignore
-        }
+      activeRef.current = false;
+      destroyRecognition();
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach(t => t.stop());
+        micStreamRef.current = null;
       }
     };
-  }, []);
+  }, [destroyRecognition]);
 
+  // Reset quand la ligne change
   useEffect(() => {
-    if (autoPlay && hasStarted && !isRecording && !transcript) {
-      const timer = setTimeout(startRecording, 200);
-      return () => clearTimeout(timer);
-    }
-  }, [autoPlay, hasStarted, isRecording, transcript, startRecording]);
+    stopRecording();
+    accumulatedRef.current = '';
+    finalCountRef.current = 0;
+    setTranscript('');
+  }, [line]);
 
   const handleMicToggle = () => {
-    if (isRecording) {
-      stopRecording();
-    } else {
-      startRecording();
-    }
+    if (isRecording) stopRecording();
+    else startRecording();
   };
 
   return (
@@ -215,15 +185,12 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
         </motion.div>
       )}
 
-      {/* Mic button or start prompt */}
+      {/* Mic button */}
       {!hasStarted ? (
         <div className="rounded-xl border-2 border-primary bg-primary/10 p-6 text-center">
           <p className="text-sm text-primary mb-3">Prêt à commencer ?</p>
           <button
-            onClick={() => {
-              setHasStarted(true);
-              setTimeout(() => startRecording(), 100);
-            }}
+            onClick={() => { setHasStarted(true); setTimeout(() => startRecording(), 100); }}
             className="relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all bg-primary shadow-lg shadow-primary/30 hover:scale-105"
           >
             <Mic className="w-8 h-8 text-primary-foreground relative z-10" />
@@ -263,12 +230,7 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
 
       {/* Buttons */}
       <div className="flex gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onSkip}
-          className="flex-1 text-xs text-muted-foreground gap-1"
-        >
+        <Button variant="ghost" size="sm" onClick={onSkip} className="flex-1 text-xs text-muted-foreground gap-1">
           Passer
         </Button>
         {transcript && (
@@ -276,23 +238,14 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                stopRecording();
-                finalWordsRef.current = [];
-                interimRef.current = '';
-                setTranscript('');
-                setTimeout(() => startRecording(), 300);
-              }}
+              onClick={() => { stopRecording(); accumulatedRef.current = ''; finalCountRef.current = 0; setTranscript(''); setTimeout(() => startRecording(), 300); }}
               className="text-xs text-muted-foreground gap-1"
             >
               <RotateCcw className="w-3 h-3" />
             </Button>
             <Button
               size="sm"
-              onClick={() => {
-                stopRecording();
-                onSubmit(transcript);
-              }}
+              onClick={() => { stopRecording(); onSubmit(transcript); }}
               className="flex-1 bg-primary text-primary-foreground text-xs gap-1"
             >
               <Send className="w-3 h-3" />
