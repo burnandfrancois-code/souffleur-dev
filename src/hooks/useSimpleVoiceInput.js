@@ -80,10 +80,11 @@ export function useSimpleVoiceInput() {
       // Reconstruire la phrase complète à partir de ALL event.results
       let fullText = '';
       for (let i = 0; i < event.results.length; i++) {
-        fullText += event.results[i][0].transcript;
+        fullText += event.results[i][0].transcript + ' ';
       }
       const displayText = fullText.trim();
       setTranscript(displayText);
+      setIsRecording(true); // forcer le re-render
 
       // Détecte "OK"
       const words = displayText.split(/\s+/);
@@ -137,8 +138,17 @@ export function useSimpleVoiceInput() {
           newRec.onstart = () => {
             if (sessionIdRef.current === mySession) setIsRecording(true);
           };
-          
-          newRec.onresult = rec.onresult;
+
+          // Garder le transcript existant lors du redémarrage
+          newRec.onresult = (event) => {
+            if (sessionIdRef.current !== mySession) return;
+            let fullText = '';
+            for (let i = 0; i < event.results.length; i++) {
+              fullText += event.results[i][0].transcript + ' ';
+            }
+            const displayText = fullText.trim();
+            setTranscript(displayText);
+          };
           newRec.onerror = rec.onerror;
           newRec.onend = rec.onend;
           
