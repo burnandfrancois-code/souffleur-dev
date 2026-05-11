@@ -21,9 +21,10 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
       }
     }
 
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    abortControllerRef.current = null;
-    stopSpeaking();
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
     pendingTimersRef.current.forEach(clearTimeout);
     pendingTimersRef.current = [];
     speakSessionRef.current += 1;
@@ -84,9 +85,10 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
       }
     }
 
-    if (abortControllerRef.current) abortControllerRef.current.abort();
-    abortControllerRef.current = null;
-    stopSpeaking();
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
 
     onSpeakingChange(true);
     const gender = genders[character] || 'male';
