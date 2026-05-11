@@ -84,13 +84,15 @@ export function useSimpleVoiceInput() {
             return;
           }
 
-          // Relancer immédiatement pour rester en écoute active
+          // Relancer avec délai court pour laisser le système respirer
           if (activeRef.current && !submittedRef.current) {
+            await new Promise(resolve => setTimeout(resolve, 50));
             recordWithWhisper();
           }
         } catch (e) {
           console.error('[WHISPER] Error transcribing:', e);
           if (activeRef.current && !submittedRef.current) {
+            await new Promise(resolve => setTimeout(resolve, 50));
             recordWithWhisper();
           }
         }
