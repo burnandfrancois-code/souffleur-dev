@@ -42,7 +42,7 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
         return;
       }
 
-      // Continue in auto mode (this will loop back if next line is also partner's)
+      // Auto-advance to next line
       index++;
     }
 
