@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Mic, MicOff, RotateCcw, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useSimpleVoiceInput } from '@/hooks/useSimpleVoiceInput';
+import { useWhisperRecorder } from '@/hooks/useWhisperRecorder';
 import { compareTexts } from '@/lib/scriptParser';
 
 export default function MyLineRecorderAndroidV2({ line, script, myCharacter, onLineAdvance, autoPlay }) {
-  const voiceRec = useSimpleVoiceInput();
+  const voiceRec = useWhisperRecorder();
   const [sttError, setSttError] = useState(null);
   const [phase, setPhase] = useState('waiting'); // waiting, recording, comparing, result
   const [comparisonResult, setComparisonResult] = useState(null);
