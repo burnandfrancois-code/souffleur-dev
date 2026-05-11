@@ -12,6 +12,7 @@ import MyLineRecorder from '@/components/rehearsal/MyLineRecorder';
 import SessionSummary from '@/components/rehearsal/SessionSummary';
 import MyLinesPanel from '@/components/rehearsal/MyLinesPanel';
 
+
 export default function DesktopRehearsal() {
   const navigate = useNavigate();
   const urlParams = new URLSearchParams(window.location.search);
