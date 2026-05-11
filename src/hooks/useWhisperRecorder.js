@@ -1,90 +1,57 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 
-/**
- * Hook stable pour enregistrement et transcription Whisper.
- * Enregistre en continu, envoie à Whisper chaque 6 secondes.
- * Arrête quand l'utilisateur dit "OK".
- */
 export function useWhisperRecorder() {
   const [transcript, setTranscript] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState(null);
 
-  const mediaRecorderRef = useRef(null);
   const micStreamRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const onCompleteRef = useRef(null);
-  const timerRef = useRef(null);
+  const intervalRef = useRef(null);
+  const isProcessingRef = useRef(false);
 
-  const recordChunk = useCallback(async () => {
-    if (!mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') return;
-
-    mediaRecorderRef.current.stop();
+  const sendChunk = useCallback(async () => {
+    if (isProcessingRef.current || chunksRef.current.length === 0) return;
     
-    // Attendre que ondataavailable soit appelé
-    await new Promise(resolve => {
-      const checkRecorder = () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
-          resolve();
-        } else {
-          setTimeout(checkRecorder, 50);
-        }
-      };
-      checkRecorder();
-    });
-
-    if (chunksRef.current.length === 0) {
-      // Redémarrer immédiatement si pas de données
-      if (mediaRecorderRef.current && micStreamRef.current) {
-        mediaRecorderRef.current = new MediaRecorder(micStreamRef.current);
-        mediaRecorderRef.current.ondataavailable = (e) => {
-          if (e.data.size > 0) chunksRef.current.push(e.data);
-        };
-        mediaRecorderRef.current.start();
-      }
-      timerRef.current = setTimeout(recordChunk, 6000);
-      return;
-    }
-
-    const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+    isProcessingRef.current = true;
+    const chunks = chunksRef.current;
     chunksRef.current = [];
 
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        const audioBase64 = reader.result;
-        const response = await base44.functions.invoke('transcribeAudioV5', { audio: audioBase64 });
-        const text = response.data?.text || '';
-        
-        if (text.trim()) {
-          setTranscript(prev => (prev + ' ' + text).trim());
-          
-          // Détecte "OK"
-          if (/\bok\b/i.test(text)) {
-            const final = (transcript + ' ' + text).trim().replace(/\bok\b/i, '').trim();
-            if (onCompleteRef.current) {
-              onCompleteRef.current(final);
-            }
-            return;
-          }
-        }
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('FileReader error'));
+        reader.readAsDataURL(blob);
+      });
 
-        // Redémarrer la recording
-        if (mediaRecorderRef.current && micStreamRef.current) {
-          mediaRecorderRef.current = new MediaRecorder(micStreamRef.current);
-          mediaRecorderRef.current.ondataavailable = (e) => {
-            if (e.data.size > 0) chunksRef.current.push(e.data);
-          };
-          mediaRecorderRef.current.start();
-          timerRef.current = setTimeout(recordChunk, 6000);
+      const response = await base44.functions.invoke('transcribeAudioV5', { audio: base64 });
+      const text = response.data?.text || '';
+
+      if (text.trim()) {
+        const newTranscript = (transcript + ' ' + text).trim();
+        setTranscript(newTranscript);
+
+        // Détecte "OK"
+        if (/\bok\b/i.test(text)) {
+          const final = newTranscript.replace(/\bok\b/i, '').trim();
+          if (onCompleteRef.current) {
+            onCompleteRef.current(final);
+          }
+          isProcessingRef.current = false;
+          return;
         }
-      };
-      reader.readAsDataURL(blob);
+      }
     } catch (e) {
-      setError({ message: 'Erreur: ' + e.message });
-      timerRef.current = setTimeout(recordChunk, 6000);
+      console.error('[WHISPER] Erreur:', e);
+      setError({ message: 'Erreur transcription' });
     }
+
+    isProcessingRef.current = false;
   }, [transcript]);
 
   const start = useCallback(async (onComplete) => {
@@ -101,6 +68,7 @@ export function useWhisperRecorder() {
       onCompleteRef.current = onComplete;
       setTranscript('');
       setError(null);
+      chunksRef.current = [];
 
       mediaRecorderRef.current = new MediaRecorder(stream);
       mediaRecorderRef.current.ondataavailable = (e) => {
@@ -109,15 +77,16 @@ export function useWhisperRecorder() {
       mediaRecorderRef.current.start();
       setIsRecording(true);
 
-      timerRef.current = setTimeout(recordChunk, 6000);
+      // Envoyer les chunks toutes les 6 secondes
+      intervalRef.current = setInterval(sendChunk, 6000);
     } catch (e) {
       setError({ message: 'Erreur micro: ' + e.message });
     }
-  }, [recordChunk]);
+  }, [sendChunk]);
 
   const stop = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (mediaRecorderRef.current?.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
     if (micStreamRef.current) {
@@ -136,7 +105,7 @@ export function useWhisperRecorder() {
 
   useEffect(() => {
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
       stop();
     };
   }, [stop]);
