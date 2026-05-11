@@ -20,6 +20,8 @@ export function useSimpleVoiceInput() {
   const micStreamRef = useRef(null); // garde le stream getUserMedia actif
 
   const setRecording = (val) => {
+    // Ne pas changer l'état si on est déjà en enregistrement — rester stable
+    if (isRecordingRef.current === val) return;
     isRecordingRef.current = val;
     setIsRecording(val);
   };
@@ -52,9 +54,8 @@ export function useSimpleVoiceInput() {
 
     rec.onstart = () => {
       console.log('[STT] onstart');
-      if (activeRef.current) {
-        isRecordingRef.current = true;
-        setIsRecording(true);
+      if (activeRef.current && !submittedRef.current) {
+        setRecording(true);
       }
     };
 
