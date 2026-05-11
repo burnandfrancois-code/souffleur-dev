@@ -62,13 +62,15 @@ export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1.
   // Déverrouiller l'audio sur desktop ET Android
   const isAndroid = /Android/i.test(navigator.userAgent);
   if (isAndroid) {
-    await unlockAudioForAndroid();
+    const ctx = await unlockAudioForAndroid();
+    console.log('[TTS] Android audio context:', ctx);
   } else {
     await unlockAudioForDesktop();
   }
 
   // Charger les voix disponibles
   const voices = await getVoices();
+  console.log('[TTS] Available voices:', voices.length, 'lang:', lang);
 
   return new Promise((resolve) => {
     try {
