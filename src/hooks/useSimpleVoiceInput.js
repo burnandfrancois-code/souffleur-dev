@@ -3,19 +3,25 @@ import { useRef, useCallback, useState, useEffect } from 'react';
 /**
  * Hook de reconnaissance vocale continue.
  * Reste ouvert jusqu'à ce que l'utilisateur dise "OK".
- * Chrome peut couper la reconnaissance même en continuous=true — on relance silencieusement sans changer isRecording.
+ * Chrome coupe parfois la reconnaissance même en continuous=true — on relance sans changer isRecording.
  */
 export function useSimpleVoiceInput() {
   const [transcript, setTranscript] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState(null);
 
-  // Tout l'état mutable est dans des refs pour éviter les re-renders qui perturbent les hooks
   const activeRef = useRef(false);
   const submittedRef = useRef(false);
   const recognitionRef = useRef(null);
   const onFinalRef = useRef(null);
   const accumulatedRef = useRef('');
+  // Ref miroir de isRecording pour éviter les flash false→true dans onstart
+  const isRecordingRef = useRef(false);
+
+  const setRecording = useCallback((val) => {
+    isRecordingRef.current = val;
+    setIsRecording(val);
+  }, []);
 
   const destroyRecognition = useCallback(() => {
     if (recognitionRef.current) {
@@ -39,8 +45,10 @@ export function useSimpleVoiceInput() {
     recognitionRef.current = rec;
 
     rec.onstart = () => {
-      // On ne change isRecording que lors du vrai premier démarrage
-      if (activeRef.current) setIsRecording(true);
+      // Ne passer à true que la première fois — pas à chaque relance silencieuse
+      if (activeRef.current && !isRecordingRef.current) {
+        setRecording(true);
+      }
     };
 
     rec.onresult = (event) => {
@@ -60,7 +68,7 @@ export function useSimpleVoiceInput() {
       const displayed = (accumulatedRef.current + ' ' + interim).trim();
       setTranscript(displayed);
 
-      // Détecter "OK" uniquement dans les finals
+      // Détecter "OK" dans les segments finaux
       if (newFinals) {
         const allFinalWords = accumulatedRef.current.trim().split(/\s+/);
         const hasOk = allFinalWords.some(w => /^(ok|okay)$/i.test(w));
@@ -69,10 +77,9 @@ export function useSimpleVoiceInput() {
           if (finalText) {
             submittedRef.current = true;
             const cb = onFinalRef.current;
-            // Arrêter proprement puis appeler le callback
             activeRef.current = false;
             destroyRecognition();
-            setIsRecording(false);
+            setRecording(false);
             cb(finalText);
           }
         }
@@ -84,16 +91,15 @@ export function useSimpleVoiceInput() {
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
         activeRef.current = false;
         destroyRecognition();
-        setIsRecording(false);
+        setRecording(false);
         setError({ message: 'Permission micro refusée. Autorisez le microphone dans votre navigateur.' });
       }
-      // no-speech / network : onend va relancer
+      // no-speech / network : onend va relancer silencieusement
     };
 
     rec.onend = () => {
       if (!activeRef.current || submittedRef.current) return;
-      // Chrome a coupé malgré continuous=true — relancer silencieusement
-      // On NE change PAS isRecording pour éviter le clignotement
+      // Chrome a coupé malgré continuous=true — relancer SANS toucher à isRecording
       setTimeout(() => {
         if (!activeRef.current || submittedRef.current) return;
         createAndStart();
@@ -105,13 +111,12 @@ export function useSimpleVoiceInput() {
     } catch (e) {
       setError({ message: 'Erreur démarrage micro : ' + e.message });
       activeRef.current = false;
-      setIsRecording(false);
+      setRecording(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const start = useCallback((onFinalTranscript) => {
-    // Stopper proprement d'abord
     activeRef.current = false;
     submittedRef.current = false;
     destroyRecognition();
@@ -120,7 +125,9 @@ export function useSimpleVoiceInput() {
     onFinalRef.current = onFinalTranscript;
     setTranscript('');
     setError(null);
-    setIsRecording(false);
+    // Remettre isRecordingRef à false pour que onstart puisse passer à true
+    isRecordingRef.current = false;
+    // Ne pas appeler setRecording(false) ici pour éviter le flash si on était déjà en train d'enregistrer
 
     activeRef.current = true;
     createAndStart();
@@ -130,8 +137,8 @@ export function useSimpleVoiceInput() {
     activeRef.current = false;
     submittedRef.current = false;
     destroyRecognition();
-    setIsRecording(false);
-  }, [destroyRecognition]);
+    setRecording(false);
+  }, [destroyRecognition, setRecording]);
 
   const reset = useCallback(() => {
     activeRef.current = false;
@@ -141,8 +148,8 @@ export function useSimpleVoiceInput() {
     onFinalRef.current = null;
     setTranscript('');
     setError(null);
-    setIsRecording(false);
-  }, [destroyRecognition]);
+    setRecording(false);
+  }, [destroyRecognition, setRecording]);
 
   useEffect(() => {
     return () => {
