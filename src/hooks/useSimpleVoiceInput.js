@@ -65,13 +65,14 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onresult = (event) => {
-      console.log('[STT] onresult, isFinal:', event.results[event.results.length - 1]?.isFinal);
+      console.log('[STT] onresult, event.results.length:', event.results.length, 'isFinal:', event.results[event.results.length - 1]?.isFinal);
       if (!activeRef.current || submittedRef.current) return;
 
       let newFinals = '';
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
+        const transcript = event.results[i][0]?.transcript || '';
+        console.log('[STT] Result[' + i + ']:', transcript, 'isFinal:', event.results[i].isFinal);
         if (event.results[i].isFinal) {
           newFinals += ' ' + transcript;
           finalCountRef.current = i + 1;
@@ -82,9 +83,10 @@ export function useSimpleVoiceInput() {
 
       if (newFinals) {
         accumulatedRef.current = (accumulatedRef.current + newFinals).trim();
-        console.log('[STT] FINAL received:', accumulatedRef.current);
+        console.log('[STT] FINAL accumulated:', accumulatedRef.current);
       }
       const displayed = (accumulatedRef.current + interim).trim();
+      console.log('[STT] Displaying:', displayed);
       setTranscript(displayed);
 
       // Détecter "OK" dans les segments finaux
