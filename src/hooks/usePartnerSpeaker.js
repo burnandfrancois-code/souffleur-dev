@@ -5,21 +5,21 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
   const speakSessionRef = useRef(0);
   const abortControllerRef = useRef(null);
   const pendingTimersRef = useRef([]);
-
-  // Unlock audio on Android on first use
-  useEffect(() => {
-    (async () => {
-      try {
-        await unlockAudioForAndroid();
-        console.log('[Hook] Android audio unlocked');
-      } catch (e) {
-        console.error('[Hook] Failed to unlock audio:', e);
-      }
-    })();
-  }, []);
+  const audioUnlockedRef = useRef(false);
 
   const speakPartnerLines = useCallback(async (startIndex, lines, myCharacter, genders, stripDirections) => {
     const norm = (s) => s?.trim().toLowerCase();
+
+    // Unlock audio une seule fois
+    if (!audioUnlockedRef.current) {
+      try {
+        await unlockAudioForAndroid();
+        audioUnlockedRef.current = true;
+        console.log('[TTS] Audio unlocked for Android');
+      } catch (e) {
+        console.error('[TTS] Failed to unlock audio:', e);
+      }
+    }
 
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = null;
@@ -66,6 +66,17 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
   }, [onLineChange, onSpeakingChange, speechRateRef]);
 
   const speakSingleLine = useCallback(async (text, character, genders, stripDirections) => {
+    // Unlock audio une seule fois
+    if (!audioUnlockedRef.current) {
+      try {
+        await unlockAudioForAndroid();
+        audioUnlockedRef.current = true;
+        console.log('[TTS] Audio unlocked for Android');
+      } catch (e) {
+        console.error('[TTS] Failed to unlock audio:', e);
+      }
+    }
+
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = null;
     stopSpeaking();
