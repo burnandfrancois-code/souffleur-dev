@@ -104,15 +104,19 @@ export default function AndroidRehearsal() {
     speakPartnerLines(index, lines, myCharacter, characterGenders, stripDirections);
   }, [speakPartnerLines, lines, myCharacter, characterGenders]);
 
-  // Lancer la lecture de la première ligne au démarrage
+  // Lancer la lecture de la première ligne au démarrage (une seule fois)
   useEffect(() => {
-    if (started && lines.length > 0) {
+    if (started && lines.length > 0 && currentLineIndex === 0) {
       const firstLine = lines[0];
       if (firstLine && normalize(firstLine.character) !== normalize(myCharacter)) {
-        launchSpeakChain(0);
+        // Délai court pour laisser l'état se stabiliser
+        const timer = setTimeout(() => {
+          launchSpeakChain(0);
+        }, 100);
+        return () => clearTimeout(timer);
       }
     }
-  }, [started, lines, myCharacter, launchSpeakChain]);
+  }, [started]); // Dépendance minimale pour éviter les rappels multiples
 
   const handleSubmitRecording = async (spokenText) => {
     const idx = currentLineIndexRef.current;
@@ -143,34 +147,37 @@ export default function AndroidRehearsal() {
   const stopCommandListening = useCallback(() => {
     commandActiveRef.current = false;
     commandVoice.stop();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    commandVoice.reset();
+  }, [commandVoice]);
 
   const startCommandListening = useCallback(() => {
+    if (commandActiveRef.current) return; // Éviter les appels multiples
     commandActiveRef.current = true;
     commandVoice.start((text) => {
       if (!commandActiveRef.current) return;
       const t = text.toLowerCase().trim();
-      if (/passer/.test(t)) {
+      console.log('[COMMAND] Heard:', t);
+      if (/passer|suivant|next/.test(t)) {
+        console.log('[COMMAND] Continue detected');
         commandActiveRef.current = false;
         handleContinueRef.current?.();
-      } else if (/r[eé]essayer/.test(t)) {
+      } else if (/r[eé]essayer|retry|again/.test(t)) {
+        console.log('[COMMAND] Retry detected');
         commandActiveRef.current = false;
         handleRetryRef.current?.();
       }
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [commandVoice]);
 
   // Lancer/arrêter l'écoute des commandes selon la phase
   useEffect(() => {
     if (phase === 'result') {
-      setTimeout(() => startCommandListening(), 400);
+      const timer = setTimeout(() => startCommandListening(), 500);
+      return () => clearTimeout(timer);
     } else {
       stopCommandListening();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  }, [phase, startCommandListening, stopCommandListening]);
 
   const handleRetry = () => {
     stopCommandListening();
