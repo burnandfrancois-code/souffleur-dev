@@ -32,6 +32,12 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
     
     // Attendre un peu avant de commencer — donne au cancel() le temps de se propager
     await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Vérifier que la session n'a pas été annulée pendant le délai
+    if (session !== speakSessionRef.current) {
+      console.log('[PARTNER] Session cancelled during startup delay');
+      return;
+    }
 
     let index = startIndex;
     console.log('[PARTNER] Starting speakPartnerLines at index:', startIndex, 'total lines:', lines.length);
