@@ -174,7 +174,12 @@ export default function DesktopRehearsal() {
               </Button>
               <div>
                 <h1 className="text-lg font-bold leading-tight">{script.title}</h1>
-                <p className="text-xs text-primary">Rôle: {myCharacter}</p>
+                <button
+                  onClick={() => navigate(`/desktop/?step=character&scriptId=${scriptId}`)}
+                  className="text-xs text-primary hover:underline cursor-pointer transition-colors"
+                >
+                  Rôle: {myCharacter}
+                </button>
               </div>
             </div>
             <Button variant="ghost" size="icon" onClick={() => setShowMyLines(true)}>
