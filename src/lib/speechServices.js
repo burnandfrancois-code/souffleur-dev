@@ -128,8 +128,9 @@ export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1.
       window.speechSynthesis.cancel();
       setTimeout(() => {
         if (signal?.aborted) { resolve(); return; }
+        console.log('[TTS] Speaking:', text.substring(0, 50), 'volume:', utterance.volume);
         window.speechSynthesis.speak(utterance);
-      }, 150);
+      }, 300);
 
     } catch (e) {
       console.error('Error in speakText:', e);
