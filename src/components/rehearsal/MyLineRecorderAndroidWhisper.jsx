@@ -58,16 +58,25 @@ const MyLineRecorderAndroidWhisper = forwardRef(function MyLineRecorderAndroidWh
     <div className="space-y-3">
       {/* Recording state */}
       {phase === 'recording' && (
-        <div className="rounded-xl border-2 border-destructive bg-destructive/10 p-8 text-center">
-          <div className="relative w-24 h-24 rounded-full mx-auto flex items-center justify-center mb-4 bg-destructive shadow-lg shadow-destructive/50">
+        <div className="rounded-xl border-2 border-destructive bg-destructive/10 p-8 text-center space-y-4">
+          <div className="relative w-24 h-24 rounded-full mx-auto flex items-center justify-center bg-destructive shadow-lg shadow-destructive/50">
             <span className="absolute inset-0 rounded-full bg-destructive/50 animate-ping" />
             <MicOff className="w-10 h-10 text-white relative z-10" />
           </div>
-          <p className="text-lg font-bold text-destructive">🎙 Parlez!</p>
-          <p className="text-xs text-muted-foreground mt-3">Dites "OK" pour arrêter</p>
-          <div className="bg-background border border-border rounded-lg px-4 py-3 mt-4 min-h-[2.5rem] flex items-center">
-            <p className="text-sm text-foreground">
-              {voiceRec.transcript || <span className="text-muted-foreground text-xs italic">En écoute...</span>}
+          <div>
+            <p className="text-lg font-bold text-destructive">🎙 Parlez!</p>
+            <p className="text-xs text-muted-foreground mt-1">Dites "OK" pour arrêter</p>
+          </div>
+          <div className="bg-background border-2 border-destructive/40 rounded-lg px-4 py-4 min-h-[3rem] flex items-center justify-center">
+            <p className="text-base text-foreground leading-relaxed">
+              {voiceRec.transcript ? (
+                <>
+                  {voiceRec.transcript}
+                  <span className="inline-block w-0.5 h-5 bg-destructive ml-1 animate-pulse" />
+                </>
+              ) : (
+                <span className="text-muted-foreground text-sm italic">En écoute...</span>
+              )}
             </p>
           </div>
         </div>
