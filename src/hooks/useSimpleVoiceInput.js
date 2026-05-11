@@ -77,6 +77,7 @@ export function useSimpleVoiceInput() {
 
       mediaRecorder.onstop = async () => {
         if (!activeRef.current || submittedRef.current) return;
+        console.log('[WHISPER] onstop triggered, chunks:', chunks.length, 'total size:', chunks.reduce((a, c) => a + c.size, 0));
         if (chunks.length === 0) {
           console.warn('[WHISPER] No audio chunks recorded');
           if (activeRef.current && !submittedRef.current) {
@@ -87,6 +88,14 @@ export function useSimpleVoiceInput() {
 
         const blob = new Blob(chunks, { type: 'audio/webm' });
         console.log('[WHISPER] Got audio blob, size:', blob.size);
+
+        if (blob.size === 0) {
+          console.warn('[WHISPER] Blob size is 0, no audio data');
+          if (activeRef.current && !submittedRef.current) {
+            setTimeout(() => recordWithWhisper(), 500);
+          }
+          return;
+        }
 
         try {
           // Convertir le blob en base64
@@ -101,7 +110,7 @@ export function useSimpleVoiceInput() {
           console.log('[WHISPER] Sending audio to transcribeAudioV2, blob size:', blob.size, 'base64 length:', audioBase64.length);
           const response = await base44.functions.invoke('transcribeAudioV2', { audio: audioBase64 });
           const text = response.data?.transcript || response.data?.text || '';
-          console.log('[WHISPER] Transcript:', text, 'response:', response.data);
+          console.log('[WHISPER] Transcript:', text, 'full response:', response.data);
 
           if (!activeRef.current || submittedRef.current) return;
 
