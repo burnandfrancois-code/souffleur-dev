@@ -126,18 +126,14 @@ export function useSimpleVoiceInput() {
           }
           
           const text = response.data?.text || response.data?.transcript || '';
-          console.log('[WHISPER] Transcript:', text, 'full response:', response.data);
+          console.log('[WHISPER] Transcript:', text);
 
           if (!activeRef.current || submittedRef.current) return;
 
           if (text.trim()) {
-            // N'ajouter que si c'est du nouveau texte (pas répétition)
-            if (!accumulatedRef.current.endsWith(text)) {
-              accumulatedRef.current = (accumulatedRef.current + ' ' + text).trim();
-            }
+            accumulatedRef.current = (accumulatedRef.current + ' ' + text).trim();
           }
           const displayed = accumulatedRef.current;
-          console.log('[WHISPER] Accumulated text:', displayed);
           setTranscript(displayed);
 
           // Détecter "OK" (exact match ou au début/fin)
@@ -154,9 +150,9 @@ export function useSimpleVoiceInput() {
             return;
           }
 
-          // Relancer avec délai pour rate limit (3 req/min) sans chevauchement
+          // Relancer avec délai pour respecter le rate limit OpenAI (3 req/min)
           if (activeRef.current && !submittedRef.current) {
-            setTimeout(() => recordWithWhisper(), 8000);
+            setTimeout(() => recordWithWhisper(), 20000);
           }
         } catch (e) {
           console.error('[WHISPER] Error transcribing:', e);
@@ -168,16 +164,12 @@ export function useSimpleVoiceInput() {
       };
 
       mediaRecorder.start();
-      console.log('[WHISPER] MediaRecorder started, state:', mediaRecorder.state);
-      // Enregistrer pendant 2 secondes pour transcription complète et précise
+      // Enregistrer pendant 2.5 secondes pour capturer le texte complet
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
-          console.log('[WHISPER] Stopping recording after 2s');
           mediaRecorder.stop();
-        } else {
-          console.log('[WHISPER] Recording already stopped, state:', mediaRecorder.state);
         }
-      }, 2000);
+      }, 2500);
     } catch (e) {
       console.error('[WHISPER] Recording error:', e);
       setError({ message: 'Erreur micro : ' + e.message });
