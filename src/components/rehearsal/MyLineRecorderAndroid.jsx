@@ -30,19 +30,15 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
     reset: voiceRec.reset
   }), [startRecording, voiceRec.stop, voiceRec.reset]);
 
-  // Reset quand la ligne change — dépendances minimales
+  // Reset quand la ligne change — lancer l'enregistrement automatiquement si autoPlay
   useEffect(() => {
     voiceRec.reset();
     setSttError(null);
-    setHasStarted(false);
     autoPlayDoneRef.current = false;
-    
+
     if (autoPlay && !autoPlayDoneRef.current) {
       autoPlayDoneRef.current = true;
-      setTimeout(() => {
-        setHasStarted(true);
-        setTimeout(() => startRecordingRef.current?.(), 100);
-      }, 300);
+      setTimeout(() => startRecordingRef.current?.(), 100);
     }
   }, [line, autoPlay, voiceRec.reset]);
 
@@ -77,18 +73,7 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
       )}
 
       {/* Mic button */}
-      {!hasStarted ? (
-        <div className="rounded-xl border-2 border-primary bg-primary/10 p-6 text-center">
-          <p className="text-sm text-primary mb-3">Prêt à commencer ?</p>
-          <button
-            onClick={() => { setHasStarted(true); setTimeout(() => startRecording(), 100); }}
-            className="relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all bg-primary shadow-lg shadow-primary/30 hover:scale-105"
-          >
-            <Mic className="w-8 h-8 text-primary-foreground relative z-10" />
-          </button>
-          <p className="text-xs text-muted-foreground mt-3">Cliquez pour activer le micro</p>
-        </div>
-      ) : voiceRec.isRecording ? (
+      {voiceRec.isRecording ? (
         <div className="rounded-xl border-2 border-destructive bg-destructive/10 p-4 text-center">
           <button
             onClick={handleMicToggle}
@@ -100,14 +85,15 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
           <p className="text-sm font-semibold text-destructive">🎙 Parlez !</p>
         </div>
       ) : (
-        <div className="rounded-xl border-2 border-primary bg-primary/10 p-4 text-center">
+        <div className="rounded-xl border-2 border-primary bg-primary/10 p-6 text-center">
+          <p className="text-sm text-primary mb-3">Prêt à commencer ?</p>
           <button
             onClick={handleMicToggle}
-            className="relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all mb-3 bg-primary shadow-lg shadow-primary/30 hover:scale-105"
+            className="relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all bg-primary shadow-lg shadow-primary/30 hover:scale-105"
           >
             <Mic className="w-8 h-8 text-primary-foreground relative z-10" />
           </button>
-          <p className="text-sm font-semibold text-primary">🎤 C'est votre tour</p>
+          <p className="text-xs text-muted-foreground mt-3">Cliquez pour activer le micro</p>
         </div>
       )}
 
