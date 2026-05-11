@@ -22,6 +22,10 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
       }
     }
 
+    // Arrêter tout ce qui parle actuellement pour éviter les interférences
+    stopSpeaking();
+    await new Promise(resolve => setTimeout(resolve, 50));
+
     speakSessionRef.current += 1;
     const session = speakSessionRef.current;
     let index = startIndex;
