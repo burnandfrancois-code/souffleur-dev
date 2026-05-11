@@ -134,12 +134,24 @@ export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1.
 
       // Sur Android, cancel() avant speak() évite les conflits
       if (!window.speechSynthesis) { resolve(); return; }
-      window.speechSynthesis.cancel();
+      // Toujours cancel avant speak pour éviter les superpositions
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {
+        console.warn('[TTS] Cancel failed:', e);
+      }
+      // Délai court pour laisser le cancel s'appliquer
       setTimeout(() => {
         if (signal?.aborted) { resolve(); return; }
         console.log('[TTS] Speaking:', text.substring(0, 50), 'volume:', utterance.volume);
-        window.speechSynthesis.speak(utterance);
-      }, 300);
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch (e) {
+          console.error('[TTS] Speak failed:', e);
+          cleanup();
+          resolve();
+        }
+      }, 100);
 
     } catch (e) {
       console.error('Error in speakText:', e);
