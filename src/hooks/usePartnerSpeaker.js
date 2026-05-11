@@ -10,7 +10,7 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
   const speakPartnerLines = useCallback(async (startIndex, lines, myCharacter, genders, stripDirections) => {
     const norm = (s) => s?.trim().toLowerCase();
 
-    // Unlock audio une seule fois
+    // Unlock audio une seule fois avant tout
     if (!audioUnlockedRef.current) {
       try {
         await unlockAudioForAndroid();
@@ -43,11 +43,18 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
       onLineChange(index);
       onSpeakingChange(true);
       const gender = genders[line.character] || 'male';
+      const textToSpeak = stripDirections(line.text);
       
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
-      await speakText(stripDirections(line.text), 'fr-FR', gender, speechRateRef.current, controller.signal);
+      try {
+        console.log('[TTS] Speaking:', textToSpeak.substring(0, 50));
+        await speakText(textToSpeak, 'fr-FR', gender, speechRateRef.current, controller.signal);
+        console.log('[TTS] Finished speaking line');
+      } catch (e) {
+        console.error('[TTS] Error speaking:', e);
+      }
 
       if (session !== speakSessionRef.current) {
         onSpeakingChange(false);
@@ -83,11 +90,19 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
 
     onSpeakingChange(true);
     const gender = genders[character] || 'male';
+    const textToSpeak = stripDirections(text);
     
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    await speakText(stripDirections(text), 'fr-FR', gender, speechRateRef.current, controller.signal);
+    try {
+      console.log('[TTS] Speaking single line:', textToSpeak.substring(0, 50));
+      await speakText(textToSpeak, 'fr-FR', gender, speechRateRef.current, controller.signal);
+      console.log('[TTS] Finished speaking single line');
+    } catch (e) {
+      console.error('[TTS] Error speaking single line:', e);
+    }
+
     onSpeakingChange(false);
   }, [onSpeakingChange]);
 
