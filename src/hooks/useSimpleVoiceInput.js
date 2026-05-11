@@ -112,8 +112,20 @@ export function useSimpleVoiceInput() {
           });
           
           console.log('[WHISPER] Sending audio to transcribeAudioV2, blob size:', blob.size, 'base64 length:', audioBase64.length);
-          const response = await base44.functions.invoke('transcribeAudioV2', { audio: audioBase64 });
-          const text = response.data?.transcript || response.data?.text || '';
+          let response;
+          try {
+            response = await base44.functions.invoke('transcribeAudioV2', { audio: audioBase64 });
+          } catch (e) {
+            console.error('[WHISPER] invoke() threw error:', e.message, 'status:', e.response?.status, 'data:', e.response?.data);
+            throw e;
+          }
+          
+          if (response.status !== 200) {
+            console.error('[WHISPER] Backend returned status', response.status, ':', response.data);
+            throw new Error('Backend status ' + response.status);
+          }
+          
+          const text = response.data?.text || response.data?.transcript || '';
           console.log('[WHISPER] Transcript:', text, 'full response:', response.data);
 
           if (!activeRef.current || submittedRef.current) return;
