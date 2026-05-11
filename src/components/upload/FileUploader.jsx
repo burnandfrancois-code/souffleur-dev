@@ -79,7 +79,7 @@ export default function FileUploader({ onFileUploaded, isProcessing, progress })
             <p className="font-semibold text-foreground">Déposer votre texte</p>
             <p className="text-xs text-muted-foreground">PDF texte (pas de PDF image)</p>
             <p className="text-xs text-muted-foreground">
-              PDF, TXT, Word · Max 50 MB
+              Max 50 MB
             </p>
           </div>
         </div>
