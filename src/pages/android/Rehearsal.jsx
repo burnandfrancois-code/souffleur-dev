@@ -39,6 +39,7 @@ export default function AndroidRehearsal() {
   const [started, setStarted] = useState(false);
   const [showLinesList, setShowLinesList] = useState(false);
   const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [trainingMode, setTrainingMode] = useState(urlParams.get('training') === 'true');
 
   const autoAdvanceThreshold = 80;
   const speechRateRef = useRef(1);
@@ -98,6 +99,15 @@ export default function AndroidRehearsal() {
       }, 200);
     }
   }, [phase, isMyLine]);
+
+  // En mode entraînement, auto-avancer après la comparaison
+  useEffect(() => {
+    if (!trainingMode || phase !== 'result' || !comparisonResult) return;
+    const timer = setTimeout(() => {
+      handleContinue();
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [trainingMode, phase, comparisonResult, handleContinue]);
 
   // Auto-redirect to home after rehearsal completes
   useEffect(() => {
@@ -265,38 +275,71 @@ export default function AndroidRehearsal() {
         <p className="font-body text-xs text-muted-foreground">{myLineCount} répliques à jouer</p>
       </div>
 
-      <Button
-        size="lg"
-        className="w-full max-w-xs bg-primary text-primary-foreground font-body text-base gap-2 mt-4"
-        onClick={async () => {
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(track => track.stop());
-            
-            // Test TTS simple
-            await unlockAudioForAndroid();
-            await speakText('Bienvenue, commençons le répétition.', 'fr-FR', 'female', 1);
-            
-            setStarted(true);
-            // Lancer la lecture immédiatement
-            setTimeout(() => {
-              if (lines[0] && normalize(lines[0].character) !== normalize(myCharacter)) {
-                speakPartnerLines(0, lines, myCharacter, characterGenders, stripDirections);
+      <div className="flex flex-col gap-3 w-full max-w-xs">
+        <Button
+          size="lg"
+          className="bg-primary text-primary-foreground font-body text-base gap-2"
+          onClick={async () => {
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+              stream.getTracks().forEach(track => track.stop());
+              
+              await unlockAudioForAndroid();
+              await speakText('Bienvenue, commençons le répétition.', 'fr-FR', 'female', 1);
+              
+              setStarted(true);
+              setTrainingMode(false);
+              setTimeout(() => {
+                if (lines[0] && normalize(lines[0].character) !== normalize(myCharacter)) {
+                  speakPartnerLines(0, lines, myCharacter, characterGenders, stripDirections);
+                }
+              }, 200);
+            } catch (e) {
+              setStarted(false);
+              if (e.name === 'NotAllowedError') {
+                alert('Microphone refusé. Vérifiez les paramètres de votre navigateur.');
+              } else {
+                console.error('Erreur au démarrage:', e);
               }
-            }, 200);
-          } catch (e) {
-            setStarted(false);
-            if (e.name === 'NotAllowedError') {
-              alert('Microphone refusé. Vérifiez les paramètres de votre navigateur.');
-            } else {
-              console.error('Erreur au démarrage:', e);
             }
-          }
-        }}
-      >
-        <Mic className="w-5 h-5" />
-        Commencer
-      </Button>
+          }}
+        >
+          <Mic className="w-5 h-5" />
+          Commencer
+        </Button>
+        <Button
+          size="lg"
+          variant="outline"
+          className="font-body text-base gap-2"
+          onClick={async () => {
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+              stream.getTracks().forEach(track => track.stop());
+              
+              await unlockAudioForAndroid();
+              await speakText('Mode entraînement complet. Commençons.', 'fr-FR', 'female', 1);
+              
+              setStarted(true);
+              setTrainingMode(true);
+              setTimeout(() => {
+                if (lines[0] && normalize(lines[0].character) !== normalize(myCharacter)) {
+                  speakPartnerLines(0, lines, myCharacter, characterGenders, stripDirections);
+                }
+              }, 200);
+            } catch (e) {
+              setStarted(false);
+              if (e.name === 'NotAllowedError') {
+                alert('Microphone refusé. Vérifiez les paramètres de votre navigateur.');
+              } else {
+                console.error('Erreur au démarrage:', e);
+              }
+            }
+          }}
+        >
+          <Mic className="w-5 h-5" />
+          Entraînement complet
+        </Button>
+      </div>
     </div>
   );
 
