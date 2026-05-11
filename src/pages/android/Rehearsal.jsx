@@ -45,6 +45,7 @@ export default function AndroidRehearsal() {
   const currentLineIndexRef = useRef(currentLineIndex);
   const myLineRecorderRef = useRef(null);
   const compareSessionRef = useRef(0);
+  const mainScrollRef = useRef(null);
 
   const commandVoice = useSimpleVoiceInput();
   const commandActiveRef = useRef(false);
@@ -53,6 +54,12 @@ export default function AndroidRehearsal() {
 
   useEffect(() => {
     currentLineIndexRef.current = currentLineIndex;
+    // Scroll vers la ligne courante
+    if (mainScrollRef.current) {
+      setTimeout(() => {
+        mainScrollRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 50);
+    }
   }, [currentLineIndex]);
 
   const { speakPartnerLines, speakSingleLine, cancelAll } = usePartnerSpeaker({
@@ -287,7 +294,7 @@ export default function AndroidRehearsal() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto px-3 py-4 pb-80">
+      <main ref={mainScrollRef} className="flex-1 overflow-y-auto px-3 py-4 pb-80">
         <div className="w-full max-w-2xl mx-auto space-y-3">
           {currentLine?.act && (
             <div className="flex justify-center">
