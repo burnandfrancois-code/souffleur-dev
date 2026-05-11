@@ -10,15 +10,22 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
   const [sttError, setSttError] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [autoStarting, setAutoStarting] = useState(false);
+  const [autoSubmit, setAutoSubmit] = useState(false);
   const autoPlayDoneRef = useRef(false);
   const startRecordingRef = useRef(null);
 
   const startRecording = useCallback(() => {
     setSttError(null);
     voiceRec.start((finalText) => {
-      onSubmit(finalText);
+      if (autoSubmit) {
+        // Soumettre directement sans attendre l'action de l'utilisateur
+        onSubmit(finalText);
+      } else {
+        // Laisser l'utilisateur valider manuellement
+        // Le texte est déjà dans le transcript, juste le recontextualiser ici
+      }
     });
-  }, [voiceRec, onSubmit]);
+  }, [voiceRec, onSubmit, autoSubmit]);
 
   // Garder startRecording à jour dans la ref
   useEffect(() => {
@@ -121,12 +128,26 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
         </p>
       </div>
 
+      {/* Auto-submit toggle */}
+      <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-secondary/30 border border-border">
+        <input
+          type="checkbox"
+          checked={autoSubmit}
+          onChange={(e) => setAutoSubmit(e.target.checked)}
+          id="auto-submit-toggle"
+          className="w-4 h-4 rounded cursor-pointer"
+        />
+        <label htmlFor="auto-submit-toggle" className="text-xs text-muted-foreground cursor-pointer flex-1">
+          Valider automatiquement
+        </label>
+      </div>
+
       {/* Buttons */}
       <div className="flex gap-2">
         <Button variant="ghost" size="sm" onClick={onSkip} className="flex-1 text-xs text-muted-foreground gap-1">
           Passer
         </Button>
-        {voiceRec.transcript && (
+        {voiceRec.transcript && !autoSubmit && (
           <>
             <Button
               variant="ghost"
