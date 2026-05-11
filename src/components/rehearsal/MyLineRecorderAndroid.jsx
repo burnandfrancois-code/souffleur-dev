@@ -10,15 +10,19 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
   const [sttError, setSttError] = useState(null);
   const [hasStarted, setHasStarted] = useState(false);
   const autoPlayDoneRef = useRef(false);
+  const startRecordingRef = useRef(null);
 
   const startRecording = useCallback(() => {
-    console.log('[RECORDER] Starting recording...');
     setSttError(null);
     voiceRec.start((finalText) => {
-      console.log('[RECORDER] Got transcript:', finalText);
       onSubmit(finalText);
     });
   }, [voiceRec, onSubmit]);
+
+  // Garder startRecording à jour dans la ref
+  useEffect(() => {
+    startRecordingRef.current = startRecording;
+  }, [startRecording]);
 
   useImperativeHandle(ref, () => ({
     startRecording,
@@ -26,24 +30,21 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
     reset: voiceRec.reset
   }), [startRecording, voiceRec.stop, voiceRec.reset]);
 
-  // Reset quand la ligne change
+  // Reset quand la ligne change — dépendances minimales
   useEffect(() => {
-    console.log('[RECORDER] Line changed, autoPlay =', autoPlay);
     voiceRec.reset();
     setSttError(null);
     setHasStarted(false);
     autoPlayDoneRef.current = false;
     
-    // Auto-start si autoPlay est activé
     if (autoPlay && !autoPlayDoneRef.current) {
-      console.log('[RECORDER] Auto-starting recording...');
       autoPlayDoneRef.current = true;
       setTimeout(() => {
         setHasStarted(true);
-        setTimeout(() => startRecording(), 100);
+        setTimeout(() => startRecordingRef.current?.(), 100);
       }, 300);
     }
-  }, [line, autoPlay, voiceRec, startRecording]);
+  }, [line, autoPlay, voiceRec.reset]);
 
   // Copier les erreurs du hook
   useEffect(() => {
