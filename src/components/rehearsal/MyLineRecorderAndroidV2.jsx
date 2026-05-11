@@ -15,17 +15,17 @@ export default function MyLineRecorderAndroidV2({ line, script, myCharacter, onL
   const stripDirections = (text) =>
     text?.replace(/\([^)]*\)?/g, '').replace(/\[[^\]]*\]?/g, '').replace(/\s+/g, ' ').trim() || '';
 
-  // Auto-start recording quand le composant monte et que autoPlay est true
+  // Auto-start recording quand le composant monte
   useEffect(() => {
-    if (autoPlay && phase === 'waiting') {
-      startRecording();
-    }
+    startRecording();
+    return () => voiceRec.stop();
   }, []);
 
   const startRecording = useCallback(() => {
     setSttError(null);
     setPhase('recording');
     voiceRec.start((finalText) => {
+      voiceRec.stop();
       handleSubmit(finalText);
     });
   }, [voiceRec]);
@@ -57,8 +57,11 @@ export default function MyLineRecorderAndroidV2({ line, script, myCharacter, onL
     voiceRec.reset();
     setSttError(null);
     setComparisonResult(null);
-    setPhase('waiting');
-    setTimeout(() => startRecording(), 300);
+    setPhase('recording');
+    setTimeout(() => voiceRec.start((finalText) => {
+      voiceRec.stop();
+      handleSubmit(finalText);
+    }), 300);
   };
 
   const handleSkip = () => {
@@ -95,30 +98,17 @@ export default function MyLineRecorderAndroidV2({ line, script, myCharacter, onL
       {/* Recording state */}
       {phase === 'recording' && (
         <div className="rounded-xl border-2 border-destructive bg-destructive/10 p-4 text-center">
-          <button
-            onClick={() => voiceRec.stop()}
-            className="relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all mb-3 bg-destructive shadow-lg shadow-destructive/50"
-          >
+          <div className="relative w-20 h-20 rounded-full mx-auto flex items-center justify-center mb-3 bg-destructive shadow-lg shadow-destructive/50">
             <span className="absolute inset-0 rounded-full bg-destructive/50 animate-ping" />
             <MicOff className="w-8 h-8 text-white relative z-10" />
-          </button>
+          </div>
           <p className="text-sm font-semibold text-destructive">🎙 Parlez !</p>
           <p className="text-xs text-muted-foreground mt-2">Dites "OK" pour arrêter</p>
         </div>
       )}
 
-      {/* Waiting state */}
-      {phase === 'waiting' && (
-        <div className="rounded-xl border-2 border-primary bg-primary/10 p-4 text-center">
-          <button
-            onClick={startRecording}
-            className="relative w-20 h-20 rounded-full mx-auto flex items-center justify-center transition-all mb-3 bg-primary shadow-lg shadow-primary/30 hover:scale-105"
-          >
-            <Mic className="w-8 h-8 text-primary-foreground relative z-10" />
-          </button>
-          <p className="text-sm font-semibold text-primary">En attente du texte</p>
-        </div>
-      )}
+      {/* Waiting state - invisible, mic already recording */}
+      {phase === 'waiting' && null}
 
       {/* Comparing state */}
       {phase === 'comparing' && (
