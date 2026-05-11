@@ -46,7 +46,7 @@ export function useSimpleVoiceInput() {
       if (blob.size < 500) { isSendingRef.current = false; return; }
       const base64 = await blobToBase64(blob);
       if (sessionIdRef.current !== mySession) { isSendingRef.current = false; return; }
-      const res = await base44.functions.invoke('transcribeAudio', { audio: base64 });
+      const res = await base44.functions.invoke('transcribeAudioV2', { audio: base64 });
       const text = (res?.data?.text || '').trim();
       if (sessionIdRef.current !== mySession) { isSendingRef.current = false; return; }
       if (text && text !== lastTranscriptRef.current) {
@@ -159,12 +159,10 @@ export function useSimpleVoiceInput() {
 
     recognition.onerror = (event) => {
       console.warn('[SpeechRecognition] error:', event.error);
-      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-        // Fallback to Whisper
-        stopSpeechRecognition();
-        usingSpeechRef.current = false;
-        startWhisper(mySession);
-      }
+      // Any error means SpeechRecognition is blocked (iframe) → fallback to Whisper
+      stopSpeechRecognition();
+      usingSpeechRef.current = false;
+      startWhisper(mySession);
     };
 
     recognition.onend = () => {
