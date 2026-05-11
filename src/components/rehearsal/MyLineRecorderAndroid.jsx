@@ -9,6 +9,7 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
   const voiceRec = useSimpleVoiceInput();
   const [sttError, setSttError] = useState(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [autoStarting, setAutoStarting] = useState(false);
   const autoPlayDoneRef = useRef(false);
   const startRecordingRef = useRef(null);
 
@@ -38,11 +39,16 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
 
      if (autoPlay && !autoPlayDoneRef.current) {
        autoPlayDoneRef.current = true;
+       setAutoStarting(true);
        setIsInitialized(true);
-       // Lancer le recording immédiatement (saute l'écran jaune)
-       startRecordingRef.current?.();
+       // Lancer le recording immédiatement (saute l'écran bleu)
+       setTimeout(() => {
+         startRecordingRef.current?.();
+         setAutoStarting(false);
+       }, 0);
      } else {
        setIsInitialized(false);
+       setAutoStarting(false);
      }
    }, [line, autoPlay, voiceRec.reset]);
 
