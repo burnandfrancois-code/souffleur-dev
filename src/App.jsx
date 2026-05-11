@@ -16,6 +16,7 @@ const DesktopHome = lazy(() => import('@/pages/desktop/Home'));
 const DesktopRehearsal = lazy(() => import('@/pages/desktop/Rehearsal'));
 const DesktopMyScripts = lazy(() => import('@/pages/desktop/MyScripts'));
 const DesktopTarifs = lazy(() => import('@/pages/desktop/Tarifs'));
+const DesktopHelp = lazy(() => import('@/pages/desktop/Help'));
 const AndroidHome = lazy(() => import('@/pages/android/Home'));
 const AndroidRehearsal = lazy(() => import('@/pages/android/Rehearsal'));
 const AndroidMyScripts = lazy(() => import('@/pages/android/MyScripts'));
@@ -61,6 +62,7 @@ const AuthenticatedApp = () => {
         <Route path="/desktop/rehearsal" element={<DesktopRehearsal />} />
         <Route path="/desktop/my-scripts" element={<DesktopMyScripts />} />
         <Route path="/desktop/tarifs" element={<DesktopTarifs />} />
+        <Route path="/desktop/help" element={<DesktopHelp />} />
         <Route path="/android/" element={<AndroidHome />} />
         <Route path="/android/rehearsal" element={<AndroidRehearsal />} />
         <Route path="/android/my-scripts" element={<AndroidMyScripts />} />
