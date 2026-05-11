@@ -145,14 +145,13 @@ export function useAndroidVoiceInputWhisper() {
 
       mediaRecorder.start();
       
-      // Capture chunks de 1.5s pour maximiser la qualité Whisper
-      // (plus court = plus souvent, mais risque de texte incomplet)
-      // (plus long = moins souvent, mais Whisper capture mieux les phrases)
+      // Capture chunks de 2.5s pour avoir assez de contenu (y compris "OK")
+      // Whisper besoin de suffisamment d'audio pour bien transcrire
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
           mediaRecorder.stop();
         }
-      }, 1500);
+      }, 2500);
 
     } catch (e) {
       setError({ message: 'Erreur micro : ' + e.message });
