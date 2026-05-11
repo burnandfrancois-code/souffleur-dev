@@ -26,18 +26,21 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
-    stopSpeaking();
     pendingTimersRef.current.forEach(clearTimeout);
     pendingTimersRef.current = [];
     speakSessionRef.current += 1;
     const session = speakSessionRef.current;
 
     let index = startIndex;
-    console.log('[PARTNER] Starting speakPartnerLines at index:', startIndex, 'total lines:', lines.length);
+    console.log('[PARTNER] Starting speakPartnerLines at index:', startIndex, 'session:', session, 'total lines:', lines.length);
     
     while (session === speakSessionRef.current && index < lines.length) {
+      console.log('[PARTNER] While loop iteration: index:', index, 'session check:', session === speakSessionRef.current);
       const line = lines[index];
-      if (!line) break;
+      if (!line) {
+        console.log('[PARTNER] Line is null at index:', index);
+        break;
+      }
 
       if (norm(line.character) === norm(myCharacter)) {
         console.log('[PARTNER] Reached my line at index:', index);
@@ -46,6 +49,7 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
         return;
       }
 
+      console.log('[PARTNER] Will speak line', index, 'character:', line.character);
       onLineChange(index);
       onSpeakingChange(true);
       const gender = genders[line.character] || 'male';
@@ -55,13 +59,15 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
       abortControllerRef.current = controller;
 
       try {
-        console.log('[PARTNER] Speaking line', index, ':', textToSpeak.substring(0, 50));
+        console.log('[PARTNER] About to call speakText with:', textToSpeak.substring(0, 50));
         await speakText(textToSpeak, 'fr-FR', gender, speechRateRef.current, controller.signal);
+        console.log('[PARTNER] speakText completed');
       } catch (e) {
-        console.error('[TTS] Error speaking:', e);
+        console.error('[PARTNER] Error speaking:', e);
       }
 
       if (session !== speakSessionRef.current) {
+        console.log('[PARTNER] Session changed, stopping');
         onSpeakingChange(false);
         return;
       }
@@ -71,6 +77,7 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
       index++;
     }
 
+    console.log('[PARTNER] Loop ended, session valid:', session === speakSessionRef.current, 'index:', index, 'lines.length:', lines.length);
     onSpeakingChange(false);
   }, [onLineChange, onSpeakingChange, speechRateRef]);
 
