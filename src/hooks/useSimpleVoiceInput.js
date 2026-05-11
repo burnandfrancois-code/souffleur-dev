@@ -1,193 +1,165 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
+import { base44 } from '@/api/base44Client';
 
 export function useSimpleVoiceInput() {
   const [transcript, setTranscript] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState(null);
 
-  const recognitionRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const streamRef = useRef(null);
+  const chunksRef = useRef([]);
   const sessionIdRef = useRef(0);
-  const finalWordsRef = useRef([]);
-  const interimRef = useRef('');
-  const lastOkTimeRef = useRef(0);
-  const userStoppedRef = useRef(false);
-  const pendingTimersRef = useRef([]);
-  const okDetectedRef = useRef(false);
-  const intentionallyStopping = useRef(false);
-  const SpeechRecognitionRef = useRef(null);
+  const onFinalRef = useRef(null);
+  const pollTimerRef = useRef(null);
+  const accumulatedTranscriptRef = useRef('');
+  const isSendingRef = useRef(false);
 
-  const stop = useCallback(() => {
-    intentionallyStopping.current = true;
-    userStoppedRef.current = true;
-    sessionIdRef.current += 1;
-    if (recognitionRef.current) {
-      try { recognitionRef.current.abort(); } catch (e) {}
+  const stopPoll = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
     }
-    setIsRecording(false);
   }, []);
 
-  const start = useCallback((onFinalTranscript) => {
-   sessionIdRef.current += 1;
-   const mySession = sessionIdRef.current;
-   userStoppedRef.current = false;
-   intentionallyStopping.current = false;
+  const blobToBase64 = (blob) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 
-   console.log('[useSimpleVoiceInput] START CALLED - sessionId:', mySession);
-   console.log('[useSimpleVoiceInput] Browser info:', { 
-     userAgent: navigator.userAgent,
-     mediaDevices: !!navigator.mediaDevices,
-     getUserMedia: !!navigator.mediaDevices?.getUserMedia,
-   });
+  const sendChunk = useCallback(async (mySession) => {
+    if (isSendingRef.current) return;
+    if (chunksRef.current.length === 0) return;
 
-   if (recognitionRef.current) {
-     try { recognitionRef.current.abort(); } catch (e) {}
-   }
+    const chunksCopy = [...chunksRef.current];
+    chunksRef.current = [];
+    isSendingRef.current = true;
 
-   setTranscript('');
-   setError(null);
-   finalWordsRef.current = [];
-   interimRef.current = '';
-   lastOkTimeRef.current = 0;
-   okDetectedRef.current = false;
-   localStorage.removeItem('souffleur_instant_mic');
+    try {
+      const blob = new Blob(chunksCopy, { type: 'audio/webm' });
+      if (blob.size < 1000) { isSendingRef.current = false; return; }
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      console.error('[useSimpleVoiceInput] SpeechRecognition API not available');
-      setError({ message: 'Reconnaissance vocale non supportée' });
-      return;
-    }
-    console.log('[useSimpleVoiceInput] SpeechRecognition API found');
-    SpeechRecognitionRef.current = SpeechRecognition;
+      const base64 = await blobToBase64(blob);
 
-    const rec = new SpeechRecognition();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = 'fr-FR';
-    recognitionRef.current = rec;
+      if (sessionIdRef.current !== mySession) { isSendingRef.current = false; return; }
 
-    rec.onstart = () => {
-      console.log('[useSimpleVoiceInput] onstart triggered - sessionId:', mySession);
-      if (sessionIdRef.current === mySession) {
-        console.log('[useSimpleVoiceInput] Setting isRecording to true');
-        setIsRecording(true);
-      }
-    };
+      const res = await base44.functions.invoke('transcribeAudio', { audio: base64 });
+      const text = (res?.data?.text || '').trim();
 
-    rec.onresult = (event) => {
-      if (sessionIdRef.current !== mySession) return;
+      if (sessionIdRef.current !== mySession) { isSendingRef.current = false; return; }
 
-      // Reconstruire la phrase complète à partir de ALL event.results
-      let fullText = '';
-      for (let i = 0; i < event.results.length; i++) {
-        fullText += event.results[i][0].transcript + ' ';
-      }
-      const displayText = fullText.trim();
-      setTranscript(displayText);
-      setIsRecording(true); // forcer le re-render
+      if (text) {
+        accumulatedTranscriptRef.current = (accumulatedTranscriptRef.current + ' ' + text).trim();
+        setTranscript(accumulatedTranscriptRef.current);
 
-      // Détecte "OK"
-      const words = displayText.split(/\s+/);
-      const hasOk = words.some(w => /^ok$/i.test(w.toLowerCase()) || /^okay$/i.test(w.toLowerCase()) || /^o\.k\.$/i.test(w.toLowerCase()));
-
-      if (hasOk && !okDetectedRef.current) {
-        okDetectedRef.current = true;
-        const now = Date.now();
-        if (now - lastOkTimeRef.current > 1000) {
-          lastOkTimeRef.current = now;
-          const finalText = words
-            .filter(w => !/^ok$/i.test(w.toLowerCase()) && !/^okay$/i.test(w.toLowerCase()) && !/^o\.k\.$/i.test(w.toLowerCase()))
-            .join(' ')
-            .trim();
-
-          if (finalText && onFinalTranscript) {
-            const capturedSession = mySession;
-            setTimeout(() => {
-              if (sessionIdRef.current !== capturedSession) return;
-              stop();
-              onFinalTranscript(finalText);
-            }, 200);
+        // Detect "OK" command
+        const words = accumulatedTranscriptRef.current.split(/\s+/);
+        const hasOk = words.some(w => /^(ok|okay|o\.k\.)$/i.test(w));
+        if (hasOk && onFinalRef.current) {
+          const finalText = words.filter(w => !/^(ok|okay|o\.k\.)$/i.test(w)).join(' ').trim();
+          if (finalText) {
+            stopPoll();
+            const cb = onFinalRef.current;
+            onFinalRef.current = null;
+            cb(finalText);
           }
         }
       }
-    };
-
-    rec.onerror = (e) => {
-       console.log('[useSimpleVoiceInput] onerror triggered:', { error: e.error, sessionId: mySession });
-       if (sessionIdRef.current !== mySession) return;
-       if (e.error === 'network') {
-         console.log('[useSimpleVoiceInput] Network error (ignoring)');
-       } else if (e.error === 'not-allowed') {
-         console.error('[useSimpleVoiceInput] Permission denied by browser/OS');
-       }
-       // Ignorer les erreurs de permission et laisser onend redémarrer
-     };
-
-    rec.onend = () => {
-      if (sessionIdRef.current !== mySession || intentionallyStopping.current || okDetectedRef.current) return;
-      
-      // Redémarrer immédiatement sans délai
-      if (SpeechRecognitionRef.current) {
-        try {
-          const newRec = new SpeechRecognitionRef.current();
-          newRec.continuous = true;
-          newRec.interimResults = true;
-          newRec.lang = 'fr-FR';
-          recognitionRef.current = newRec;
-          
-          newRec.onstart = () => {
-            if (sessionIdRef.current === mySession) setIsRecording(true);
-          };
-
-          // Garder le transcript existant lors du redémarrage
-          newRec.onresult = (event) => {
-            if (sessionIdRef.current !== mySession) return;
-            let fullText = '';
-            for (let i = 0; i < event.results.length; i++) {
-              fullText += event.results[i][0].transcript + ' ';
-            }
-            const displayText = fullText.trim();
-            setTranscript(displayText);
-          };
-          newRec.onerror = rec.onerror;
-          newRec.onend = rec.onend;
-          
-          newRec.start();
-        } catch (e) {}
-      }
-    };
-
-    console.log('[useSimpleVoiceInput] Calling rec.start()');
-    try {
-      rec.start();
-      console.log('[useSimpleVoiceInput] rec.start() succeeded');
     } catch (e) {
-      console.error('[useSimpleVoiceInput] rec.start() threw error:', e);
+      console.warn('[useSimpleVoiceInput] sendChunk error:', e);
+    } finally {
+      isSendingRef.current = false;
     }
-  }, [stop]);
+  }, [stopPoll]);
+
+  const stop = useCallback(() => {
+    sessionIdRef.current += 1;
+    stopPoll();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try { mediaRecorderRef.current.stop(); } catch (e) {}
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    mediaRecorderRef.current = null;
+    setIsRecording(false);
+  }, [stopPoll]);
+
+  const start = useCallback(async (onFinalTranscript) => {
+    sessionIdRef.current += 1;
+    const mySession = sessionIdRef.current;
+
+    onFinalRef.current = onFinalTranscript;
+    accumulatedTranscriptRef.current = '';
+    chunksRef.current = [];
+    isSendingRef.current = false;
+    setTranscript('');
+    setError(null);
+    stopPoll();
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+    }
+
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (e) {
+      setError({ message: 'Microphone non accessible : ' + e.message });
+      return;
+    }
+
+    if (sessionIdRef.current !== mySession) {
+      stream.getTracks().forEach(t => t.stop());
+      return;
+    }
+
+    streamRef.current = stream;
+    setIsRecording(true);
+
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : MediaRecorder.isTypeSupported('audio/webm')
+      ? 'audio/webm'
+      : '';
+
+    const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {});
+    mediaRecorderRef.current = recorder;
+
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+    };
+
+    recorder.onerror = (e) => console.error('[useSimpleVoiceInput] recorder error:', e);
+
+    // Collect chunks every 500ms
+    recorder.start(500);
+
+    // Send to Whisper every 4 seconds
+    pollTimerRef.current = setInterval(() => {
+      if (sessionIdRef.current === mySession) sendChunk(mySession);
+    }, 4000);
+
+  }, [stopPoll, sendChunk]);
 
   const reset = useCallback(() => {
     stop();
     setTranscript('');
     setError(null);
-    finalWordsRef.current = [];
-    interimRef.current = '';
+    accumulatedTranscriptRef.current = '';
   }, [stop]);
 
   useEffect(() => {
     return () => {
-      if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch (e) {}
+      stopPoll();
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
       }
     };
-  }, []);
+  }, [stopPoll]);
 
-  return {
-    transcript,
-    isRecording,
-    error,
-    start,
-    stop,
-    reset,
-  };
+  return { transcript, isRecording, error, start, stop, reset };
 }
