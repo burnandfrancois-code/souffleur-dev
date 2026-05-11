@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { motion } from 'framer-motion';
-import { MicOff, Loader2 } from 'lucide-react';
+import { Mic, MicOff, Loader2 } from 'lucide-react';
 import { useSimpleVoiceInput } from '@/hooks/useSimpleVoiceInput';
 import { compareTexts } from '@/lib/scriptParser';
 
@@ -58,21 +58,21 @@ const MyLineRecorderAndroidWhisper = forwardRef(function MyLineRecorderAndroidWh
     <div className="space-y-3">
       {/* Recording state */}
       {phase === 'recording' && (
-        <div className="rounded-xl border-2 border-destructive bg-destructive/10 p-8 text-center space-y-4">
-          <div className="relative w-24 h-24 rounded-full mx-auto flex items-center justify-center bg-destructive shadow-lg shadow-destructive/50">
-            <span className="absolute inset-0 rounded-full bg-destructive/50 animate-ping" />
-            <MicOff className="w-10 h-10 text-white relative z-10" />
+        <div className="rounded-2xl border-2 border-destructive bg-destructive/10 p-6 text-center space-y-4">
+          <div className="relative w-32 h-32 rounded-full mx-auto flex items-center justify-center bg-destructive shadow-xl shadow-destructive/50">
+            <span className="absolute inset-0 rounded-full bg-destructive/40 animate-pulse" />
+            <Mic className="w-14 h-14 text-destructive-foreground relative z-10" />
           </div>
           <div>
-            <p className="text-lg font-bold text-destructive">🎙 Parlez!</p>
-            <p className="text-xs text-muted-foreground mt-1">Dites "OK" pour arrêter</p>
+            <p className="text-2xl font-bold text-destructive">🎙 Parlez!</p>
+            <p className="text-sm text-muted-foreground mt-2">Dites "OK" pour arrêter</p>
           </div>
-          <div className="bg-background border-2 border-destructive/40 rounded-lg px-4 py-4 min-h-[3rem] flex items-center justify-center">
-            <p className="text-base text-foreground leading-relaxed">
+          <div className="bg-background border-2 border-destructive/30 rounded-xl px-4 py-4 min-h-[4rem] flex items-center justify-center">
+            <p className="text-lg text-foreground leading-relaxed font-medium">
               {voiceRec.transcript ? (
                 <>
                   {voiceRec.transcript}
-                  <span className="inline-block w-0.5 h-5 bg-destructive ml-1 animate-pulse" />
+                  <span className="inline-block w-1 h-6 bg-destructive ml-2 animate-pulse" />
                 </>
               ) : (
                 <span className="text-muted-foreground text-sm italic">En écoute...</span>
