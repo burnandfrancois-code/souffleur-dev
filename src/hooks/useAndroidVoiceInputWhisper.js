@@ -173,7 +173,7 @@ export function useAndroidVoiceInputWhisper() {
       micStreamRef.current = null;
     }
 
-    activeRef.current = false;
+    activeRef.current = true;
     submittedRef.current = false;
     accumulatedRef.current = '';
     interimRef.current = '';
