@@ -16,6 +16,7 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
         await unlockAudioForAndroid();
         audioUnlockedRef.current = true;
         console.log('[TTS] Audio unlocked for Android');
+        await new Promise(resolve => setTimeout(resolve, 200));
       } catch (e) {
         console.error('[TTS] Failed to unlock audio:', e);
         return;
@@ -24,7 +25,7 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
 
     // Arrêter tout ce qui parle actuellement pour éviter les interférences
     stopSpeaking();
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     speakSessionRef.current += 1;
     const session = speakSessionRef.current;
