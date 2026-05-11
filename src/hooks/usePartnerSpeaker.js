@@ -1,10 +1,15 @@
-import { useCallback, useRef } from 'react';
-import { speakText, stopSpeaking } from '@/lib/speechServices';
+import { useCallback, useRef, useEffect } from 'react';
+import { speakText, stopSpeaking, unlockAudioForAndroid } from '@/lib/speechServices';
 
 export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChange }) {
   const speakSessionRef = useRef(0);
   const abortControllerRef = useRef(null);
   const pendingTimersRef = useRef([]);
+
+  // Unlock audio on Android on first use
+  useEffect(() => {
+    unlockAudioForAndroid();
+  }, []);
 
   const speakPartnerLines = useCallback(async (startIndex, lines, myCharacter, genders, stripDirections) => {
     const norm = (s) => s?.trim().toLowerCase();
