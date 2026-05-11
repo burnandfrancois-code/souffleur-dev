@@ -150,9 +150,9 @@ export function useSimpleVoiceInput() {
             return;
           }
 
-          // Relancer avec délai pour respecter le rate limit (3 req/min) avec peu de marge
+          // Relancer avec délai court pour rate limit (3 req/min)
           if (activeRef.current && !submittedRef.current) {
-            setTimeout(() => recordWithWhisper(), 12000);
+            setTimeout(() => recordWithWhisper(), 11000);
           }
         } catch (e) {
           console.error('[WHISPER] Error transcribing:', e);
@@ -165,15 +165,15 @@ export function useSimpleVoiceInput() {
 
       mediaRecorder.start();
       console.log('[WHISPER] MediaRecorder started, state:', mediaRecorder.state);
-      // Enregistrer pendant 1-1.5 secondes pour transcription plus rapide
+      // Enregistrer pendant 800ms pour feedback ultra-rapide
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
-          console.log('[WHISPER] Stopping recording after 1.5s');
+          console.log('[WHISPER] Stopping recording after 800ms');
           mediaRecorder.stop();
         } else {
           console.log('[WHISPER] Recording already stopped, state:', mediaRecorder.state);
         }
-      }, 1500);
+      }, 800);
     } catch (e) {
       console.error('[WHISPER] Recording error:', e);
       setError({ message: 'Erreur micro : ' + e.message });
