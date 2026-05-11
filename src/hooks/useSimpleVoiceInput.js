@@ -18,10 +18,10 @@ export function useSimpleVoiceInput() {
   // Ref miroir de isRecording pour éviter les flash false→true dans onstart
   const isRecordingRef = useRef(false);
 
-  const setRecording = useCallback((val) => {
+  const setRecording = (val) => {
     isRecordingRef.current = val;
     setIsRecording(val);
-  }, []);
+  };
 
   const destroyRecognition = useCallback(() => {
     if (recognitionRef.current) {
@@ -45,9 +45,9 @@ export function useSimpleVoiceInput() {
     recognitionRef.current = rec;
 
     rec.onstart = () => {
-      // Ne passer à true que la première fois — pas à chaque relance silencieuse
-      if (activeRef.current && !isRecordingRef.current) {
-        setRecording(true);
+      if (activeRef.current) {
+        isRecordingRef.current = true;
+        setIsRecording(true);
       }
     };
 
