@@ -53,7 +53,7 @@ export default function DesktopRehearsal() {
   const stripDirections = (text) =>
     text?.replace(/\([^)]*\)?/g, '').replace(/\[[^\]]*\]?/g, '').replace(/\s+/g, ' ').trim() || '';
 
-  // Auto-play partner lines
+  // Auto-play partner lines — avance automatiquement après la lecture
   const speakPartnerLine = useCallback(async (line) => {
     if (speakAbortRef.current) speakAbortRef.current.abort();
     const controller = new AbortController();
@@ -63,6 +63,8 @@ export default function DesktopRehearsal() {
     await speakText(stripDirections(line.text), 'fr-FR', gender, 1, controller.signal);
     if (!controller.signal.aborted) {
       setIsSpeakingPartner(false);
+      // Avancer automatiquement après la réplique partenaire
+      setCurrentIndex(prev => prev + 1);
     }
   }, [genders]);
 
@@ -196,8 +198,8 @@ export default function DesktopRehearsal() {
                   />
                 )}
 
-                {/* Next button for partner lines */}
-                {!isMyLine && (
+                {/* Next button for partner lines — visible seulement si pas en train de parler */}
+                {!isMyLine && !isSpeakingPartner && (
                   <div className="mt-4 flex justify-end">
                     <Button onClick={() => handleLineAdvance()} className="bg-primary text-primary-foreground">
                       Suivant →
