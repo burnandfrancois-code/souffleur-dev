@@ -25,19 +25,11 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    stopSpeaking();
     pendingTimersRef.current.forEach(clearTimeout);
     pendingTimersRef.current = [];
     speakSessionRef.current += 1;
     const session = speakSessionRef.current;
-    
-    // Attendre un peu avant de commencer — donne au cancel() le temps de se propager
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // Vérifier que la session n'a pas été annulée pendant le délai
-    if (session !== speakSessionRef.current) {
-      console.log('[PARTNER] Session cancelled during startup delay');
-      return;
-    }
 
     let index = startIndex;
     console.log('[PARTNER] Starting speakPartnerLines at index:', startIndex, 'total lines:', lines.length);
