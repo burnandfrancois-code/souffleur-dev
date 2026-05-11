@@ -106,20 +106,26 @@ export default function AndroidRehearsal() {
 
 
 
-  const handleSubmitRecording = async (spokenText) => {
+  const handleSubmitRecording = useCallback(async (spokenText) => {
+    console.log('[REHEARSAL] handleSubmitRecording called with:', spokenText?.substring(0, 50));
     const idx = currentLineIndexRef.current;
-    const lineText = currentLineClean.text;
+    const lineText = currentLineClean?.text;
+    if (!lineText) {
+      console.error('[REHEARSAL] No lineText to compare');
+      return;
+    }
     compareSessionRef.current += 1;
     const session = compareSessionRef.current;
     setPhase('comparing');
     const result = await compareTexts(lineText, spokenText || '');
+    console.log('[REHEARSAL] Comparison result:', result?.accuracy);
     if (compareSessionRef.current !== session) return;
     if (currentLineIndexRef.current !== idx) return;
     setComparisonResult(result);
     setLineScores(prev => [...prev, result.accuracy ?? 0]);
     if (result.perfect) setCompletedMyLines(prev => new Set([...prev, idx]));
     setPhase('result');
-  };
+  }, [currentLineClean?.text]);
 
   useEffect(() => {
     if (phase !== 'result' || !comparisonResult) return;
