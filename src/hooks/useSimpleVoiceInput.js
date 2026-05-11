@@ -41,6 +41,10 @@ export function useSimpleVoiceInput() {
 
   const recordWithWhisper = useCallback(async () => {
     if (!activeRef.current || submittedRef.current) return;
+    if (!micStreamRef.current) {
+      console.error('[WHISPER] No media stream available');
+      return;
+    }
 
     console.log('[WHISPER] Starting recording chunk...');
     try {
@@ -74,32 +78,36 @@ export function useSimpleVoiceInput() {
             const finalText = allText.replace(/\b(ok|okay|o\s*\.?\s*k)\b|^(ok|okay)$/g, '').trim();
             const cb = onFinalRef.current;
             activeRef.current = false;
-            setRecording(false);
+            isRecordingRef.current = false;
+            setIsRecording(false);
             cb(finalText);
             return;
           }
 
-          // Relancer la capture après 1 seconde de silence
+          // Relancer la capture après 500ms de silence
           if (activeRef.current && !submittedRef.current) {
-            setTimeout(() => recordWithWhisper(), 1000);
+            setTimeout(() => recordWithWhisper(), 500);
           }
         } catch (e) {
           console.error('[WHISPER] Error transcribing:', e);
           if (activeRef.current && !submittedRef.current) {
-            setTimeout(() => recordWithWhisper(), 1000);
+            setTimeout(() => recordWithWhisper(), 500);
           }
         }
       };
 
       mediaRecorder.start();
-      // Enregistrer pendant 3 secondes max
+      console.log('[WHISPER] MediaRecorder started, recording for 2 seconds');
+      // Enregistrer pendant 2 secondes
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
+          console.log('[WHISPER] Stopping recording after 2 seconds');
           mediaRecorder.stop();
         }
-      }, 3000);
+      }, 2000);
     } catch (e) {
       console.error('[WHISPER] Recording error:', e);
+      setError({ message: 'Erreur micro : ' + e.message });
     }
   }, []);
 
@@ -111,29 +119,31 @@ export function useSimpleVoiceInput() {
     
     activeRef.current = false;
     submittedRef.current = false;
-    destroyRecognition();
 
     accumulatedRef.current = '';
     finalCountRef.current = 0;
     onFinalRef.current = onFinalTranscript;
     setTranscript('');
     setError(null);
-    isRecordingRef.current = false;
 
     // Obtenir le stream micro
     try {
       console.log('[WHISPER] Requesting getUserMedia');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       micStreamRef.current = stream;
-      console.log('[WHISPER] Got media stream');
+      console.log('[WHISPER] Got media stream, stream active:', stream.active);
     } catch (e) {
       console.error('[WHISPER] getUserMedia error:', e);
-      setError({ message: 'Permission micro refusée. Autorisez le microphone dans votre navigateur.' });
+      setError({ message: 'Permission micro refusée.' });
+      activeRef.current = false;
+      isRecordingRef.current = false;
+      setIsRecording(false);
       return;
     }
 
     activeRef.current = true;
-    setRecording(true);
+    isRecordingRef.current = true;
+    setIsRecording(true);
     console.log('[WHISPER] Starting Whisper recording loop');
     recordWithWhisper();
   }, [recordWithWhisper]);
