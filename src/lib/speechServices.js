@@ -3,6 +3,7 @@ let audioContextAndroid = null;
 let currentUtterance = null;
 let mediaStream = null;
 let androidInitialized = false;
+let pendingIntervals = [];
 
 export async function unlockAudioForDesktop() {
   try {
@@ -75,12 +76,14 @@ function getVoices() {
 
 export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1.3, signal) {
   if (signal?.aborted) return;
+  
+  console.log('[TTS] speakText called - rate:', rate, 'gender:', gender, 'text length:', text.length);
 
   // Déverrouiller l'audio sur desktop ET Android
   const isAndroid = /Android/i.test(navigator.userAgent);
   if (isAndroid) {
     const ctx = await unlockAudioForAndroid();
-    console.log('[TTS] Android audio context:', ctx);
+    console.log('[TTS] Android audio context:', ctx?.state);
   } else {
     await unlockAudioForDesktop();
   }
@@ -96,12 +99,13 @@ export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1.
 
       // Map vitesses pour accélération
       const rateMap = {
-        1: 2.5,
-        1.5: 3.0,
-        2: 3.5,
-        3: 4.5
+        1: 1.5,
+        1.5: 1.8,
+        2: 2.0,
+        3: 2.5
       };
-      const actualRate = Math.min(rateMap[rate] || rate, 4.5);
+      const actualRate = Math.min(rateMap[rate] || rate, 2.5);
+      console.log('[TTS] Computed rate:', rate, '→', actualRate);
 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = lang;
@@ -125,10 +129,14 @@ export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1.
           window.speechSynthesis.pause();
           window.speechSynthesis.resume();
         }
-      }, 10000);
+      }, 8000);
+      pendingIntervals.push(keepaliveInterval);
 
       const cleanup = () => {
-        if (keepaliveInterval) clearInterval(keepaliveInterval);
+        if (keepaliveInterval) {
+          clearInterval(keepaliveInterval);
+          pendingIntervals = pendingIntervals.filter(id => id !== keepaliveInterval);
+        }
         currentUtterance = null;
         console.log('[TTS] Cleanup complete');
       };
@@ -150,11 +158,15 @@ export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1.
       window.speechSynthesis.cancel();
       
       // Petit délai puis lancer
-      setTimeout(() => {
+      const speakTimeout = setTimeout(() => {
         if (signal?.aborted) { resolve(); return; }
-        console.log('[TTS] Speaking:', text.substring(0, 50), 'volume:', utterance.volume);
+        console.log('[TTS] Speaking:', text.substring(0, 50), 'rate:', actualRate, 'volume:', utterance.volume);
         window.speechSynthesis.speak(utterance);
       }, 50);
+      
+      signal?.addEventListener('abort', () => {
+        clearTimeout(speakTimeout);
+      });
 
     } catch (e) {
       console.error('Error in speakText:', e);
@@ -167,6 +179,10 @@ export function stopSpeaking() {
   try {
     window.speechSynthesis.cancel();
     currentUtterance = null;
+    // Clean up any pending intervals
+    pendingIntervals.forEach(id => clearInterval(id));
+    pendingIntervals = [];
+    console.log('[TTS] Stopped speaking and cleaned intervals');
   } catch (e) {
     console.error('Error stopping speech:', e);
   }
