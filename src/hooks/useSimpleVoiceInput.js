@@ -84,27 +84,27 @@ export function useSimpleVoiceInput() {
             return;
           }
 
-          // Relancer la capture après 500ms de silence
+          // Relancer immédiatement pour rester en écoute active
           if (activeRef.current && !submittedRef.current) {
-            setTimeout(() => recordWithWhisper(), 500);
+            recordWithWhisper();
           }
         } catch (e) {
           console.error('[WHISPER] Error transcribing:', e);
           if (activeRef.current && !submittedRef.current) {
-            setTimeout(() => recordWithWhisper(), 500);
+            recordWithWhisper();
           }
         }
       };
 
       mediaRecorder.start();
-      console.log('[WHISPER] MediaRecorder started, recording for 2 seconds');
-      // Enregistrer pendant 2 secondes
+      console.log('[WHISPER] MediaRecorder started, recording indefinitely');
+      // Enregistrer pendant 10 secondes (puis relancer automatiquement si pas d'arrêt)
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
-          console.log('[WHISPER] Stopping recording after 2 seconds');
+          console.log('[WHISPER] Stopping recording after 10 seconds to restart');
           mediaRecorder.stop();
         }
-      }, 2000);
+      }, 10000);
     } catch (e) {
       console.error('[WHISPER] Recording error:', e);
       setError({ message: 'Erreur micro : ' + e.message });
