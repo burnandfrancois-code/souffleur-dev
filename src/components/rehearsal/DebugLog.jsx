@@ -45,7 +45,7 @@ export default function DebugLog({ show = true }) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
-        className={`fixed bottom-64 right-2 z-50 rounded-lg border border-yellow-500/50 bg-black/90 backdrop-blur-sm transition-all ${
+        className={`fixed top-20 right-2 z-50 rounded-lg border border-yellow-500/50 bg-black/90 backdrop-blur-sm transition-all ${
           expanded ? 'w-80 h-48' : 'w-64 h-12'
         }`}
       >

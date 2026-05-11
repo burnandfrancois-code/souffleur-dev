@@ -53,13 +53,23 @@ function getVoices() {
     const voices = window.speechSynthesis.getVoices();
     if (voices.length > 0) { resolve(voices); return; }
     // Sur Android, les voix se chargent de manière asynchrone
+    let resolved = false;
     const handler = () => {
-      resolve(window.speechSynthesis.getVoices());
-      window.speechSynthesis.removeEventListener('voiceschanged', handler);
+      if (!resolved) {
+        resolved = true;
+        resolve(window.speechSynthesis.getVoices());
+        window.speechSynthesis.removeEventListener('voiceschanged', handler);
+      }
     };
     window.speechSynthesis.addEventListener('voiceschanged', handler);
-    // Fallback si l'événement ne se déclenche pas
-    setTimeout(() => resolve(window.speechSynthesis.getVoices() || []), 1000);
+    // Fallback si l'événement ne se déclenche pas après 300ms
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        resolve(window.speechSynthesis.getVoices() || []);
+        window.speechSynthesis.removeEventListener('voiceschanged', handler);
+      }
+    }, 300);
   });
 }
 
@@ -108,16 +118,19 @@ export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1.
       currentUtterance = utterance;
 
       // Keepalive pour Chrome Android (bug: s'arrête après ~15s)
-      const keepaliveInterval = setInterval(() => {
+      let keepaliveInterval = null;
+      keepaliveInterval = setInterval(() => {
         if (window.speechSynthesis.speaking) {
+          console.log('[TTS] Keepalive: resuming playback');
           window.speechSynthesis.pause();
           window.speechSynthesis.resume();
         }
       }, 10000);
 
       const cleanup = () => {
-        clearInterval(keepaliveInterval);
+        if (keepaliveInterval) clearInterval(keepaliveInterval);
         currentUtterance = null;
+        console.log('[TTS] Cleanup complete');
       };
 
       utterance.onend = () => { cleanup(); resolve(); };
