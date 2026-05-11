@@ -91,6 +91,7 @@ export default function AndroidRehearsal() {
   useEffect(() => () => cancelAll(), [cancelAll]);
 
   const launchSpeakChain = useCallback((index) => {
+    console.log('[REHEARSAL] launchSpeakChain at index:', index, 'isMyLine:', normalize(lines[index]?.character) === normalize(myCharacter));
     speakPartnerLines(index, lines, myCharacter, characterGenders, stripDirections);
   }, [speakPartnerLines, lines, myCharacter, characterGenders]);
 
@@ -347,6 +348,7 @@ export default function AndroidRehearsal() {
               <div key={currentLineIndex} className="space-y-3">
                 {isMyLine ? (
                   <>
+                    {console.log('[REHEARSAL] Rendering MyLineRecorder, phase:', phase, 'isMyLine:', isMyLine) || true}
                     {phase === 'line' && <MyLineRecorder ref={myLineRecorderRef} line={currentLineClean} onSubmit={handleSubmitRecording} onSkip={handleNextLine} autoPlay={true} />}
                     {phase === 'comparing' && (
                       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-center py-6">
