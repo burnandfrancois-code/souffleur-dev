@@ -29,6 +29,9 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
     pendingTimersRef.current = [];
     speakSessionRef.current += 1;
     const session = speakSessionRef.current;
+    
+    // Attendre un peu avant de commencer — donne au cancel() le temps de se propager
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     let index = startIndex;
     while (session === speakSessionRef.current && index < lines.length) {
