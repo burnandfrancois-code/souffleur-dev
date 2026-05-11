@@ -129,12 +129,13 @@ export function useSimpleVoiceInput() {
         setRecording(false);
         return;
       }
-      // Le silence ne doit rien déclencher. Seul "OK" ferme la session.
-      // Garder le micro rouge ouvert en attente du "OK".
-      if (!activeRef.current || submittedRef.current) {
+      // Si actif et pas soumis, relancer automatiquement jusqu'à "OK"
+      if (activeRef.current && !submittedRef.current) {
+        console.log('[STT] Restarting after silence...');
+        setTimeout(() => createAndStart(), 200);
+      } else {
         setRecording(false);
       }
-      // Ne pas relancer, ne pas toucher à isRecording si on est actif
     };
 
     try {
