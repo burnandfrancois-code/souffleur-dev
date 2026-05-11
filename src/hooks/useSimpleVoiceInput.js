@@ -131,9 +131,13 @@ export function useSimpleVoiceInput() {
           if (!activeRef.current || submittedRef.current) return;
 
           if (text.trim()) {
-            accumulatedRef.current = (accumulatedRef.current + ' ' + text).trim();
+            // N'ajouter que si c'est du nouveau texte (pas répétition)
+            if (!accumulatedRef.current.endsWith(text)) {
+              accumulatedRef.current = (accumulatedRef.current + ' ' + text).trim();
+            }
           }
           const displayed = accumulatedRef.current;
+          console.log('[WHISPER] Accumulated text:', displayed);
           setTranscript(displayed);
 
           // Détecter "OK" (exact match ou au début/fin)
@@ -150,9 +154,9 @@ export function useSimpleVoiceInput() {
             return;
           }
 
-          // Relancer avec délai court pour rate limit (3 req/min)
+          // Relancer avec délai pour rate limit (3 req/min) sans chevauchement
           if (activeRef.current && !submittedRef.current) {
-            setTimeout(() => recordWithWhisper(), 11000);
+            setTimeout(() => recordWithWhisper(), 8000);
           }
         } catch (e) {
           console.error('[WHISPER] Error transcribing:', e);
@@ -165,15 +169,15 @@ export function useSimpleVoiceInput() {
 
       mediaRecorder.start();
       console.log('[WHISPER] MediaRecorder started, state:', mediaRecorder.state);
-      // Enregistrer pendant 800ms pour feedback ultra-rapide
+      // Enregistrer pendant 2 secondes pour transcription complète et précise
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
-          console.log('[WHISPER] Stopping recording after 800ms');
+          console.log('[WHISPER] Stopping recording after 2s');
           mediaRecorder.stop();
         } else {
           console.log('[WHISPER] Recording already stopped, state:', mediaRecorder.state);
         }
-      }, 800);
+      }, 2000);
     } catch (e) {
       console.error('[WHISPER] Recording error:', e);
       setError({ message: 'Erreur micro : ' + e.message });
