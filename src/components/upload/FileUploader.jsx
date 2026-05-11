@@ -23,8 +23,8 @@ export default function FileUploader({ onFileUploaded, isProcessing, progress })
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('Fichier trop volumineux (max 10 MB).');
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error('Fichier trop volumineux (max 50 MB).');
       if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
@@ -78,7 +78,7 @@ export default function FileUploader({ onFileUploaded, isProcessing, progress })
           <div className="space-y-1">
             <p className="font-semibold text-foreground">Déposer votre texte</p>
             <p className="text-xs text-muted-foreground">
-              PDF, TXT, Word · Max 10 MB
+              PDF, TXT, Word · Max 50 MB
             </p>
           </div>
         </div>
