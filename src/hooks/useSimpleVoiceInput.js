@@ -165,15 +165,15 @@ export function useSimpleVoiceInput() {
 
       mediaRecorder.start();
       console.log('[WHISPER] MediaRecorder started, state:', mediaRecorder.state);
-      // Enregistrer pendant 6 secondes sur Android pour bien capturer l'audio
+      // Enregistrer pendant 2-3 secondes pour transcription rapide
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
-          console.log('[WHISPER] Force stopping recording after timeout');
+          console.log('[WHISPER] Stopping recording after 2.5s');
           mediaRecorder.stop();
         } else {
           console.log('[WHISPER] Recording already stopped, state:', mediaRecorder.state);
         }
-      }, 6000);
+      }, 2500);
     } catch (e) {
       console.error('[WHISPER] Recording error:', e);
       setError({ message: 'Erreur micro : ' + e.message });
