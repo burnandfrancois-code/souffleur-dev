@@ -131,7 +131,10 @@ export function useSimpleVoiceInput() {
           if (!activeRef.current || submittedRef.current) return;
 
           if (text.trim()) {
-            accumulatedRef.current = (accumulatedRef.current + ' ' + text).trim();
+            // Éviter les doublons du même texte
+            if (!accumulatedRef.current.includes(text)) {
+              accumulatedRef.current = (accumulatedRef.current + ' ' + text).trim();
+            }
           }
           const displayed = accumulatedRef.current;
           setTranscript(displayed);
