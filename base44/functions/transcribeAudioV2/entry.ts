@@ -12,11 +12,13 @@ Deno.serve(async (req) => {
 
     // Nettoyer la clé API : ne garder que les caractères ASCII imprimables valides
     const rawKey = Deno.env.get('OPENAI_API_KEY') || '';
+    console.log('[DEBUG] rawKey length:', rawKey.length, 'charCodes:', Array.from(rawKey).slice(0,10).map(c => c.charCodeAt(0)));
     const apiKey = Array.from(rawKey)
       .filter(c => c.charCodeAt(0) >= 33 && c.charCodeAt(0) <= 126)
       .join('');
+    console.log('[DEBUG] apiKey length after filter:', apiKey.length);
 
-    if (!apiKey) return Response.json({ error: 'API key not configured' }, { status: 500 });
+    if (!apiKey) return Response.json({ error: 'API key not configured', rawLen: rawKey.length }, { status: 500 });
 
     // Décoder base64 → bytes
     const cleanBase64 = audioBase64.includes(',') ? audioBase64.split(',')[1] : audioBase64;
