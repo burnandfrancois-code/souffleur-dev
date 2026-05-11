@@ -12,8 +12,10 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
   const autoPlayDoneRef = useRef(false);
 
   const startRecording = useCallback(() => {
+    console.log('[RECORDER] Starting recording...');
     setSttError(null);
     voiceRec.start((finalText) => {
+      console.log('[RECORDER] Got transcript:', finalText);
       onSubmit(finalText);
     });
   }, [voiceRec, onSubmit]);
@@ -26,6 +28,7 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
 
   // Reset quand la ligne change
   useEffect(() => {
+    console.log('[RECORDER] Line changed, autoPlay =', autoPlay);
     voiceRec.reset();
     setSttError(null);
     setHasStarted(false);
@@ -33,6 +36,7 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
     
     // Auto-start si autoPlay est activé
     if (autoPlay && !autoPlayDoneRef.current) {
+      console.log('[RECORDER] Auto-starting recording...');
       autoPlayDoneRef.current = true;
       setTimeout(() => {
         setHasStarted(true);
@@ -44,6 +48,7 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
   // Copier les erreurs du hook
   useEffect(() => {
     if (voiceRec.error) {
+      console.error('[RECORDER] Voice recognition error:', voiceRec.error);
       setSttError(voiceRec.error);
     }
   }, [voiceRec.error]);

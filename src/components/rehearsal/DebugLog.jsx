@@ -4,7 +4,7 @@ import { ChevronUp, ChevronDown, X } from 'lucide-react';
 
 export default function DebugLog({ show = true }) {
   const [logs, setLogs] = useState([]);
-  const [expanded, setExpanded] = React.useState(false);
+  const [expanded, setExpanded] = React.useState(true);
   const logsRef = useRef([]);
 
   useEffect(() => {
@@ -17,7 +17,7 @@ export default function DebugLog({ show = true }) {
       logsRef.current = [
         { msg: String(message), type, time: new Date().toLocaleTimeString() },
         ...logsRef.current
-      ].slice(0, 20); // Keep last 20
+      ].slice(0, 50); // Keep last 50
       setLogs([...logsRef.current]);
     };
 
@@ -45,22 +45,20 @@ export default function DebugLog({ show = true }) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
-        className={`fixed top-20 right-2 z-50 rounded-lg border border-yellow-500/50 bg-black/90 backdrop-blur-sm transition-all ${
-          expanded ? 'w-80 h-48' : 'w-64 h-12'
-        }`}
+        className="fixed top-0 right-0 z-50 w-96 h-screen bg-black/95 border-l-2 border-yellow-500 shadow-lg rounded-none"
       >
-        <div className="flex items-center justify-between px-2 py-1 border-b border-yellow-500/30">
-          <span className="text-xs text-yellow-400 font-mono">DEBUG</span>
-          <div className="flex gap-1">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-yellow-500/30 bg-black/80 sticky top-0">
+          <span className="text-sm text-yellow-400 font-mono font-bold">🔴 DEBUG LOG</span>
+          <div className="flex gap-2">
             <button
               onClick={() => setExpanded(!expanded)}
-              className="p-1 hover:bg-yellow-500/20 rounded text-yellow-400"
+              className="p-1.5 hover:bg-yellow-500/20 rounded text-yellow-400"
             >
-              {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+              {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
             </button>
             <button
               onClick={() => setLogs([])}
-              className="p-1 hover:bg-yellow-500/20 rounded text-yellow-400 text-xs"
+              className="p-1.5 hover:bg-yellow-500/20 rounded text-yellow-400 text-xs font-bold"
             >
               CLEAR
             </button>
@@ -68,18 +66,20 @@ export default function DebugLog({ show = true }) {
         </div>
 
         {expanded && (
-          <div className="overflow-y-auto h-44 p-1.5 space-y-0.5 font-mono text-xs">
+          <div className="overflow-y-auto h-[calc(100vh-60px)] p-3 space-y-1 bg-black/80">
             {logs.length === 0 ? (
-              <p className="text-gray-500">No logs yet...</p>
+              <p className="text-gray-500 text-xs italic mt-4 text-center">Waiting for logs...</p>
             ) : (
               logs.map((log, i) => (
                 <div
                   key={i}
-                  className={`${
-                    log.type === 'error' ? 'text-red-400' : 'text-green-400'
-                  } text-xs whitespace-nowrap overflow-hidden text-ellipsis`}
+                  className={`text-xs font-mono whitespace-pre-wrap break-words p-1.5 rounded border-l-2 ${
+                    log.type === 'error' 
+                      ? 'text-red-300 bg-red-500/10 border-l-red-500' 
+                      : 'text-green-300 bg-green-500/10 border-l-green-500'
+                  }`}
                 >
-                  <span className="text-gray-600">[{log.time}]</span> {log.msg}
+                  <span className="text-gray-500">[{log.time}]</span> {log.msg}
                 </div>
               ))
             )}
