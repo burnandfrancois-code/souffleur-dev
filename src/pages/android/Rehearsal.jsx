@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { unlockAudioForAndroid, stopSpeaking, speakText } from '@/lib/speechServices';
 import { compareTexts } from '@/lib/scriptParser';
 import PartnerLine from '@/components/rehearsal/PartnerLine';
-import MyLineRecorder from '@/components/rehearsal/MyLineRecorderAndroid';
+import MyLineRecorder from '@/components/rehearsal/MyLineRecorderV2';
 import ComparisonResult from '@/components/rehearsal/ComparisonResultAndroid';
 import { useSimpleVoiceInput } from '@/hooks/useSimpleVoiceInput';
 import RehearsalProgress from '@/components/rehearsal/RehearsalProgress';
