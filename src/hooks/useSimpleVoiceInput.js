@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState, useEffect } from 'react';
+import { useRef, useCallback, useState, useEffect, useMemo } from 'react';
 
 /**
  * Hook de reconnaissance vocale continue.
@@ -198,5 +198,6 @@ export function useSimpleVoiceInput() {
     };
   }, [destroyRecognition]);
 
-  return { transcript, isRecording, error, start, stop, reset };
+  // Stabiliser le retour avec useMemo pour éviter les re-triggers infinis
+  return useMemo(() => ({ transcript, isRecording, error, start, stop, reset }), [transcript, isRecording, error, start, stop, reset]);
 }
