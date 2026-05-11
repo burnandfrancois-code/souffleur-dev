@@ -111,10 +111,10 @@ export function useSimpleVoiceInput() {
             reader.readAsDataURL(blob);
           });
           
-          console.log('[WHISPER] Sending audio to transcribeAudioV3, blob size:', blob.size, 'base64 length:', audioBase64.length);
+          console.log('[WHISPER] Sending audio to transcribeAudioV4, blob size:', blob.size, 'base64 length:', audioBase64.length);
           let response;
           try {
-            response = await base44.functions.invoke('transcribeAudioV3', { audio: audioBase64 });
+            response = await base44.functions.invoke('transcribeAudioV4', { audio: audioBase64 });
           } catch (e) {
             console.error('[WHISPER] invoke() threw error:', e.message, 'status:', e.response?.status, 'data:', e.response?.data);
             throw e;
