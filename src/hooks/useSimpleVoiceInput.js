@@ -121,20 +121,13 @@ export function useSimpleVoiceInput() {
     };
 
     rec.onend = () => {
-      console.log('[STT] onend - activeRef:', activeRef.current, 'submittedRef:', submittedRef.current, 'isRecordingRef:', isRecordingRef.current);
+      console.log('[STT] onend - silence détecté, mais on NE relance PAS automatiquement');
+      // Le silence ne doit rien déclencher. Seul "OK" ferme la session.
+      // Garder le micro rouge ouvert en attente du "OK".
       if (!activeRef.current || submittedRef.current) {
-        console.log('[STT] onend - NOT restarting, setting recording to false');
         setRecording(false);
-        return;
       }
-      console.log('[STT] onend - will restart, keeping isRecording true');
-      // NE PAS appeler setRecording(false) — garder isRecording true pendant le redémarrage
-      setTimeout(() => {
-        if (activeRef.current && !submittedRef.current) {
-          console.log('[STT] onend - restarting recognition');
-          createAndStart();
-        }
-      }, 300);
+      // Ne pas relancer, ne pas toucher à isRecording si on est actif
     };
 
     try {
