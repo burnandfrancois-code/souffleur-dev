@@ -23,6 +23,7 @@ const AndroidTarifs = lazy(() => import('@/pages/android/Tarifs'));
 const RehearsalTest = lazy(() => import('@/pages/RehearsalTest'));
 const AndroidTTSTest = lazy(() => import('@/pages/AndroidTTSTest'));
 const AndroidRehearsalDebug = lazy(() => import('@/pages/AndroidRehearsalDebug'));
+const TestRomeoTTS = lazy(() => import('@/pages/TestRomeoTTS'));
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -66,6 +67,7 @@ const AuthenticatedApp = () => {
         <Route path="/rehearsal-test" element={<RehearsalTest />} />
         <Route path="/android-tts-test" element={<AndroidTTSTest />} />
         <Route path="/android/rehearsal-debug" element={<AndroidRehearsalDebug />} />
+        <Route path="/test-romeo-tts" element={<TestRomeoTTS />} />
         <Route path="*" element={<PageNotFound />} />
       </Routes>
     </Suspense>
