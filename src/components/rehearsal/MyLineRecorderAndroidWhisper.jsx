@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { motion } from 'framer-motion';
 import { Mic, MicOff, Loader2 } from 'lucide-react';
-import { useSimpleVoiceInput } from '@/hooks/useSimpleVoiceInput';
+import { useAndroidVoiceInputWhisper } from '@/hooks/useAndroidVoiceInputWhisper';
 import { compareTexts } from '@/lib/scriptParser';
 
 const MyLineRecorderAndroidWhisper = forwardRef(function MyLineRecorderAndroidWhisper({ line, onSubmit, onSkip, autoPlay }, ref) {
-  const voiceRec = useSimpleVoiceInput();
+  const voiceRec = useAndroidVoiceInputWhisper();
   const [phase, setPhase] = useState('recording'); // recording, comparing, result
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
