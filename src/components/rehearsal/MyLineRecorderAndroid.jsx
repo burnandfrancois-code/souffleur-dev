@@ -33,7 +33,14 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
     voiceRec.reset();
     setSttError(null);
     setHasStarted(false);
-  }, [line, voiceRec]);
+    // Auto-start si autoPlay est activé
+    if (autoPlay) {
+      setTimeout(() => {
+        setHasStarted(true);
+        setTimeout(() => startRecording(), 100);
+      }, 300);
+    }
+  }, [line, autoPlay, voiceRec, startRecording]);
 
   // Copier les erreurs du hook
   useEffect(() => {
