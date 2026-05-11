@@ -1,7 +1,5 @@
 import { useRef, useCallback, useState, useEffect } from 'react';
 
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
 export function useSimpleVoiceInput() {
   const [transcript, setTranscript] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -28,6 +26,7 @@ export function useSimpleVoiceInput() {
     setTranscript('');
     setError(null);
 
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setError({ message: 'Reconnaissance vocale non supportée par ce navigateur. Utilisez Chrome ou Safari.' });
       return;
