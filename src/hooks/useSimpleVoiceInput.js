@@ -1,9 +1,10 @@
 import { useRef, useCallback, useState, useEffect, useMemo } from 'react';
+import { base44 } from '@/api/base44Client';
 
 /**
  * Hook de reconnaissance vocale continue.
+ * Utilise Whisper (transcribeAudioV2) sur Android pour une meilleure compatibilité.
  * Reste ouvert jusqu'à ce que l'utilisateur dise "OK".
- * Chrome coupe parfois la reconnaissance même en continuous=true — on relance sans changer isRecording.
  */
 export function useSimpleVoiceInput() {
   const [transcript, setTranscript] = useState('');
@@ -38,128 +39,75 @@ export function useSimpleVoiceInput() {
     }
   }, []);
 
-  const createAndStart = useCallback(() => {
-    if (!activeRef.current || submittedRef.current) return; // Pas de relance si pas actif
-    destroyRecognition();
+  const recordWithWhisper = useCallback(async () => {
+    if (!activeRef.current || submittedRef.current) return;
 
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
-
-    const rec = new SR();
-    rec.lang = 'fr-FR';
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.maxAlternatives = 1;
-    recognitionRef.current = rec;
-
-    rec.onstart = () => {
-      console.log('[STT] onstart - recognition ready');
-      setRecording(true);
-    };
-
-    rec.onspeechstart = () => {
-      console.log('[STT] onspeechstart');
-      setError(null);
-    };
-
-    rec.onresult = (event) => {
-      console.log('[STT] onresult, event.results.length:', event.results.length, 'isFinal:', event.results[event.results.length - 1]?.isFinal);
-      if (!activeRef.current || submittedRef.current) return;
-
-      let newFinals = '';
-      let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0]?.transcript || '';
-        console.log('[STT] Result[' + i + ']:', transcript, 'isFinal:', event.results[i].isFinal);
-        if (event.results[i].isFinal) {
-          newFinals += ' ' + transcript;
-          finalCountRef.current = i + 1;
-        } else {
-          interim += ' ' + transcript;
-        }
-      }
-
-      if (newFinals) {
-        accumulatedRef.current = (accumulatedRef.current + newFinals).trim();
-        console.log('[STT] FINAL accumulated:', accumulatedRef.current);
-      }
-      const displayed = (accumulatedRef.current + interim).trim();
-      console.log('[STT] Displaying:', displayed);
-      setTranscript(displayed);
-
-      // Détecter "OK" dans les finals ET dans l'interim (plus sensible)
-      if (!submittedRef.current) {
-        const allText = (accumulatedRef.current + interim).toLowerCase();
-        console.log('[STT] Checking for OK in:', allText);
-        // Accepter "ok", "okay", "o k", "o.k", même avec espaces/ponctuation
-        const hasOk = /\b(ok|okay|o\s*\.?\s*k)\b|^(ok|okay)$/.test(allText);
-        if (hasOk && onFinalRef.current) {
-          console.log('[STT] OK detected! Submitting...');
-          submittedRef.current = true;
-          // Enlever "ok"/"okay" du texte final
-          const finalText = allText.replace(/\b(ok|okay|o\s*\.?\s*k)\b|^(ok|okay)$/g, '').trim();
-          const cb = onFinalRef.current;
-          activeRef.current = false;
-          destroyRecognition();
-          setRecording(false);
-          cb(finalText);
-        }
-      }
-    };
-
-    rec.onerror = (event) => {
-      console.error('[STT] Error event:', event.error);
-      if (!activeRef.current || submittedRef.current) return;
-      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-        activeRef.current = false;
-        destroyRecognition();
-        setRecording(false);
-        setError({ message: 'Permission micro refusée. Autorisez le microphone dans votre navigateur.' });
-      } else if (event.error === 'aborted') {
-        // Chrome bloque les relances automatiques — on arrête la boucle
-        activeRef.current = false;
-        destroyRecognition();
-        setRecording(false);
-      }
-      // no-speech / network : onend va relancer silencieusement
-    };
-
-    rec.onend = () => {
-      console.log('[STT] onend - silence détecté');
-      // Arrêter si la synthèse vocale est en cours
-      if (window.speechSynthesis?.speaking) {
-        console.log('[STT] TTS speaking, stopping voice input');
-        activeRef.current = false;
-        setRecording(false);
-        return;
-      }
-      // Si actif et pas soumis, relancer automatiquement jusqu'à "OK"
-      if (activeRef.current && !submittedRef.current) {
-        console.log('[STT] Restarting after silence...');
-        setTimeout(() => createAndStart(), 200);
-      } else {
-        setRecording(false);
-      }
-    };
-
+    console.log('[WHISPER] Starting recording chunk...');
     try {
-      console.log('[STT] Calling rec.start()');
-      rec.start();
-      console.log('[STT] rec.start() called successfully');
+      const mediaRecorder = new MediaRecorder(micStreamRef.current);
+      const chunks = [];
+
+      mediaRecorder.ondataavailable = (e) => chunks.push(e.data);
+      mediaRecorder.onstop = async () => {
+        if (!activeRef.current || submittedRef.current) return;
+
+        const blob = new Blob(chunks, { type: 'audio/webm' });
+        console.log('[WHISPER] Got audio blob, sending to Whisper...');
+
+        try {
+          const response = await base44.functions.invoke('transcribeAudioV2', { audio: blob });
+          const text = response.data?.transcript || '';
+          console.log('[WHISPER] Transcript:', text);
+
+          if (!activeRef.current || submittedRef.current) return;
+
+          accumulatedRef.current = (accumulatedRef.current + ' ' + text).trim();
+          const displayed = accumulatedRef.current;
+          setTranscript(displayed);
+
+          // Détecter "OK"
+          const allText = displayed.toLowerCase();
+          const hasOk = /\b(ok|okay|o\s*\.?\s*k)\b|^(ok|okay)$/.test(allText);
+          if (hasOk && onFinalRef.current) {
+            console.log('[WHISPER] OK detected! Submitting...');
+            submittedRef.current = true;
+            const finalText = allText.replace(/\b(ok|okay|o\s*\.?\s*k)\b|^(ok|okay)$/g, '').trim();
+            const cb = onFinalRef.current;
+            activeRef.current = false;
+            setRecording(false);
+            cb(finalText);
+            return;
+          }
+
+          // Relancer la capture après 1 seconde de silence
+          if (activeRef.current && !submittedRef.current) {
+            setTimeout(() => recordWithWhisper(), 1000);
+          }
+        } catch (e) {
+          console.error('[WHISPER] Error transcribing:', e);
+          if (activeRef.current && !submittedRef.current) {
+            setTimeout(() => recordWithWhisper(), 1000);
+          }
+        }
+      };
+
+      mediaRecorder.start();
+      // Enregistrer pendant 3 secondes max
+      setTimeout(() => {
+        if (mediaRecorder.state === 'recording') {
+          mediaRecorder.stop();
+        }
+      }, 3000);
     } catch (e) {
-      console.error('[STT] Error calling rec.start():', e);
-      setError({ message: 'Erreur démarrage micro : ' + e.message });
-      activeRef.current = false;
-      setRecording(false);
+      console.error('[WHISPER] Recording error:', e);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const start = useCallback(async (onFinalTranscript) => {
-    console.log('[STT] start() called');
+    console.log('[WHISPER] start() called');
     // Arrêter toute synthèse vocale EN COURS avant de démarrer le micro
     window.speechSynthesis?.cancel();
-    await new Promise(resolve => setTimeout(resolve, 300)); // Délai plus long pour Android
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     activeRef.current = false;
     submittedRef.current = false;
@@ -172,24 +120,23 @@ export function useSimpleVoiceInput() {
     setError(null);
     isRecordingRef.current = false;
 
-    // Obtenir la permission micro ET garder le stream actif
-    // Chrome avorte SpeechRecognition si aucun stream audio n'est ouvert
+    // Obtenir le stream micro
     try {
-      console.log('[STT] Requesting getUserMedia');
+      console.log('[WHISPER] Requesting getUserMedia');
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      micStreamRef.current = stream; // NE PAS arrêter le stream — on le garde ouvert
-      console.log('[STT] Got media stream');
+      micStreamRef.current = stream;
+      console.log('[WHISPER] Got media stream');
     } catch (e) {
-      console.error('[STT] getUserMedia error:', e);
+      console.error('[WHISPER] getUserMedia error:', e);
       setError({ message: 'Permission micro refusée. Autorisez le microphone dans votre navigateur.' });
       return;
     }
 
     activeRef.current = true;
     setRecording(true);
-    console.log('[STT] About to call createAndStart');
-    createAndStart();
-  }, [destroyRecognition, createAndStart]);
+    console.log('[WHISPER] Starting Whisper recording loop');
+    recordWithWhisper();
+  }, [recordWithWhisper]);
 
   const stop = useCallback(() => {
     activeRef.current = false;
