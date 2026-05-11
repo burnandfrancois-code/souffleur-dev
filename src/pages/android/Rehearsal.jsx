@@ -89,6 +89,16 @@ export default function AndroidRehearsal() {
 
   useEffect(() => () => cancelAll(), [cancelAll]);
 
+  // Auto-redirect to home after rehearsal completes
+  useEffect(() => {
+    if (isFinished) {
+      const timer = setTimeout(() => {
+        navigate('/android/');
+      }, 3000); // Show summary for 3 seconds then redirect
+      return () => clearTimeout(timer);
+    }
+  }, [isFinished, navigate]);
+
   const launchSpeakChain = useCallback((index) => {
     console.log('[REHEARSAL] launchSpeakChain at index:', index, 'isMyLine:', normalize(lines[index]?.character) === normalize(myCharacter));
     speakPartnerLines(index, lines, myCharacter, characterGenders, stripDirections);
