@@ -77,8 +77,8 @@ export function useSimpleVoiceInput() {
 
         try {
           const response = await base44.functions.invoke('transcribeAudioV2', { audio: blob });
-          const text = response.data?.transcript || '';
-          console.log('[WHISPER] Transcript:', text);
+          const text = response.data?.transcript || response.data?.text || '';
+          console.log('[WHISPER] Transcript:', text, 'response:', response.data);
 
           if (!activeRef.current || submittedRef.current) return;
 
