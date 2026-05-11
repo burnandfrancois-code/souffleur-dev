@@ -122,12 +122,7 @@ export function useSimpleVoiceInput() {
 
     rec.onend = () => {
       console.log('[STT] onend - recognition stopped');
-      if (!activeRef.current || submittedRef.current) return;
-      // Chrome a coupé malgré continuous=true — relancer SANS toucher à isRecording
-      setTimeout(() => {
-        if (!activeRef.current || submittedRef.current) return;
-        createAndStart();
-      }, 150);
+      // Ne rien relancer — le micro doit rester ouvert jusqu'à "OK"
     };
 
     try {
