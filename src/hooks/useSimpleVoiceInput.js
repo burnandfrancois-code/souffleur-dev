@@ -105,7 +105,7 @@ export function useSimpleVoiceInput() {
 
     rec.onerror = (event) => {
       console.error('[STT] Error event:', event.error);
-      if (!activeRef.current) return;
+      if (!activeRef.current || submittedRef.current) return;
       if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
         activeRef.current = false;
         destroyRecognition();
@@ -128,6 +128,7 @@ export function useSimpleVoiceInput() {
         return;
       }
       console.log('[STT] onend - will restart, keeping isRecording true');
+      // NE PAS appeler setRecording(false) — garder isRecording true pendant le redémarrage
       setTimeout(() => {
         if (activeRef.current && !submittedRef.current) {
           console.log('[STT] onend - restarting recognition');
