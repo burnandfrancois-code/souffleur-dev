@@ -84,14 +84,14 @@ export function useSimpleVoiceInput() {
             return;
           }
 
-          // Relancer après 100ms pour rester en écoute active
+          // Relancer immédiatement pour rester en écoute active
           if (activeRef.current && !submittedRef.current) {
-            setTimeout(() => recordWithWhisper(), 100);
+            recordWithWhisper();
           }
         } catch (e) {
           console.error('[WHISPER] Error transcribing:', e);
           if (activeRef.current && !submittedRef.current) {
-            setTimeout(() => recordWithWhisper(), 100);
+            recordWithWhisper();
           }
         }
       };
