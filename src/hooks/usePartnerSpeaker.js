@@ -42,6 +42,9 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
         return;
       }
 
+      // Small delay to allow UI to update before advancing
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       // Auto-advance to next line
       index++;
     }
