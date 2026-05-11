@@ -10,7 +10,7 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
   const speakPartnerLines = useCallback(async (startIndex, lines, myCharacter, genders, stripDirections) => {
     const norm = (s) => s?.trim().toLowerCase();
 
-    // Unlock audio une seule fois avant tout
+    // Unlock audio une seule fois avant tout (exactement comme TestRomeoTTS)
     if (!audioUnlockedRef.current) {
       try {
         await unlockAudioForAndroid();
@@ -18,6 +18,7 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
         console.log('[TTS] Audio unlocked for Android');
       } catch (e) {
         console.error('[TTS] Failed to unlock audio:', e);
+        return;
       }
     }
 
@@ -33,32 +34,29 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
 
     let index = startIndex;
     console.log('[PARTNER] Starting speakPartnerLines at index:', startIndex, 'total lines:', lines.length);
+    
     while (session === speakSessionRef.current && index < lines.length) {
       const line = lines[index];
-      console.log('[PARTNER] Line', index, ':', line?.character, '(my char:', myCharacter, ')');
       if (!line) break;
 
       if (norm(line.character) === norm(myCharacter)) {
-        console.log('[PARTNER] Reached my line, stopping');
+        console.log('[PARTNER] Reached my line at index:', index);
         onLineChange(index);
         onSpeakingChange(false);
         return;
       }
 
-      console.log('[PARTNER] Speaking partner line at index:', index);
       onLineChange(index);
       onSpeakingChange(true);
       const gender = genders[line.character] || 'male';
       const textToSpeak = stripDirections(line.text);
       
-      console.log('[PARTNER] Text to speak:', textToSpeak.substring(0, 60), 'gender:', gender, 'rate:', speechRateRef.current);
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
       try {
-        console.log('[TTS] Speaking:', textToSpeak.substring(0, 50));
+        console.log('[PARTNER] Speaking line', index, ':', textToSpeak.substring(0, 50));
         await speakText(textToSpeak, 'fr-FR', gender, speechRateRef.current, controller.signal);
-        console.log('[TTS] Finished speaking line');
       } catch (e) {
         console.error('[TTS] Error speaking:', e);
       }
@@ -68,14 +66,11 @@ export function usePartnerSpeaker({ speechRateRef, onLineChange, onSpeakingChang
         return;
       }
 
-      // Small delay to allow UI to update before advancing
+      // Small delay before next line
       await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Auto-advance to next line
       index++;
     }
 
-    // If we've reached the end of lines
     onSpeakingChange(false);
   }, [onLineChange, onSpeakingChange, speechRateRef]);
 
