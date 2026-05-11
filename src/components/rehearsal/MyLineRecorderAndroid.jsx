@@ -9,7 +9,7 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
   const voiceRec = useSimpleVoiceInput();
   const [sttError, setSttError] = useState(null);
   const [hasStarted, setHasStarted] = useState(false);
-  const startRecordingRef = useRef(null);
+  const autoPlayDoneRef = useRef(false);
 
   const startRecording = useCallback(() => {
     setSttError(null);
@@ -17,10 +17,6 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
       onSubmit(finalText);
     });
   }, [voiceRec, onSubmit]);
-
-  useEffect(() => {
-    startRecordingRef.current = startRecording;
-  }, [startRecording]);
 
   useImperativeHandle(ref, () => ({
     startRecording,
@@ -33,14 +29,17 @@ const MyLineRecorderAndroid = forwardRef(function MyLineRecorderAndroid({ line, 
     voiceRec.reset();
     setSttError(null);
     setHasStarted(false);
+    autoPlayDoneRef.current = false;
+    
     // Auto-start si autoPlay est activé
-    if (autoPlay && startRecordingRef.current) {
+    if (autoPlay && !autoPlayDoneRef.current) {
+      autoPlayDoneRef.current = true;
       setTimeout(() => {
         setHasStarted(true);
-        setTimeout(() => startRecordingRef.current?.(), 100);
+        setTimeout(() => startRecording(), 100);
       }, 300);
     }
-  }, [line, autoPlay, voiceRec]);
+  }, [line, autoPlay, voiceRec, startRecording]);
 
   // Copier les erreurs du hook
   useEffect(() => {
