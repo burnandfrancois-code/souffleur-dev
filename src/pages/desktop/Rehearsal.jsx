@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Theater, Loader2, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { speakText, stopSpeaking } from '@/lib/speechServices';
+import { useSimpleVoiceInput } from '@/hooks/useSimpleVoiceInput';
 import RehearsalProgress from '@/components/rehearsal/RehearsalProgress';
 import PartnerLine from '@/components/rehearsal/PartnerLine';
 import MyLineRecorder from '@/components/rehearsal/MyLineRecorderV2';
@@ -33,6 +34,8 @@ export default function DesktopRehearsal() {
 
   const myLineRecorderRef = useRef(null);
   const speakAbortRef = useRef(null);
+  const commandVoice = useSimpleVoiceInput();
+  const commandActiveRef = useRef(false);
 
   const { data: script, isLoading } = useQuery({
     queryKey: ['script', scriptId],
@@ -101,6 +104,35 @@ export default function DesktopRehearsal() {
     setLineScores([]);
     setStarted(false);
   };
+
+  // Commandes vocales
+  const stopCommandListening = useCallback(() => {
+    commandActiveRef.current = false;
+    commandVoice.stop();
+    commandVoice.reset();
+  }, [commandVoice]);
+
+  const startCommandListening = useCallback(() => {
+    if (commandActiveRef.current) return;
+    commandActiveRef.current = true;
+    commandVoice.start((text) => {
+      if (!commandActiveRef.current) return;
+      const t = text.toLowerCase().trim();
+      if (/passer|suivant|next/.test(t)) {
+        commandActiveRef.current = false;
+        myLineRecorderRef.current?.handleContinue?.();
+      } else if (/r[eé]essayer|retry|again/.test(t)) {
+        commandActiveRef.current = false;
+        myLineRecorderRef.current?.handleRetry?.();
+      }
+    });
+  }, [commandVoice]);
+
+  useEffect(() => {
+    return () => {
+      stopCommandListening();
+    };
+  }, [stopCommandListening]);
 
   if (isLoading) {
     return (
