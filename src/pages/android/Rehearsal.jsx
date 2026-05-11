@@ -406,7 +406,15 @@ export default function AndroidRehearsal() {
             </Button>
             <div className="min-w-0">
               <h1 className="font-display text-sm font-bold text-foreground truncate">{script.title}</h1>
-              <p className="text-xs text-primary font-body">{myCharacter}</p>
+              <button
+                onClick={() => {
+                  cancelAll();
+                  navigate(`/android/?step=character&scriptId=${scriptId}`);
+                }}
+                className="text-xs text-primary font-body hover:underline cursor-pointer transition-colors"
+              >
+                {myCharacter}
+              </button>
             </div>
           </div>
           <Theater className="w-5 h-5 text-primary shrink-0" />

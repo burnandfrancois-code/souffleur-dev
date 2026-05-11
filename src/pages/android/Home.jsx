@@ -56,9 +56,35 @@ export default function AndroidHome() {
   }, []);
 
   useEffect(() => {
-    const newStep = new URLSearchParams(window.location.search).get('step');
+    const params = new URLSearchParams(window.location.search);
+    const newStep = params.get('step');
+    const scriptIdParam = params.get('scriptId');
+    
     if (newStep && newStep !== step) {
       setStep(newStep);
+    }
+    
+    // Si on vient de la rehearsal pour changer de rôle
+    if (scriptIdParam && newStep === 'character') {
+      (async () => {
+        try {
+          const script = await base44.entities.Script.filter({ id: scriptIdParam });
+          if (script && script.length > 0) {
+            const s = script[0];
+            setEditingScriptId(s.id);
+            setParsedScript({
+              title: s.title,
+              characters: s.characters || [],
+              lines: s.lines || []
+            });
+            setSelectedCharacter(s.my_character || '');
+            setCharacterGenders(s.character_genders || {});
+            setFileUrl(s.file_url || '');
+          }
+        } catch (e) {
+          console.error('Error loading script:', e);
+        }
+      })();
     }
   }, [window.location.search]);
 
