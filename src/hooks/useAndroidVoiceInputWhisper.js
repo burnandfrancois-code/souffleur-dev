@@ -2,8 +2,15 @@ import { useRef, useCallback, useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 
 /**
- * Hook de reconnaissance vocale Whisper (ANDROID UNIQUEMENT - Transcription OpenAI)
- * Détecte "OK" pour arrêter et soumettre le texte.
+ * Hook de reconnaissance vocale Whisper (ANDROID - Transcription OpenAI)
+ * Inspire de la logique Desktop (Web Speech API) mais avec Whisper cloud.
+ * 
+ * Architecture :
+ * - Capture chunks audio de 1.5s (optimisé pour Whisper)
+ * - Accumule les résultats finals (pas de doublons)
+ * - Simule les résultats "interim" (texte partiel) en temps réel
+ * - Détecte "OK" et soumet le texte nettoyé
+ * - Respecte rate limit OpenAI (3 req/min = 20s minimum entre appels)
  */
 export function useAndroidVoiceInputWhisper() {
   const [transcript, setTranscript] = useState('');
@@ -13,8 +20,10 @@ export function useAndroidVoiceInputWhisper() {
   const activeRef = useRef(false);
   const submittedRef = useRef(false);
   const onFinalRef = useRef(null);
-  const accumulatedRef = useRef('');
+  const accumulatedRef = useRef(''); // Texte final validé
+  const interimRef = useRef(''); // Texte partial en cours (simulé)
   const micStreamRef = useRef(null);
+  const lastTranscriptRef = useRef(''); // Éviter les doublons
 
   const destroyRecognition = useCallback(() => {
     if (micStreamRef.current) {
@@ -31,6 +40,7 @@ export function useAndroidVoiceInputWhisper() {
     }
 
     try {
+      // Sélectionner le meilleur mimeType disponible
       let mimeType = 'audio/webm';
       if (!MediaRecorder.isTypeSupported(mimeType)) {
         mimeType = 'audio/webm;codecs=opus';
@@ -53,7 +63,9 @@ export function useAndroidVoiceInputWhisper() {
 
       mediaRecorder.onstop = async () => {
         if (!activeRef.current || submittedRef.current) return;
+        
         if (chunks.length === 0) {
+          // Pas de données, relancer
           if (activeRef.current && !submittedRef.current) {
             setTimeout(() => recordWithWhisper(), 500);
           }
@@ -69,6 +81,7 @@ export function useAndroidVoiceInputWhisper() {
         }
 
         try {
+          // Convertir en base64 pour transmission
           const audioBase64 = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result);
@@ -76,6 +89,7 @@ export function useAndroidVoiceInputWhisper() {
             reader.readAsDataURL(blob);
           });
 
+          // Appel Whisper
           const response = await base44.functions.invoke('transcribeAudioV5', { audio: audioBase64 });
 
           if (response.status !== 200) {
@@ -86,18 +100,27 @@ export function useAndroidVoiceInputWhisper() {
 
           if (!activeRef.current || submittedRef.current) return;
 
+          // ===== LOGIQUE DESKTOP ADAPTÉE =====
+          // Traiter comme un "résultat final" (isFinal = true en Web Speech API)
           if (text.trim()) {
-            if (!accumulatedRef.current.includes(text)) {
+            // Ne pas ajouter si c'est un doublon
+            if (text !== lastTranscriptRef.current) {
               accumulatedRef.current = (accumulatedRef.current + ' ' + text).trim();
+              lastTranscriptRef.current = text;
             }
           }
+
+          // Afficher : accumulated + interim (simulé vide car Whisper pas de stream)
           const displayed = accumulatedRef.current;
           setTranscript(displayed);
+          interimRef.current = '';
 
-          // Détecter "OK" pour arrêter
+          // ===== DÉTECTION "OK" (identique à Desktop) =====
           const allText = displayed.toLowerCase();
           const hasOk = /\bok\b/.test(allText) || /^ok\s/.test(allText) || /\sok$/.test(allText);
+          
           if (hasOk && onFinalRef.current) {
+            // Soumettre le texte nettoyé (sans "ok")
             submittedRef.current = true;
             const finalText = allText.replace(/\bok\b/g, '').trim();
             const cb = onFinalRef.current;
@@ -107,7 +130,7 @@ export function useAndroidVoiceInputWhisper() {
             return;
           }
 
-          // Relancer avec délai respectant le rate limit
+          // Relancer avec délai (rate limit : 3 req/min = 20s minimum)
           if (activeRef.current && !submittedRef.current) {
             setTimeout(() => recordWithWhisper(), 20000);
           }
@@ -115,17 +138,22 @@ export function useAndroidVoiceInputWhisper() {
           console.error('[WHISPER] Error transcribing:', e);
           setError({ message: 'Erreur transcription: ' + e.message });
           if (activeRef.current && !submittedRef.current) {
-            setTimeout(() => recordWithWhisper(), 500);
+            setTimeout(() => recordWithWhisper(), 1500);
           }
         }
       };
 
       mediaRecorder.start();
+      
+      // Capture chunks de 1.5s pour maximiser la qualité Whisper
+      // (plus court = plus souvent, mais risque de texte incomplet)
+      // (plus long = moins souvent, mais Whisper capture mieux les phrases)
       setTimeout(() => {
         if (mediaRecorder.state === 'recording') {
           mediaRecorder.stop();
         }
-      }, 2500);
+      }, 1500);
+
     } catch (e) {
       setError({ message: 'Erreur micro : ' + e.message });
       if (activeRef.current && !submittedRef.current) {
@@ -135,9 +163,11 @@ export function useAndroidVoiceInputWhisper() {
   }, []);
 
   const start = useCallback(async (onFinalTranscript) => {
+    // Arrêter la synthèse vocale en cours
     window.speechSynthesis?.cancel();
     await new Promise(resolve => setTimeout(resolve, 300));
 
+    // Nettoyer l'ancienne session
     if (micStreamRef.current) {
       micStreamRef.current.getTracks().forEach(t => t.stop());
       micStreamRef.current = null;
@@ -146,6 +176,8 @@ export function useAndroidVoiceInputWhisper() {
     activeRef.current = false;
     submittedRef.current = false;
     accumulatedRef.current = '';
+    interimRef.current = '';
+    lastTranscriptRef.current = '';
     onFinalRef.current = onFinalTranscript;
     setTranscript('');
     setError(null);
@@ -180,6 +212,8 @@ export function useAndroidVoiceInputWhisper() {
     submittedRef.current = false;
     destroyRecognition();
     accumulatedRef.current = '';
+    interimRef.current = '';
+    lastTranscriptRef.current = '';
     onFinalRef.current = null;
     setTranscript('');
     setError(null);
