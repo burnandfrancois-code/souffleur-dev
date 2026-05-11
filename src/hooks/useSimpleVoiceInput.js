@@ -150,9 +150,9 @@ export function useSimpleVoiceInput() {
             return;
           }
 
-          // Relancer avec délai pour éviter le rate limiting
+          // Relancer avec délai pour respecter le rate limit (3 req/min = 20s)
           if (activeRef.current && !submittedRef.current) {
-            setTimeout(() => recordWithWhisper(), 1500);
+            setTimeout(() => recordWithWhisper(), 25000);
           }
         } catch (e) {
           console.error('[WHISPER] Error transcribing:', e);
