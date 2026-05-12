@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Theater, Sparkles, Mic, BookOpen, Volume2, History, Play, Pencil, HelpCircle, CreditCard, AlertCircle, CheckCircle } from 'lucide-react';
@@ -93,14 +92,12 @@ export default function Home() {
   };
 
   const handleFileUploaded = async (url, uploadedFileName) => {
-    flushSync(() => {
-      setFileUrl(url);
-      setFileName(uploadedFileName);
-      setIsProcessing(true);
-      setProgress(0);
-      setLogs([]);
-      setProcessingError(null);
-    });
+    setFileUrl(url);
+    setFileName(uploadedFileName);
+    setIsProcessing(true);
+    setProgress(0);
+    setLogs([]);
+    setProcessingError(null);
     
     const startTime = Date.now();
     try {
