@@ -24,10 +24,10 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) 
         const parsePromise = base44.functions.invoke('parseScript', {
           file_url: fileUrl,
           file_name: fileName
-        }, { timeout: 600000 });
+        }, { timeout: 900000 }); // 15 minutes
 
         const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout: analyse des répliques trop longue (>6min). Le fichier est peut-être trop gros ou contient trop de répliques.')), 360000)
+          setTimeout(() => reject(new Error('Timeout: analyse des répliques trop longue (>12min). Le fichier est peut-être trop gros ou contient trop de répliques.')), 720000) // 12 minutes
         );
 
         result = await Promise.race([parsePromise, timeoutPromise]);
@@ -35,12 +35,13 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) 
       } catch (error) {
         lastError = error;
         const status = error?.response?.status;
+        const isTimeout = error?.code === 'ECONNABORTED' || error?.message?.includes('Timeout');
         
-        // Retry only on 502/503 errors
-        if ((status === 502 || status === 503) && attempt < maxAttempts - 1) {
+        // Retry on 502/503 or timeout errors
+        if ((status === 502 || status === 503 || status === 504 || isTimeout) && attempt < maxAttempts - 1) {
           attempt++;
-          const delayMs = Math.min(2000 * Math.pow(2, attempt - 1), 10000); // 2s, 4s, 8s...
-          console.warn(`[parseScriptWithLLM] Error ${status}, retrying in ${delayMs}ms (attempt ${attempt}/${maxAttempts - 1})`);
+          const delayMs = Math.min(3000 * Math.pow(2, attempt - 1), 15000); // 3s, 6s, 12s...
+          console.warn(`[parseScriptWithLLM] Error ${status || 'TIMEOUT'}, retrying in ${delayMs}ms (attempt ${attempt}/${maxAttempts - 1})`);
           await new Promise(resolve => setTimeout(resolve, delayMs));
         } else {
           throw error;
