@@ -9,9 +9,9 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) 
     // Simulate progress during parsing (backend doesn't send updates)
     let simulatedProgress = 10;
     const progressInterval = setInterval(() => {
-      simulatedProgress = Math.min(simulatedProgress + Math.random() * 5, 75);
+      simulatedProgress = Math.min(simulatedProgress + Math.random() * 1.2, 75);
       onProgress?.(simulatedProgress);
-    }, 1000);
+    }, 1500);
 
     // Appeler la vraie fonction backend parseScript avec timeout de 5 minutes
     const parsePromise = base44.functions.invoke('parseScript', {
