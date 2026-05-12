@@ -13,9 +13,9 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) 
       onProgress?.(simulatedProgress);
     }, 1500);
 
-    // Appeler parseScriptV2 (stable, un seul appel Claude)
+    // Appeler parseScript (V1, extraction texte puis parsing parallèle)
     // timeout: 600000ms (10 min) pour dépasser le timeout Axios par défaut
-    const parsePromise = base44.functions.invoke('parseScriptV2', {
+    const parsePromise = base44.functions.invoke('parseScript', {
       file_url: fileUrl,
       file_name: fileName
     }, { timeout: 600000 });
