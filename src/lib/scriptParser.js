@@ -9,9 +9,9 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) 
     // Simulate progress during parsing (backend doesn't send updates)
     let simulatedProgress = 10;
     const progressInterval = setInterval(() => {
-      simulatedProgress = Math.min(simulatedProgress + Math.random() * 1.2, 75);
+      simulatedProgress = Math.min(simulatedProgress + Math.random() * 1.5, 95);
       onProgress?.(simulatedProgress);
-    }, 1500);
+    }, 800);
 
     // Retry logic pour les erreurs 502/503
     let result;
