@@ -13,6 +13,7 @@ const PlatformSelect = lazy(() => import('@/pages/PlatformSelect'));
 const CompleteProfile = lazy(() => import('@/pages/CompleteProfile'));
 const Settings = lazy(() => import('@/pages/Settings'));
 const DesktopHome = lazy(() => import('@/pages/desktop/Home'));
+const DesktopHomeSeparatedDesktop = lazy(() => import('@/pages/desktop/HomeSeparatedDesktop'));
 const DesktopRehearsal = lazy(() => import('@/pages/desktop/Rehearsal'));
 const DesktopMyScripts = lazy(() => import('@/pages/desktop/MyScripts'));
 const DesktopTarifs = lazy(() => import('@/pages/desktop/Tarifs'));
@@ -59,6 +60,7 @@ const AuthenticatedApp = () => {
         <Route path="/complete-profile" element={<CompleteProfile />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/desktop/" element={<DesktopHome />} />
+        <Route path="/desktop-separated/" element={<DesktopHomeSeparatedDesktop />} />
         <Route path="/desktop/rehearsal" element={<DesktopRehearsal />} />
         <Route path="/desktop/my-scripts" element={<DesktopMyScripts />} />
         <Route path="/desktop/tarifs" element={<DesktopTarifs />} />
