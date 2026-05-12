@@ -6,10 +6,7 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import Landing from '@/pages/Landing.jsx';
-import PlatformSelect from '@/pages/PlatformSelect.jsx';
-import CompleteProfile from '@/pages/CompleteProfile.jsx';
-import Settings from '@/pages/Settings.jsx';
+
 
 const AuthenticatedApp = () => {
   const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
@@ -37,12 +34,6 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/platform" element={<PlatformSelect />} />
-      <Route path="/complete-profile" element={<CompleteProfile />} />
-      <Route element={<ProtectedRoute />}>
-        <Route path="/settings" element={<Settings />} />
-      </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
