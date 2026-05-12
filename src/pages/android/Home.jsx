@@ -234,7 +234,7 @@ export default function AndroidHome() {
               className="px-3 py-1.5 rounded-full hover:bg-secondary transition-colors"
               title="Mes textes"
             >
-              <span className="text-xs font-semibold text-yellow-400">Textes</span>
+              <span className="text-xs font-semibold text-yellow-400">Mes textes</span>
             </button>
             <button
               onClick={() => navigate('/android/help')}
