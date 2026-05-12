@@ -99,12 +99,12 @@ export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1.
 
       // Map vitesses pour accélération
       const rateMap = {
-        1: 1.8,
-        1.5: 2.1,
-        2: 2.3,
-        3: 2.8
+        1: 2.0,
+        1.5: 2.5,
+        2: 3.0,
+        3: 4.0
       };
-      const actualRate = Math.min(rateMap[rate] || rate, 2.5);
+      const actualRate = rateMap[rate] || rate;
       console.log('[TTS] Computed rate:', rate, '→', actualRate);
 
       const utterance = new SpeechSynthesisUtterance(text);
