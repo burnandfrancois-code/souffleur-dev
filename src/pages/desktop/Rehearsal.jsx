@@ -205,8 +205,9 @@ export default function DesktopRehearsal() {
                 </button>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setShowMyLines(true)}>
-              <List className="w-5 h-5" />
+            <Button variant="ghost" size="sm" onClick={() => setShowMyLines(true)} className="gap-2">
+              <List className="w-4 h-4" />
+              <span className="text-xs font-semibold">Mes répliques</span>
             </Button>
           </div>
           {!isFinished && (

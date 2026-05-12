@@ -430,8 +430,9 @@ export default function AndroidRehearsal() {
             <Button variant="ghost" size="icon" onClick={() => setShowVoiceModal(true)} className="shrink-0 h-8 w-8" title="Voix">
               <span className="text-xs">🎙️</span>
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setShowLinesList(!showLinesList)} className="shrink-0 h-8 w-8">
+            <Button variant="ghost" size="sm" onClick={() => setShowLinesList(!showLinesList)} className="shrink-0 gap-1 h-8 px-2 text-xs">
               {showLinesList ? <X className="w-4 h-4" /> : <List className="w-4 h-4" />}
+              <span>Mes répliques</span>
             </Button>
           </div>
         </div>
