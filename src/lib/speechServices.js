@@ -112,19 +112,6 @@ export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1.
       utterance.rate = actualRate;
       utterance.pitch = gender === 'female' ? 1.3 : 0.8;
       utterance.volume = 1;
-      
-      // Amplifier le volume sur Android via Web Audio API
-      if (isAndroid && audioContextAndroid) {
-        try {
-          const dest = audioContextAndroid.createMediaElementAudioDestination();
-          const gainNode = audioContextAndroid.createGain();
-          gainNode.gain.value = 4; // Multiplier par 4
-          gainNode.connect(dest);
-          console.log('[TTS] Android gain node set to 4x');
-        } catch (e) {
-          console.warn('[TTS] Could not set gain node for Android:', e);
-        }
-      }
 
       // Sélectionner une voix française si disponible
       const frVoice = voices.find(v => v.lang.startsWith('fr') && (gender === 'female' ? v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('fem') || v.name.includes('Amélie') || v.name.includes('Marie') || v.name.includes('Audrey') : true))
