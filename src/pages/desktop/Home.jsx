@@ -120,7 +120,7 @@ export default function Home() {
       }
       
       const parsed = {
-        title: fileName,
+        title: uploadedFileName,
         characters: result.characters,
         lines: result.lines || [],
         stats: result.stats || {}

@@ -150,7 +150,7 @@ export default function AndroidHome() {
       setCharacterGenders(initialGenders);
 
       const parsed = {
-        title: fileName,
+        title: uploadedFileName,
         characters: result.characters,
         lines: result.lines || [],
         stats: result.stats || {}
