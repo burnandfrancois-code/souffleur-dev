@@ -13,8 +13,8 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) 
       onProgress?.(simulatedProgress);
     }, 1500);
 
-    // Appeler parseScriptV2 (séquentiel, évite les timeouts serveur 504)
-    const parsePromise = base44.functions.invoke('parseScriptV2', {
+    // Appeler parseScriptV3 (extraction texte + parsing chunked, évite les timeouts 504)
+    const parsePromise = base44.functions.invoke('parseScriptV3', {
       file_url: fileUrl,
       file_name: fileName
     });
