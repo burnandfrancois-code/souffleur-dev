@@ -55,8 +55,9 @@ export default function DesktopRehearsal() {
   const myLineCount = lines.filter(l => normalize(l.character) === normalize(myCharacter)).length;
   const isFinished = lines.length > 0 && currentIndex >= lines.length;
 
-  const stripDirections = (text) =>
-    text?.replace(/\([^)]*\)?/g, '').replace(/\[[^\]]*\]?/g, '').replace(/\s+/g, ' ').trim() || '';
+  const stripDirections = useCallback((text) =>
+    text?.replace(/\([^)]*\)?/g, '').replace(/\[[^\]]*\]?/g, '').replace(/\s+/g, ' ').trim() || ''
+  , []);
 
   // Auto-play partner lines — avance automatiquement après la lecture
   const speakPartnerLine = useCallback(async (line) => {
