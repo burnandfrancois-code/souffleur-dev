@@ -31,6 +31,10 @@ export default function DesktopRehearsal() {
   const [showMyLines, setShowMyLines] = useState(false);
   const [started, setStarted] = useState(false);
   const [isSpeakingPartner, setIsSpeakingPartner] = useState(false);
+  const [autoMode, setAutoMode] = useState(true);
+  const [speechRate, setSpeechRate] = useState(1);
+  const speechRateRef = useRef(speechRate);
+  useEffect(() => { speechRateRef.current = speechRate; }, [speechRate]);
 
   const myLineRecorderRef = useRef(null);
   const speakAbortRef = useRef(null);
@@ -64,7 +68,7 @@ export default function DesktopRehearsal() {
     speakAbortRef.current = controller;
     const gender = genders[line.character] || 'male';
     setIsSpeakingPartner(true);
-    await speakText(stripDirections(line.text), 'fr-FR', gender, 1, controller.signal);
+    await speakText(stripDirections(line.text), 'fr-FR', gender, speechRateRef.current, controller.signal);
     if (!controller.signal.aborted) {
       setIsSpeakingPartner(false);
       // Avancer automatiquement après la réplique partenaire
@@ -157,7 +161,51 @@ export default function DesktopRehearsal() {
         <h1 className="text-2xl font-bold">{script.title}</h1>
         <p className="text-muted-foreground">Rôle: <span className="text-primary font-semibold">{myCharacter}</span></p>
         <p className="text-sm text-muted-foreground">{lines.length} répliques • {myLineCount} à jouer</p>
-        <Button size="lg" onClick={() => setStarted(true)}>Commencer la répétition</Button>
+
+        <div className="flex flex-col gap-4 w-full max-w-xs">
+          {/* Manuel/Auto selector */}
+          <div className="bg-secondary/50 rounded-lg p-3 space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase">Mode d'avancement</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setAutoMode(false)}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  !autoMode ? 'bg-primary text-primary-foreground' : 'border border-primary/30 text-muted-foreground hover:bg-primary/10'
+                }`}
+              >
+                Manuel
+              </button>
+              <button
+                onClick={() => setAutoMode(true)}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  autoMode ? 'bg-primary text-primary-foreground' : 'border border-primary/30 text-muted-foreground hover:bg-primary/10'
+                }`}
+              >
+                Auto
+              </button>
+            </div>
+          </div>
+
+          {/* Speed selector */}
+          <div className="bg-secondary/50 rounded-lg p-3 space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase">Vitesse partenaire</p>
+            <div className="grid grid-cols-4 gap-1">
+              {[1, 1.5, 2, 3].map((rate) => (
+                <button
+                  key={rate}
+                  onClick={() => setSpeechRate(rate)}
+                  className={`px-2 py-2 rounded-lg text-xs font-medium transition-all ${
+                    speechRate === rate ? 'bg-primary text-primary-foreground' : 'border border-primary/30 text-muted-foreground hover:bg-primary/10'
+                  }`}
+                >
+                  {rate}x
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Button size="lg" onClick={() => setStarted(true)}>Commencer la répétition</Button>
+        </div>
       </div>
     );
   }
