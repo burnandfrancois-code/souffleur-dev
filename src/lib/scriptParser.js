@@ -14,13 +14,14 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) 
     }, 1500);
 
     // Appeler parseScriptV2 (un seul appel Claude avec file_urls)
+    // timeout: 360000ms (6 min) pour dépasser le timeout Axios par défaut
     const parsePromise = base44.functions.invoke('parseScriptV2', {
       file_url: fileUrl,
       file_name: fileName
-    });
+    }, { timeout: 360000 });
 
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Timeout: analyse des répliques trop longue (>5min). Le fichier est peut-être trop gros ou contient trop de répliques.')), 300000)
+      setTimeout(() => reject(new Error('Timeout: analyse des répliques trop longue (>6min). Le fichier est peut-être trop gros ou contient trop de répliques.')), 360000)
     );
 
     const result = await Promise.race([parsePromise, timeoutPromise]);
