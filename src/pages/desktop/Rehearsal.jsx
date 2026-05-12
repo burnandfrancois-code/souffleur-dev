@@ -71,10 +71,9 @@ export default function DesktopRehearsal() {
     await speakText(stripDirections(line.text), 'fr-FR', gender, speechRateRef.current, controller.signal);
     if (!controller.signal.aborted) {
       setIsSpeakingPartner(false);
-      // Avancer automatiquement après la réplique partenaire
       setCurrentIndex(prev => prev + 1);
     }
-  }, [genders]);
+  }, [genders, stripDirections]);
 
   // When line changes, auto-play partner or auto-record my line
   useEffect(() => {
@@ -82,7 +81,8 @@ export default function DesktopRehearsal() {
     if (!isMyLine) {
       speakPartnerLine(currentLine);
     }
-  }, [currentIndex, started]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIndex, started, speakPartnerLine]);
 
   const handleLineAdvance = useCallback((score) => {
     if (score !== undefined) {
