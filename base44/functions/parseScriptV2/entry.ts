@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
     // ==========================================
     addLog('info', 'Analyse du script via LLM Vision (extraction + parsing en une passe)...');
 
-    const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
+    const rawResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
       prompt: `You are analysing a theatre script PDF. Do two things in one pass:
 1. Extract ALL the text from every page.
 2. Parse every dialogue line: identify character names (usually in CAPS or followed by a colon) and their spoken text.
@@ -38,30 +38,20 @@ Rules:
 - Include every line from start to finish, in order.
 - If the same character speaks several sentences in a row without interruption, keep them as ONE line entry.
 
-Return JSON with:
-{
-  "characters": ["NAME1", "NAME2", ...],
-  "lines": [{"character": "NAME", "text": "full spoken text"}, ...]
-}`,
+Return ONLY valid JSON (no markdown, no explanation):
+{"characters": ["NAME1", ...], "lines": [{"character": "NAME", "text": "full spoken text"}, ...]}`,
       file_urls: [file_url],
       model: 'claude_sonnet_4_6',
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          characters: { type: 'array', items: { type: 'string' } },
-          lines: {
-            type: 'array',
-            items: {
-              type: 'object',
-              properties: {
-                character: { type: 'string' },
-                text: { type: 'string' }
-              }
-            }
-          }
-        }
-      }
     });
+
+    // Parse result - may be string or object depending on whether schema was used
+    let result;
+    if (typeof rawResult === 'object' && rawResult !== null && (rawResult.lines || rawResult.characters)) {
+      result = rawResult;
+    } else {
+      const jsonMatch = String(rawResult).match(/\{[\s\S]*\}/);
+      result = jsonMatch ? JSON.parse(jsonMatch[0]) : { characters: [], lines: [] };
+    }
 
     addLog('info', `LLM terminé: ${result?.characters?.length || 0} personnages, ${result?.lines?.length || 0} répliques`);
 

@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
 - Separate pages with "---PAGE---".
 Return only the raw extracted text, nothing else.`,
       file_urls: [file_url],
-      model: 'gemini_3_1_pro',
+      model: 'gemini_3_flash',
     });
 
     const rawText = typeof extractionResult === 'string' ? extractionResult : JSON.stringify(extractionResult);
@@ -46,8 +46,8 @@ Return only the raw extracted text, nothing else.`,
     // ==========================================
     // ÉTAPE 2 : Découper en chunks et parser en parallèle
     // ==========================================
-    const CHUNK_SIZE = 15000; // ~15k chars par chunk
-    const OVERLAP = 500;
+    const CHUNK_SIZE = 12000;
+    const OVERLAP = 300;
     const chunks = [];
 
     for (let i = 0; i < rawText.length; i += CHUNK_SIZE - OVERLAP) {
@@ -56,50 +56,45 @@ Return only the raw extracted text, nothing else.`,
 
     addLog('info', `Étape 2: Parsing en ${chunks.length} chunks...`);
 
-    const PARSE_PROMPT = `You are parsing a French theatre script. Extract every dialogue line from this text excerpt.
+    const PARSE_PROMPT = `Parse this French theatre script excerpt. Extract ALL spoken dialogue lines.
 
 Rules:
-- Character names are usually in CAPS or followed by colon/period (e.g. "HAMLET." or "HAMLET :")
-- Keep character names in CAPS, remove trailing punctuation (. : -)
-- Remove stage directions (text in parentheses or brackets) from spoken text
-- Keep the FULL spoken text, never truncate
-- If the same character speaks several sentences without interruption, merge into ONE entry
-- Skip stage directions, scene headers, act titles - only extract spoken dialogue
+- Character names appear in CAPS (e.g. "HAMLET", "LE CHIRURGIEN", "MARIE")
+- Return character names in CAPS without trailing punctuation
+- Remove stage directions (parentheses/brackets) from the spoken text
+- Keep complete spoken text
+- Skip scene titles, act titles, stage directions that are not dialogue
 
-Return JSON:
-{"lines": [{"character": "NAME", "text": "spoken text"}]}`;
+Return ONLY this JSON (no explanation, no markdown):
+{"lines": [{"character": "NAME", "text": "spoken text"}, ...]}`;
 
     const parseChunk = async (chunk, idx) => {
       try {
-        const res = await base44.asServiceRole.integrations.Core.InvokeLLM({
-          prompt: PARSE_PROMPT + `\n\nScript excerpt:\n${chunk}`,
+        const rawStr = await base44.asServiceRole.integrations.Core.InvokeLLM({
+          prompt: PARSE_PROMPT + `\n\n---\n${chunk}\n---`,
           model: 'claude_sonnet_4_6',
-          response_json_schema: {
-            type: 'object',
-            properties: {
-              lines: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    character: { type: 'string' },
-                    text: { type: 'string' }
-                  }
-                }
-              }
-            }
-          }
         });
-        addLog('info', `Chunk ${idx + 1}/${chunks.length}: ${res?.lines?.length || 0} répliques`);
-        return res?.lines || [];
+        // rawStr is a string when no response_json_schema is provided
+        let lines = [];
+        try {
+          const jsonMatch = String(rawStr).match(/\{[\s\S]*"lines"[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            lines = Array.isArray(parsed?.lines) ? parsed.lines : [];
+          }
+        } catch (parseErr) {
+          addLog('warn', `Chunk ${idx + 1} JSON parse error: ${parseErr.message}`);
+        }
+        addLog('info', `Chunk ${idx + 1}/${chunks.length}: ${lines.length} répliques`);
+        return lines;
       } catch (err) {
         addLog('warn', `Chunk ${idx + 1} échoué: ${err.message}`);
         return [];
       }
     };
 
-    // Traiter les chunks par batch de 5 max en parallèle
-    const BATCH_SIZE = 5;
+    // Traiter les chunks par batch de 4 max en parallèle
+    const BATCH_SIZE = 4;
     const allRawLines = [];
     for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
       const batch = chunks.slice(i, i + BATCH_SIZE);
