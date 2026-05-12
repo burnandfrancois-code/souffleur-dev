@@ -98,6 +98,10 @@ export default function Home() {
     setProgress(0);
     setLogs([]);
     setProcessingError(null);
+    
+    // Petit délai pour afficher le cadre de progression immédiatement
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
     const startTime = Date.now();
     try {
       const result = await parseScriptWithLLM(url, uploadedFileName, (progressValue) => {
