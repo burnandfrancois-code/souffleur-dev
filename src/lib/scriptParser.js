@@ -13,12 +13,12 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) 
       onProgress?.(simulatedProgress);
     }, 1500);
 
-    // Appeler parseScript (V1, ancienne version parallèle + chunks)
-    // timeout: 360000ms (6 min) pour dépasser le timeout Axios par défaut
-    const parsePromise = base44.functions.invoke('parseScript', {
+    // Appeler parseScriptV2 (stable, un seul appel Claude)
+    // timeout: 600000ms (10 min) pour dépasser le timeout Axios par défaut
+    const parsePromise = base44.functions.invoke('parseScriptV2', {
       file_url: fileUrl,
       file_name: fileName
-    }, { timeout: 360000 });
+    }, { timeout: 600000 });
 
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Timeout: analyse des répliques trop longue (>6min). Le fichier est peut-être trop gros ou contient trop de répliques.')), 360000)
@@ -29,19 +29,22 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) 
     clearInterval(progressInterval);
     onProgress?.(80);
 
+    // S'assurer que result.data existe (parfois la réponse arrive différemment)
+    const responseData = result.data || result;
+    
     // Passer les logs au callback
-    if (onLogs && result.data?.logs) {
-      onLogs(result.data.logs);
+    if (onLogs && responseData?.logs) {
+      onLogs(responseData.logs);
     }
 
-    console.log(`[parseScriptWithLLM] Parse successful: ${result.data?.characters?.length} characters, ${result.data?.lines?.length} lines`);
+    console.log(`[parseScriptWithLLM] Parse successful: ${responseData?.characters?.length} characters, ${responseData?.lines?.length} lines`);
 
     return {
-      characters: result.data?.characters || [],
-      lines: result.data?.lines || [],
-      stats: result.data?.stats || {},
-      rawText: result.data?.rawText || '',
-      logs: result.data?.logs || []
+      characters: responseData?.characters || [],
+      lines: responseData?.lines || [],
+      stats: responseData?.stats || {},
+      rawText: responseData?.rawText || '',
+      logs: responseData?.logs || []
     };
   } catch (error) {
     console.error('[parseScriptWithLLM] Parse failed:', error);
