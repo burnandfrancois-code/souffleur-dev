@@ -13,18 +13,40 @@ export async function parseScriptWithLLM(fileUrl, fileName, onProgress, onLogs) 
       onProgress?.(simulatedProgress);
     }, 1500);
 
-    // Appeler parseScript (V1, extraction texte puis parsing parallèle)
-    // timeout: 600000ms (10 min) pour dépasser le timeout Axios par défaut
-    const parsePromise = base44.functions.invoke('parseScript', {
-      file_url: fileUrl,
-      file_name: fileName
-    }, { timeout: 600000 });
+    // Retry logic pour les erreurs 502/503
+    let result;
+    let attempt = 0;
+    const maxAttempts = 3;
+    let lastError;
 
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Timeout: analyse des répliques trop longue (>6min). Le fichier est peut-être trop gros ou contient trop de répliques.')), 360000)
-    );
+    while (attempt < maxAttempts) {
+      try {
+        const parsePromise = base44.functions.invoke('parseScript', {
+          file_url: fileUrl,
+          file_name: fileName
+        }, { timeout: 600000 });
 
-    const result = await Promise.race([parsePromise, timeoutPromise]);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout: analyse des répliques trop longue (>6min). Le fichier est peut-être trop gros ou contient trop de répliques.')), 360000)
+        );
+
+        result = await Promise.race([parsePromise, timeoutPromise]);
+        break; // Success, exit retry loop
+      } catch (error) {
+        lastError = error;
+        const status = error?.response?.status;
+        
+        // Retry only on 502/503 errors
+        if ((status === 502 || status === 503) && attempt < maxAttempts - 1) {
+          attempt++;
+          const delayMs = Math.min(2000 * Math.pow(2, attempt - 1), 10000); // 2s, 4s, 8s...
+          console.warn(`[parseScriptWithLLM] Error ${status}, retrying in ${delayMs}ms (attempt ${attempt}/${maxAttempts - 1})`);
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        } else {
+          throw error;
+        }
+      }
+    }
 
     clearInterval(progressInterval);
     onProgress?.(80);
