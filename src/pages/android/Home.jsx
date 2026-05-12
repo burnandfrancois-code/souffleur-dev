@@ -119,9 +119,6 @@ export default function AndroidHome() {
     setProgress(0);
     setLogs([]);
     
-    // Petit délai pour afficher le cadre de progression immédiatement
-    await new Promise(resolve => setTimeout(resolve, 50));
-    
     try {
       // Timeout global: 120s max
       const timeoutPromise = new Promise((_, reject) =>
