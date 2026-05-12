@@ -99,10 +99,10 @@ export async function speakText(text, lang = 'fr-FR', gender = 'male', rate = 1.
 
       // Map vitesses pour accélération
       const rateMap = {
-        1: 1.5,
-        1.5: 1.8,
-        2: 2.0,
-        3: 2.5
+        1: 1.8,
+        1.5: 2.1,
+        2: 2.3,
+        3: 2.8
       };
       const actualRate = Math.min(rateMap[rate] || rate, 2.5);
       console.log('[TTS] Computed rate:', rate, '→', actualRate);
