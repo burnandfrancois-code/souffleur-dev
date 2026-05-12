@@ -99,55 +99,58 @@ export default function Home() {
     setLogs([]);
     setProcessingError(null);
     
-    const startTime = Date.now();
-    try {
-      const result = await parseScriptWithLLM(url, uploadedFileName, (progressValue) => {
-        setProgress(progressValue);
-      }, (fileLogs) => {
-        setLogs(fileLogs);
-      });
+    // Délai minimal pour assurer le rendu instantané du ParseProgress
+    setTimeout(async () => {
+      const startTime = Date.now();
+      try {
+        const result = await parseScriptWithLLM(url, uploadedFileName, (progressValue) => {
+          setProgress(progressValue);
+        }, (fileLogs) => {
+          setLogs(fileLogs);
+        });
       
-      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.log(`[Home] Parsing completed in ${duration}s`, result);
-      
-      if (!result) {
-        toast.error('Aucune réponse du serveur. Le fichier est peut-être trop volumineux.');
+        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.log(`[Home] Parsing completed in ${duration}s`, result);
+        
+        if (!result) {
+          toast.error('Aucune réponse du serveur. Le fichier est peut-être trop volumineux.');
+          setIsProcessing(false);
+          return;
+        }
+        
+        if (!result.characters) {
+          result.characters = [];
+        }
+        
+        const parsed = {
+          title: uploadedFileName,
+          characters: result.characters,
+          lines: result.lines || [],
+          stats: result.stats || {}
+        };
+        
+        const integrity = await verifyScriptIntegrity(result.rawText || '', parsed);
+        setIntegrityReport(integrity);
+        
+        setParsedScript(parsed);
         setIsProcessing(false);
-        return;
+        setStep('summary');
+        navigate('/desktop/?step=summary', { replace: true });
+      } catch (err) {
+        const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+        console.error(`[Home] Erreur analyse après ${duration}s:`, err);
+        
+        let message = err?.message || 'Impossible d\'analyser le fichier';
+        if (err?.response?.status === 504) {
+          message = 'Le fichier est trop volumineux ou le parsing a pris trop longtemps. Essayez un fichier plus court.';
+        } else if (err?.code === 'ECONNABORTED') {
+          message = 'Timeout lors de l\'analyse. Le fichier est peut-être trop grand.';
+        }
+        
+        setProcessingError(message);
+        setIsProcessing(false);
       }
-      
-      if (!result.characters) {
-        result.characters = [];
-      }
-      
-      const parsed = {
-        title: uploadedFileName,
-        characters: result.characters,
-        lines: result.lines || [],
-        stats: result.stats || {}
-      };
-      
-      const integrity = await verifyScriptIntegrity(result.rawText || '', parsed);
-      setIntegrityReport(integrity);
-      
-      setParsedScript(parsed);
-      setIsProcessing(false);
-      setStep('summary');
-      navigate('/desktop/?step=summary', { replace: true });
-    } catch (err) {
-      const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-      console.error(`[Home] Erreur analyse après ${duration}s:`, err);
-      
-      let message = err?.message || 'Impossible d\'analyser le fichier';
-      if (err?.response?.status === 504) {
-        message = 'Le fichier est trop volumineux ou le parsing a pris trop longtemps. Essayez un fichier plus court.';
-      } else if (err?.code === 'ECONNABORTED') {
-        message = 'Timeout lors de l\'analyse. Le fichier est peut-être trop grand.';
-      }
-      
-      setProcessingError(message);
-      setIsProcessing(false);
-    }
+    }, 0);
   };
 
   const handleCharacterSelect = (char) => {
