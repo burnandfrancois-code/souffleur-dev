@@ -6,6 +6,12 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import Landing from '@/pages/Landing';
+import PlatformSelect from '@/pages/PlatformSelect';
+import CompleteProfile from '@/pages/CompleteProfile';
+import Settings from '@/pages/Settings';
+import DesktopRehearsal from '@/pages/desktop/Rehearsal';
+import AndroidRehearsal from '@/pages/android/Rehearsal';
 
 
 
@@ -35,6 +41,14 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/platform" element={<PlatformSelect />} />
+      <Route element={<ProtectedRoute />}>
+        <Route path="/complete-profile" element={<CompleteProfile />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/desktop/rehearsal" element={<DesktopRehearsal />} />
+        <Route path="/android/rehearsal" element={<AndroidRehearsal />} />
+      </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
