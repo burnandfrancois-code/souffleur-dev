@@ -145,7 +145,6 @@ export default function Home() {
       }
       
       setProcessingError(message);
-    } finally {
       setIsProcessing(false);
     }
   };
@@ -229,7 +228,7 @@ export default function Home() {
         </div>
       </header>
 
-      {isProcessing && <ParseProgress fileName={fileName} progress={progress} logs={logs} error={processingError} />}
+      {(isProcessing || processingError) && <ParseProgress fileName={fileName} progress={progress} logs={logs} error={processingError} />}
 
       <main className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-4xl mx-auto space-y-8">
