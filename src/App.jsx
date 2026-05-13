@@ -12,6 +12,7 @@ import CompleteProfile from '@/pages/CompleteProfile';
 import Settings from '@/pages/Settings';
 import DesktopRehearsal from '@/pages/desktop/Rehearsal';
 import AndroidRehearsal from '@/pages/android/Rehearsal';
+import GitHubPRs from '@/pages/GitHubPRs';
 
 
 
@@ -48,6 +49,7 @@ const AuthenticatedApp = () => {
         <Route path="/settings" element={<Settings />} />
         <Route path="/desktop/rehearsal" element={<DesktopRehearsal />} />
         <Route path="/android/rehearsal" element={<AndroidRehearsal />} />
+        <Route path="/github-prs" element={<GitHubPRs />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
