@@ -1,0 +1,69 @@
+{
+  "name": "Issue",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Titre de l'issue"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description/contenu de l'issue"
+    },
+    "repo": {
+      "type": "string",
+      "description": "Nom du repo"
+    },
+    "author": {
+      "type": "string",
+      "description": "Auteur de l'issue"
+    },
+    "url": {
+      "type": "string",
+      "description": "URL de l'issue sur GitHub"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "open",
+        "closed"
+      ],
+      "description": "\u00c9tat de l'issue"
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Labels/tags de l'issue"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Date de cr\u00e9ation"
+    },
+    "github_id": {
+      "type": "number",
+      "description": "ID unique GitHub de l'issue"
+    }
+  },
+  "required": [
+    "title",
+    "repo",
+    "github_id"
+  ],
+  "rls": {
+    "create": {
+      "created_by": "{{user.email}}"
+    },
+    "read": {
+      "created_by": "{{user.email}}"
+    },
+    "update": {
+      "created_by": "{{user.email}}"
+    },
+    "delete": {
+      "created_by": "{{user.email}}"
+    }
+  }
+}

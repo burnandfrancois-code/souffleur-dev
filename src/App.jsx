@@ -13,6 +13,7 @@ import Settings from '@/pages/Settings';
 import DesktopRehearsal from '@/pages/desktop/Rehearsal';
 import AndroidRehearsal from '@/pages/android/Rehearsal';
 import GitHubPRs from '@/pages/GitHubPRs';
+import ImportGitHubIssues from '@/pages/ImportGitHubIssues';
 
 
 
@@ -50,6 +51,7 @@ const AuthenticatedApp = () => {
         <Route path="/desktop/rehearsal" element={<DesktopRehearsal />} />
         <Route path="/android/rehearsal" element={<AndroidRehearsal />} />
         <Route path="/github-prs" element={<GitHubPRs />} />
+        <Route path="/import-github-issues" element={<ImportGitHubIssues />} />
       </Route>
       <Route path="*" element={<PageNotFound />} />
     </Routes>
